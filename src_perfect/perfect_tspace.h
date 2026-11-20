@@ -551,6 +551,12 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // For every perfect domain, the number of orbits and the number of faces
     // of every rank from 1 to LowRankMax.
     ListStringValues["FileLowRankConeFaceOrbits"] = "null";
+    // The well rounded faces of rank LowRankMin to LowRankMax are reduced up
+    // to the action of the group: the number of orbits of every rank, and
+    // the representatives (their rank and their vectors, one per pair +-v).
+    ListIntValues["LowRankMin"] = 1;
+    ListStringValues["FileLowRankNumberCells"] = "null";
+    ListStringValues["FileLowRankCells"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);

@@ -129,6 +129,45 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileLowRankNumberCells = BlockQUERIES.get_string("FileLowRankNumberCells");
+  std::string FileLowRankCells = BlockQUERIES.get_string("FileLowRankCells");
+  if (FileLowRankNumberCells != "null" || FileLowRankCells != "null") {
+    int LowRankMin = BlockQUERIES.get_int("LowRankMin");
+    if (LowRankMin < 1 || LowRankMin > LowRankMax) {
+      std::cerr << "LowRankMin=" << LowRankMin << " should be between 1 and LowRankMax=" << LowRankMax << "\n";
+      throw TerminalException{1};
+    }
+    std::vector<LowRankCell<T, Tint>> l_cell =
+        get_low_rank_well_rounded_cells<T, Tint, Tgroup>(LinSpa, fce.pctdi.l_perfect, LowRankMin, LowRankMax, os);
+    if (FileLowRankNumberCells != "null") {
+      std::vector<int> l_number(LowRankMax - LowRankMin + 1, 0);
+      for (auto &cell : l_cell) {
+        l_number[cell.rank - LowRankMin]++;
+      }
+      std::ofstream os_out(FileLowRankNumberCells);
+      os_out << "return [";
+      for (size_t i = 0; i < l_number.size(); i++) {
+        if (i > 0) {
+          os_out << ",";
+        }
+        os_out << l_number[i];
+      }
+      os_out << "];\n";
+    }
+    if (FileLowRankCells != "null") {
+      std::ofstream os_out(FileLowRankCells);
+      os_out << "return [";
+      for (size_t i_cell = 0; i_cell < l_cell.size(); i_cell++) {
+        if (i_cell > 0) {
+          os_out << ",\n";
+        }
+        os_out << "rec(rank:=" << l_cell[i_cell].rank << ", EXT:=";
+        WriteMatrixGAP(os_out, l_cell[i_cell].SHV);
+        os_out << ")";
+      }
+      os_out << "];\n";
+    }
+  }
 
   /*
     The queries related to individual cells
