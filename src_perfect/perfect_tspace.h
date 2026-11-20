@@ -542,6 +542,15 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListIntValues["IndexUpperBoundary"] = 0;
     ListIntValues["IndexLowerBoundary"] = 0;
     ListIntValues["IndexCell"] = 0;
+    // The faces of small rank of the perfect domains, computed from the
+    // bottom (perfect_low_dim.h). They only need the perfect forms, so they
+    // can be used with ComputeComplex = F. The rank of a face is the rank of
+    // its rays in the T-space: the faces of rank at most LowRankMax are
+    // computed.
+    ListIntValues["LowRankMax"] = 0;
+    // For every perfect domain, the number of orbits and the number of faces
+    // of every rank from 1 to LowRankMax.
+    ListStringValues["FileLowRankConeFaceOrbits"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);

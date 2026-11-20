@@ -7,6 +7,7 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "perfect_complex.h"
+#include "perfect_low_dim.h"
 #include "perfect_presentation.h"
 #include "hecke_operators.h"
 #include "Permutation.h"
@@ -88,6 +89,43 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       }
       int n_orb = fce.levels[index].l_faces.size();
       os_out << n_orb;
+    }
+    os_out << "];\n";
+  }
+  // The faces of small rank of the perfect domains, from the bottom. They
+  // only need the perfect forms.
+  int LowRankMax = BlockQUERIES.get_int("LowRankMax");
+  std::string FileLowRankConeFaceOrbits = BlockQUERIES.get_string("FileLowRankConeFaceOrbits");
+  if (FileLowRankConeFaceOrbits != "null") {
+    using TintGroup = typename Tgroup::Tint;
+    std::vector<PerfectFormInfoForComplex<T, Tint, Tgroup>> const &l_perfect = fce.pctdi.l_perfect;
+    std::ofstream os_out(FileLowRankConeFaceOrbits);
+    os_out << "return [";
+    for (size_t i_cone = 0; i_cone < l_perfect.size(); i_cone++) {
+      PerfectConeLowRankFaces<T, Tint, Tgroup> cf =
+          get_cone_low_rank_faces(LinSpa, l_perfect[i_cone], LowRankMax, os);
+      if (i_cone > 0) {
+        os_out << ",\n";
+      }
+      os_out << "rec(n_ray:=" << cf.FAC.rows() << ", ListNbOrbit:=[";
+      for (size_t i_lev = 0; i_lev < cf.levels.size(); i_lev++) {
+        if (i_lev > 0) {
+          os_out << ",";
+        }
+        os_out << cf.levels[i_lev].size();
+      }
+      os_out << "], ListNbFace:=[";
+      for (size_t i_lev = 0; i_lev < cf.levels.size(); i_lev++) {
+        if (i_lev > 0) {
+          os_out << ",";
+        }
+        TintGroup n_face = 0;
+        for (Face const &f : cf.levels[i_lev]) {
+          n_face += cf.GRP.OrbitSize_OnSets(f);
+        }
+        os_out << n_face;
+      }
+      os_out << "])";
     }
     os_out << "];\n";
   }
