@@ -2451,6 +2451,27 @@ bool is_correct_fce(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   return true;
 }
 
+// The complex read from CacheFile if it holds the one of (LinSpa, pco),
+// otherwise computed and written there. CacheFile = "none" for no cache.
+template <typename T, typename Tint, typename Tgroup>
+FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMatrix<T> const& LinSpa,
+                                                                     PerfectComplexOptions const& pco,
+                                                                     std::string const& CacheFile,
+                                                                     std::ostream& os) {
+  if (CacheFile == "none") {
+    return get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
+  }
+  if (FILE_IsExistingFile(CacheFile)) {
+    FullComplexEnumeration<T, Tint, Tgroup> fce = read_fce_from_file<T,Tint,Tgroup>(CacheFile);
+    if (is_correct_fce(fce, LinSpa, pco)) {
+      return fce;
+    }
+  }
+  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
+  write_fce_to_file(CacheFile, fce);
+  return fce;
+}
+
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_COMPLEX_H_
 // clang-format on

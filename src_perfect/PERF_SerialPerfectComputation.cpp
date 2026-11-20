@@ -15,27 +15,6 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMatrix<T> const& LinSpa,
-                                                                     PerfectComplexOptions const& pco,
-                                                                     std::string const& CacheFile,
-                                                                     std::ostream& os) {
-  if (CacheFile == "none") {
-    return get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
-  }
-  if (FILE_IsExistingFile(CacheFile)) {
-    FullComplexEnumeration<T, Tint, Tgroup> fce = read_fce_from_file<T,Tint,Tgroup>(CacheFile);
-    if (is_correct_fce(fce, LinSpa, pco)) {
-      return fce;
-    }
-  }
-  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
-  write_fce_to_file(CacheFile, fce);
-  return fce;
-}
-
-
-
-template <typename T, typename Tint, typename Tgroup>
 void process_A(FullNamelist const &eFull, std::ostream& os) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
