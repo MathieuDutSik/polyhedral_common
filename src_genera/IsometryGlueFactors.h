@@ -903,7 +903,8 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
           N = LCMpair(N, D);
         }
         for (auto const &[G, P] :
-             HermitianPieces<T, Tint>(f.herm_d, f.multiplicity, N, os)) {
+             HermitianPieces<T, Tint, Tgroup>(f.herm_d, f.multiplicity, N,
+                                              os)) {
           MyMatrix<T> g = P.transpose();
           std::vector<MyMatrix<T>> gens;
           for (int64_t e : f.powers) {

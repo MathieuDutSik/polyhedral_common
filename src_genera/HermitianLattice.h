@@ -4,14 +4,18 @@
 
 // clang-format off
 #include "HermitianGenus.h"
+#include "IsotypicPieces.h"
 #include "GenusSymbol.h"
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixPolynomial.h"
 #include "ClassicLLL.h"
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <map>
+#include <numeric>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -253,30 +257,30 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
 
 /*
   Representatives of the elements of B / S, B and S lattices (bases as
-  rows, rational) with S in B.
+  rows, rational) with S in B, given in turn to f until it returns true.
  */
-template <typename T, typename Tint>
-std::vector<MyVector<T>> HermQuotientReps(MyMatrix<T> const &B,
-                                          MyMatrix<T> const &S) {
+template <typename T, typename Tint, typename F>
+void HermQuotientRepsForEach(MyMatrix<T> const &B, MyMatrix<T> const &S,
+                             F const &f) {
   int n = B.rows();
   MyMatrix<T> C = S * Inverse(B);
   MyMatrix<Tint> C_i = UniversalMatrixConversion<Tint, T>(C);
   ResultSmithNormalForm<Tint> snf = SmithNormalForm(C_i);
   MyMatrix<Tint> D = snf.ROW * C_i * snf.COL;
   MyMatrix<T> Bp = Inverse(UniversalMatrixConversion<T, Tint>(snf.COL)) * B;
-  // the orders of the cyclic factors, enumerated so bounded in size
+  // the orders of the cyclic factors (the enumeration may stop early, so
+  // only bounded to fit the counters)
   std::vector<size_t> ord;
   Tint total(1);
   for (int i = 0; i < n; i++) {
     Tint o = T_abs(D(i, i));
     total *= o;
-    if (total > Tint(static_cast<long>(1) << 24)) {
+    if (total > Tint(static_cast<long>(1) << 62)) {
       std::cerr << "HERM_LATTICE: the quotient is too large to enumerate\n";
       throw TerminalException{1};
     }
     ord.push_back(UniversalScalarConversion<size_t, Tint>(o));
   }
-  std::vector<MyVector<T>> res;
   std::vector<size_t> c(n, 0);
   while (true) {
     MyVector<T> v = ZeroVector<T>(B.cols());
@@ -287,7 +291,9 @@ std::vector<MyVector<T>> HermQuotientReps(MyMatrix<T> const &B,
         }
       }
     }
-    res.push_back(v);
+    if (f(v)) {
+      return;
+    }
     int i = 0;
     while (i < n) {
       c[i]++;
@@ -301,7 +307,6 @@ std::vector<MyVector<T>> HermQuotientReps(MyMatrix<T> const &B,
       break;
     }
   }
-  return res;
 }
 
 
@@ -387,6 +392,24 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
     }
     return ok && first_only;
   };
+  // L + O_E v (v in L^#) is even exactly when q(v) is even and the
+  // b(v, sigma^k v), k < phi, are integers: the b(v, sigma^k v) for the
+  // other k are integral combinations of these, and q(lambda v) for lambda
+  // in O_E is then even
+  auto over_even = [&](MyVector<T> const &v) -> bool {
+    MyVector<T> Gv = G * v;
+    if (!IsInteger(v.dot(Gv) / T(2))) {
+      return false;
+    }
+    MyVector<T> w = v;
+    for (int k = 1; k < phi; k++) {
+      w = P.transpose() * w;
+      if (!IsInteger(w.dot(Gv))) {
+        return false;
+      }
+    }
+    return true;
+  };
   for (auto const &cut : parts) {
     if (over) {
       // B = {x in L^# : x U in L, x cut in L}, in the coordinates of L
@@ -395,11 +418,34 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
         As.push_back(cut);
       }
       MyMatrix<T> B = HermIntegralPreimage<T, Tint>(Ginv, As);
-      for (auto const &v : HermQuotientReps<T, Tint>(B, Id)) {
-        if (v.isZero()) {
+      // B / L is a vector space over O_E / P; when L + O_E v = B for one v
+      // not in L it has dimension one, and every such v gives B
+      bool cyclic = false;
+      for (int i = 0; i < B.rows() && !cyclic; i++) {
+        MyVector<T> v = GetMatrixRow(B, i);
+        if (IsIntegralVector(v)) {
           continue;
         }
-        if (keep_if_even(GetZbasis(orbit_rows(Id, v)))) {
+        MyMatrix<T> W = GetZbasis(orbit_rows(Id, v));
+        if (T_abs(DeterminantMat(W)) != T_abs(DeterminantMat(B))) {
+          break;
+        }
+        cyclic = true;
+        if (over_even(v) && keep_if_even(W)) {
+          return res;
+        }
+      }
+      if (!cyclic) {
+        bool stop = false;
+        HermQuotientRepsForEach<T, Tint>(
+            B, Id, [&](MyVector<T> const &v) -> bool {
+              if (v.isZero() || !over_even(v)) {
+                return false;
+              }
+              stop = keep_if_even(GetZbasis(orbit_rows(Id, v)));
+              return stop;
+            });
+        if (stop) {
           return res;
         }
       }
@@ -413,16 +459,20 @@ HermNeighbors(MyMatrix<T> const &G, MyMatrix<T> const &P, int64_t d,
       }
       MyMatrix<T> B = HermIntegralPreimage<T, Tint>(
           MyMatrix<T>(Ginv * Inverse(pc.U)), As);
-      for (auto const &w : HermQuotientReps<T, Tint>(B, Ginv)) {
-        if (w.isZero()) {
-          continue;
-        }
-        MyMatrix<T> Wd = GetZbasis(orbit_rows(Ginv, w));
-        // the dual of the lattice of basis Wd: (Wd G Wd^T)^-1 Wd
-        if (keep_if_even(GetZbasis(MyMatrix<T>(
-                Inverse(MyMatrix<T>(Wd * G * Wd.transpose())) * Wd)))) {
-          return res;
-        }
+      bool stop = false;
+      HermQuotientRepsForEach<T, Tint>(
+          B, Ginv, [&](MyVector<T> const &w) -> bool {
+            if (w.isZero()) {
+              return false;
+            }
+            MyMatrix<T> Wd = GetZbasis(orbit_rows(Ginv, w));
+            // the dual of the lattice of basis Wd: (Wd G Wd^T)^-1 Wd
+            stop = keep_if_even(GetZbasis(MyMatrix<T>(
+                Inverse(MyMatrix<T>(Wd * G * Wd.transpose())) * Wd)));
+            return stop;
+          });
+      if (stop) {
+        return res;
       }
     }
   }
@@ -489,91 +539,15 @@ HermStandardPair(int64_t d, int b, std::vector<int64_t> const &a) {
 }
 
 /*
-  Starts for the search: the a = c_0 + c_1 t + c_2 t^2 (t = zeta + zeta^-1,
-  |c_i| <= bound, distinct as elements of K_0 of degree phi(d) / 2) that are
-  totally positive (positive at t = 2 cos(2 pi k / d), k prime to d) with a
-  norm N_{K_0/Q}(a) whose primes divide 2 d N: a determinant class -1 at
-  another prime, inert, is no piece's (a piece is unimodular there), so the
-  other a are dropped by the descent anyway. Sorted by norm, at most
-  max_starts of them. They give the hermitian spaces of the determinant
-  classes at the primes of 2 d N.
- */
-inline std::vector<std::vector<int64_t>>
-HermDefaultStarts(int64_t d, int64_t N_small, int64_t bound,
-                  size_t max_starts) {
-  int64_t dn = NormalizeCyclotomicIndex(d);
-  int64_t deg = EulerPhi(dn) / 2;
-  int max_deg = static_cast<int>(std::min<int64_t>(2, deg - 1));
-  std::vector<double> conj;
-  for (int64_t k = 1; 2 * k < dn || (dn <= 2 && k == 1); k++) {
-    if (std::gcd(k, dn) == 1) {
-      conj.push_back(2 * std::cos(2 * M_PI * static_cast<double>(k) /
-                                  static_cast<double>(dn)));
-    }
-  }
-  int64_t rel = 2 * dn * N_small;
-  std::vector<std::pair<int64_t, std::vector<int64_t>>> cand;
-  std::set<std::vector<int64_t>> seen;
-  for (int64_t c0 = 1; c0 <= bound; c0++) {
-    for (int64_t c1 = (max_deg >= 1 ? -bound : 0);
-         c1 <= (max_deg >= 1 ? bound : 0); c1++) {
-      for (int64_t c2 = (max_deg >= 2 ? -bound : 0);
-           c2 <= (max_deg >= 2 ? bound : 0); c2++) {
-        double norm = 1;
-        bool pos = true;
-        for (double t : conj) {
-          double v = static_cast<double>(c0) + static_cast<double>(c1) * t +
-                     static_cast<double>(c2) * t * t;
-          pos = pos && v > 1e-9;
-          norm *= v;
-        }
-        if (!pos) {
-          continue;
-        }
-        int64_t nm = static_cast<int64_t>(std::llround(norm));
-        // the primes of the norm must divide 2 d N
-        bool relevant = true;
-        if (nm > 1) {
-          for (auto const &[p, mult] : FactorsIntMap(nm)) {
-            relevant = relevant && (rel % p == 0);
-          }
-        }
-        if (!relevant) {
-          continue;
-        }
-        std::vector<int64_t> a{c0};
-        if (max_deg >= 1) {
-          a.push_back(c1);
-        }
-        if (max_deg >= 2) {
-          a.push_back(c2);
-        }
-        while (a.size() > 1 && a.back() == 0) {
-          a.pop_back();
-        }
-        if (seen.insert(a).second) {
-          cand.push_back({nm, a});
-        }
-      }
-    }
-  }
-  std::sort(cand.begin(), cand.end());
-  std::vector<std::vector<int64_t>> res;
-  for (auto const &[nm, a] : cand) {
-    if (res.size() < max_starts) {
-      res.push_back(a);
-    }
-  }
-  return res;
-}
-
-
-/*
-  The pieces: one pair (L, sigma) per invariant (so per hermitian genus,
-  see above) of rank b over O_E, even, with det L dividing N, in the
-  hermitian spaces of the standard pairs of the starts a (forms diag(1,
-  ..., 1, a)). One pair per invariant is enough: the neighbors of the pairs
-  of a genus have the same invariants, locally at the prime of the step.
+  The pieces: the pairs (L, sigma) of rank b over O_E, even, with det L
+  dividing N, in the hermitian spaces of the standard pairs of the starts a
+  (forms diag(1, ..., 1, a)), one per class (the canonical form of the
+  pair): the search walks classes, as the neighbors of isometric pairs are
+  isometric, so that no genus is missed, whether or not the invariant
+  (HermitianPairInvariant) separates the genera; it is only counted for
+  the report (several classes may share a genus, and so an invariant).
+  The starts must meet every hermitian space that contains a piece
+  (HermHermiteStarts).
   - At a prime l not dividing N the pieces are maximal even lattices
     locally (det prime to l), and these form one local genus in a given
     space: any chain of overlattice neighbors at l ends there. Done
@@ -585,11 +559,12 @@ HermDefaultStarts(int64_t d, int64_t N_small, int64_t bound,
     dividing N once below it: a search by neighbors both ways, among the
     pairs of determinant dividing N, after a greedy descent to it.
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>>
-HermitianPiecesSearch(int64_t d, int b, Tint const &N,
-                      std::vector<std::vector<int64_t>> const &starts,
-                      std::ostream &os) {
+HermitianPiecesSearch(
+    int64_t d, int b, Tint const &N,
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &starts,
+    std::ostream &os) {
   using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
   auto det_of = [](MyMatrix<T> const &G) -> Tint {
     return UniversalScalarConversion<Tint, T>(T_abs(DeterminantMat(G)));
@@ -629,26 +604,32 @@ HermitianPiecesSearch(int64_t d, int b, Tint const &N,
       }
     }
   };
-  std::map<std::string, Tpair> visited;
+  // the classes, by the canonical form of the pair (the Gram matrix and
+  // the form of sigma)
+  LatticeMethodChoice choice = DefaultPairMethods().canonical;
+  auto class_key = [&](Tpair const &pr) -> std::vector<MyMatrix<T>> {
+    return PairCanonicalForms<T, Tint, Tgroup>(
+        pr.first, std::vector<MyMatrix<T>>{pr.second}, choice, os);
+  };
+  std::map<std::vector<MyMatrix<T>>, Tpair> visited;
   std::deque<Tpair> queue;
   size_t n_dropped = 0;
   // the invariants are taken after the descent, where the determinants
   // are small (those of the starts are large, and so are the powers of the
   // cuts)
-  for (auto const &a : starts) {
-    std::optional<Tpair> opt = descend(HermStandardPair<T>(d, b, a));
+  for (auto const &start : starts) {
+    std::optional<Tpair> opt = descend(start);
     if (!opt) {
       n_dropped++;
       continue;
     }
-    std::string key = HermitianPairInvariant<T, Tint>(opt->first, opt->second, d);
-    if (visited.emplace(key, *opt).second) {
+    if (visited.emplace(class_key(*opt), *opt).second) {
       queue.push_back(*opt);
     }
   }
   os << "HERM_PIECES: d=" << d << " b=" << b << " N=" << N << ": "
      << starts.size() << " starts, " << n_dropped << " dropped, "
-     << visited.size() << " invariants after the descent\n";
+     << visited.size() << " classes after the descent\n";
   while (!queue.empty()) {
     Tpair pr = queue.front();
     queue.pop_front();
@@ -659,33 +640,347 @@ HermitianPiecesSearch(int64_t d, int b, Tint const &N,
         if (ResInt(N, det_of(nb.first)) != 0) {
           continue;
         }
-        std::string key =
-            HermitianPairInvariant<T, Tint>(nb.first, nb.second, d);
-        if (visited.emplace(key, nb).second) {
+        if (visited.emplace(class_key(nb), nb).second) {
           queue.push_back(nb);
         }
       }
     }
   }
   std::vector<Tpair> res;
+  std::set<std::string> invariants;
   for (auto const &[key, pr] : visited) {
     res.push_back(pr);
+    invariants.insert(HermitianPairInvariant<T, Tint>(pr.first, pr.second, d));
   }
-  os << "HERM_PIECES: " << res.size() << " pieces\n";
+  os << "HERM_PIECES: " << res.size() << " classes, " << invariants.size()
+     << " invariants\n";
   return res;
 }
 
 /*
-  The pieces of rank b over Z[zeta_d] with even trace lattice of
-  determinant dividing N, from the default starts (coefficients up to 4,
-  at most 40 of them, enough in all the tests).
+  Starts meeting every hermitian space of a piece. Let X be a piece: rank
+  b over O_E, trace form q even of determinant D <= N, rank R = b phi
+  over Z, with successive minima lambda_1 <= ... <= lambda_R (values of q).
+  Among the first (i - 1) phi + 1 of the vectors realising them one lies
+  outside the E-span of i - 1 others, so X contains E-independent y_1,
+  ..., y_b with q(y_i) <= lambda_{(i - 1) phi + 1}, and by Minkowski's
+  second theorem prod_i q(y_i)^phi <= prod_j lambda_j <= gamma_R^R D. Let
+  H = (h(y_i, y_j)) and delta = det H, totally positive in K_0. At each
+  embedding sigma of E, Hadamard gives sigma(delta) <= prod_i sigma(h(y_i,
+  y_i)), so Tr_{E/Q}(delta) <= prod_i Tr_{E/Q}(h(y_i, y_i)) = prod_i q(y_i)
+  <= (gamma_R^R D)^{1/phi}. As q is integral, h(X, X) is in the inverse
+  different D_E^{-1}, so delta is in D_E^{-b} cap K_0. By Landherr's
+  theorem (a definite hermitian space over E / K_0 is determined by its
+  rank and its determinant modulo the norms) the space of X is that of
+  diag(1, ..., 1, delta). So the starts: the delta of D_E^{-b} cap K_0,
+  totally positive, of trace at most (gamma_R^R N)^{1/phi}; the twist of
+  delta s^2 (s a positive integer, so the same class, making it integral
+  and even) raised to a maximal even lattice of its space; one per class
+  of these, summed with b - 1 copies of O_E (h = 1). From any lattice of
+  a space the search reaches every genus of the space with determinant
+  dividing N. No unit or class group of K_0 enters.
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
+std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>>
+HermHermiteStarts(int64_t d, int b, Tint const &N, std::ostream &os) {
+  using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
+  int64_t dn = NormalizeCyclotomicIndex(d);
+  int phi = static_cast<int>(EulerPhi(dn));
+  Tpair unit = HermStandardPair<T>(d, 1, std::vector<int64_t>{1});
+  MyMatrix<T> const &A = unit.first;
+  MyMatrix<T> const &Z = unit.second;
+  // E in the basis zeta^k (row coordinates): the multiplication by zeta,
+  // the traces Tr_{E/Q}(zeta^j)
+  std::vector<int64_t> cyc = CyclotomicPolynomial(static_cast<int>(dn));
+  MyMatrix<T> Mz = ZeroMatrix<T>(phi, phi);
+  for (int k = 0; k + 1 < phi; k++) {
+    Mz(k, k + 1) = 1;
+  }
+  for (int k = 0; k < phi; k++) {
+    Mz(phi - 1, k) = T(static_cast<long>(-cyc[k]));
+  }
+  std::vector<T> trace_table(dn);
+  for (int64_t j = 0; j < dn; j++) {
+    trace_table[j] = T(static_cast<long>(RamanujanSum(dn, j)));
+  }
+  auto trace_zeta = [&](int64_t j) -> T {
+    return trace_table[((j % dn) + dn) % dn];
+  };
+  // the real embeddings of K_0: zeta -> exp(2 i pi k / dn), k prime to dn
+  std::vector<std::vector<double>> cosines;
+  for (int64_t k = 1; 2 * k <= dn; k++) {
+    if (std::gcd(k, dn) == 1) {
+      std::vector<double> row(phi);
+      for (int j = 0; j < phi; j++) {
+        row[j] = std::cos(2 * M_PI * static_cast<double>(k * j) /
+                          static_cast<double>(dn));
+      }
+      cosines.push_back(row);
+    }
+  }
+  // the multiplication by x = sum_k c_k zeta^k, on the row coordinates
+  auto mult_matrix = [&](MyVector<T> const &c) -> MyMatrix<T> {
+    MyMatrix<T> M = ZeroMatrix<T>(phi, phi);
+    MyMatrix<T> P = IdentityMat<T>(phi);
+    for (int k = 0; k < phi; k++) {
+      M += c(k) * P;
+      P = P * Mz;
+    }
+    return M;
+  };
+  // D_E^{-1} = {x : Tr(x zeta^l) integral}, then D_E^{-b} as products
+  MyMatrix<T> Tm(phi, phi);
+  for (int k = 0; k < phi; k++) {
+    for (int l = 0; l < phi; l++) {
+      Tm(k, l) = trace_zeta(k + l);
+    }
+  }
+  MyMatrix<T> Dinv = Inverse(Tm);
+  MyMatrix<T> I = Dinv;
+  for (int e = 1; e < b; e++) {
+    MyMatrix<T> Gen(I.rows() * phi, phi);
+    int r = 0;
+    for (int u = 0; u < I.rows(); u++) {
+      for (int v = 0; v < phi; v++) {
+        MyVector<T> y = GetMatrixRow(Dinv, v);
+        MyVector<T> x = GetMatrixRow(I, u);
+        MyVector<T> xy = mult_matrix(y).transpose() * x;
+        for (int w = 0; w < phi; w++) {
+          Gen(r, w) = xy(w);
+        }
+        r++;
+      }
+    }
+    I = GetZbasis(Gen);
+  }
+  // the intersection with K_0: x fixed by zeta -> zeta^-1
+  MyMatrix<T> Cj(phi, phi);
+  {
+    MyMatrix<T> Mzinv = Inverse(Mz);
+    MyMatrix<T> P = IdentityMat<T>(phi);
+    for (int k = 0; k < phi; k++) {
+      for (int w = 0; w < phi; w++) {
+        Cj(k, w) = P(0, w);
+      }
+      P = P * Mzinv;
+    }
+  }
+  MyMatrix<T> Kb;
+  {
+    MyMatrix<T> Eq = I * (Cj - IdentityMat<T>(phi));
+    MyMatrix<Tint> Eq_i =
+        UniversalMatrixConversion<Tint, T>(RemoveFractionMatrix(Eq));
+    MyMatrix<T> U = UniversalMatrixConversion<T, Tint>(NullspaceIntMat(Eq_i));
+    Kb = U * I;
+  }
+  int m = Kb.rows();
+  // the bound
+  int R = b * phi;
+  double bound_tr = std::exp(
+      (std::log(HermiteConstantPower(R)) +
+       std::log(UniversalScalarConversion<double, Tint>(N))) /
+      phi);
+  T Btr = UniversalScalarConversion<T, int64_t>(
+      static_cast<int64_t>(std::ceil(bound_tr * (1 + 1e-9))) + 1);
+  T bound2 = Btr * Btr;
+  // Tr_{E/Q} on the coordinates, and the form Tr(x y) on Kb
+  MyVector<T> tvec(phi);
+  for (int k = 0; k < phi; k++) {
+    tvec(k) = trace_zeta(k);
+  }
+  auto trace_of = [&](MyVector<T> const &c) -> T { return c.dot(tvec); };
+  auto form_of = [&](MyMatrix<T> const &basis) -> MyMatrix<T> {
+    int k = basis.rows();
+    MyMatrix<T> F(k, k);
+    for (int u = 0; u < k; u++) {
+      MyMatrix<T> Mu = mult_matrix(GetMatrixRow(basis, u));
+      for (int v = 0; v < k; v++) {
+        MyVector<T> prod = Mu.transpose() * GetMatrixRow(basis, v);
+        F(u, v) = trace_of(prod);
+      }
+    }
+    return F;
+  };
+  {
+    LLLreduction<T, Tint> red = LLLreducedBasis<T, Tint>(form_of(Kb), os);
+    Kb = UniversalMatrixConversion<T, Tint>(red.Pmat) * Kb;
+  }
+  MyMatrix<T> Q = form_of(Kb);
+  // Fincke-Pohst for Tr(delta^2) <= Btr^2 (the conjugates of delta are
+  // positive): Q(v) = sum_i qd_i (v_i + sum_{j > i} mu_ij v_j)^2, in doubles
+  // with a margin for the pruning only, the conditions checked exactly on
+  // the leaves
+  std::vector<double> qd(m);
+  std::vector<std::vector<double>> mu(m, std::vector<double>(m, 0));
+  {
+    std::vector<std::vector<double>> a(m, std::vector<double>(m));
+    for (int u = 0; u < m; u++) {
+      for (int v = 0; v < m; v++) {
+        a[u][v] = UniversalScalarConversion<double, T>(Q(u, v));
+      }
+    }
+    for (int u = 0; u < m; u++) {
+      qd[u] = a[u][u];
+      for (int v = u + 1; v < m; v++) {
+        mu[u][v] = a[u][v] / qd[u];
+      }
+      for (int v = u + 1; v < m; v++) {
+        for (int w = u + 1; w < m; w++) {
+          a[v][w] -= mu[u][v] * qd[u] * mu[u][w];
+        }
+      }
+    }
+  }
+  double bound2_d = UniversalScalarConversion<double, T>(bound2);
+  double margin = 1e-6 * (1 + bound2_d);
+  // the twist of delta: Tr(delta zeta^(k - l)), scaled by s^2 to be
+  // integral and even
+  auto twist_of = [&](MyVector<T> const &c) -> MyMatrix<T> {
+    MyMatrix<T> G(phi, phi);
+    for (int k = 0; k < phi; k++) {
+      for (int l = 0; l < phi; l++) {
+        T x(0);
+        for (int j = 0; j < phi; j++) {
+          x += c(j) * trace_zeta(j + k - l);
+        }
+        G(k, l) = x;
+      }
+    }
+    for (int64_t sv = 1;; sv++) {
+      T s2 = ScalarFromInt64<T>(sv * sv);
+      MyMatrix<T> Gs = s2 * G;
+      bool ok = IsIntegralMatrix(Gs);
+      for (int k = 0; ok && k < phi; k++) {
+        ok = IsInteger(Gs(k, k) / T(2));
+      }
+      if (ok) {
+        return Gs;
+      }
+    }
+  };
+  auto det_of = [](MyMatrix<T> const &G) -> Tint {
+    return UniversalScalarConversion<Tint, T>(T_abs(DeterminantMat(G)));
+  };
+  // up to a maximal even lattice, by steps up
+  auto ascend = [&](Tpair pr) -> Tpair {
+    while (true) {
+      Tint det = det_of(pr.first);
+      bool moved = false;
+      if (det > 1) {
+        for (auto const &[l_i, mult] : FactorsIntMap(det)) {
+          int64_t l = UniversalScalarConversion<int64_t, Tint>(l_i);
+          std::vector<Tpair> nbs = HermNeighbors<T, Tint>(
+              pr.first, pr.second, d, l, true, false, true);
+          if (!nbs.empty()) {
+            pr = nbs[0];
+            moved = true;
+            break;
+          }
+        }
+      }
+      if (!moved) {
+        return pr;
+      }
+    }
+  };
+  LatticeMethodChoice choice = DefaultPairMethods().canonical;
+  auto class_key = [&](Tpair const &pr) -> std::vector<MyMatrix<T>> {
+    return PairCanonicalForms<T, Tint, Tgroup>(
+        pr.first, std::vector<MyMatrix<T>>{pr.second}, choice, os);
+  };
+  std::map<std::vector<MyMatrix<T>>, Tpair> rank_one;
+  std::set<std::vector<MyMatrix<T>>> seen_twists;
+  size_t n_delta = 0;
+  std::vector<int64_t> v(m);
+  std::function<void(int, double)> rec = [&](int i, double rest) -> void {
+    if (i < 0) {
+      MyVector<T> c = ZeroVector<T>(phi);
+      for (int u = 0; u < m; u++) {
+        if (v[u] != 0) {
+          c += ScalarFromInt64<T>(v[u]) * GetMatrixRow(Kb, u);
+        }
+      }
+      T tr = trace_of(c);
+      if (tr <= 0 || tr > Btr) {
+        return;
+      }
+      // totally positive: screened in doubles, then exactly
+      std::vector<double> cd(phi);
+      for (int j = 0; j < phi; j++) {
+        cd[j] = UniversalScalarConversion<double, T>(c(j));
+      }
+      for (auto const &row : cosines) {
+        double x = 0;
+        for (int j = 0; j < phi; j++) {
+          x += cd[j] * row[j];
+        }
+        if (x < -1e-6) {
+          return;
+        }
+      }
+      MyMatrix<T> G = twist_of(c);
+      if (!IsPositiveDefinite(G, std::cerr)) {
+        return;
+      }
+      n_delta++;
+      // the twists of delta and delta u u-bar, u a unit, are isometric
+      if (seen_twists.insert(class_key(Tpair{G, Z})).second) {
+        Tpair top = ascend(Tpair{G, Z});
+        rank_one.emplace(class_key(top), top);
+      }
+      return;
+    }
+    double cc = 0;
+    for (int w = i + 1; w < m; w++) {
+      cc += mu[i][w] * static_cast<double>(v[w]);
+    }
+    double r = std::sqrt(std::max(0.0, (rest + margin) / qd[i]));
+    int64_t lo = static_cast<int64_t>(std::ceil(-cc - r - 1e-9));
+    int64_t hi = static_cast<int64_t>(std::floor(-cc + r + 1e-9));
+    for (int64_t x = lo; x <= hi; x++) {
+      double y = static_cast<double>(x) + cc;
+      double used = qd[i] * y * y;
+      if (used > rest + margin) {
+        continue;
+      }
+      v[i] = x;
+      rec(i - 1, rest - used);
+    }
+  };
+  rec(m - 1, bound2_d);
+  // the starts: b - 1 copies of O_E, and the rank one lattice
+  std::vector<Tpair> starts;
+  int n = b * phi;
+  for (auto const &[key, top] : rank_one) {
+    MyMatrix<T> G = ZeroMatrix<T>(n, n);
+    MyMatrix<T> P = ZeroMatrix<T>(n, n);
+    for (int u = 0; u < b; u++) {
+      MyMatrix<T> const &Gu = (u + 1 < b) ? A : top.first;
+      MyMatrix<T> const &Pu = (u + 1 < b) ? Z : top.second;
+      for (int r = 0; r < phi; r++) {
+        for (int c = 0; c < phi; c++) {
+          G(u * phi + r, u * phi + c) = Gu(r, c);
+          P(u * phi + r, u * phi + c) = Pu(r, c);
+        }
+      }
+    }
+    starts.push_back({G, P});
+  }
+  os << "HERM_PIECES: Hermite starts, trace bound " << Btr << ", " << n_delta
+     << " determinants, " << seen_twists.size() << " classes of twists, "
+     << starts.size() << " rank one maximal classes\n";
+  return starts;
+}
+
+/*
+  The pieces of rank b over Z[zeta_d] with even trace lattice of
+  determinant dividing N: the search from the Hermite starts, complete.
+ */
+template <typename T, typename Tint, typename Tgroup>
 std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>>
 HermitianPieces(int64_t d, int b, Tint const &N, std::ostream &os) {
-  int64_t N_small = UniversalScalarConversion<int64_t, Tint>(N);
-  return HermitianPiecesSearch<T, Tint>(
-      d, b, N, HermDefaultStarts(d, N_small, 4, 40), os);
+  return HermitianPiecesSearch<T, Tint, Tgroup>(
+      d, b, N, HermHermiteStarts<T, Tint, Tgroup>(d, b, N, os), os);
 }
 
 // clang-format off

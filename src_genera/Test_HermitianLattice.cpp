@@ -1,6 +1,8 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Group.h"
+#include "Permutation.h"
 #include "HermitianLattice.h"
 #include <set>
 #include <string>
@@ -16,6 +18,9 @@
 
 using T = mpq_class;
 using Tint = mpz_class;
+using Tidx = uint32_t;
+using Telt = permutalib::SingleSidedPerm<Tidx>;
+using Tgroup = permutalib::Group<Telt, Tint>;
 
 int main(int argc, char *argv[]) {
   try {
@@ -27,7 +32,7 @@ int main(int argc, char *argv[]) {
       int b = std::stoi(argv[4]);
       Tint N(argv[5]);
       std::set<std::string> ours;
-      for (auto const &pr : HermitianPieces<T, Tint>(d, b, N, std::cerr)) {
+      for (auto const &pr : HermitianPieces<T, Tint, Tgroup>(d, b, N, std::cerr)) {
         ours.insert(HermitianPairInvariant<T, Tint>(pr.first, pr.second, d));
       }
       size_t n_missing = 0, n_file = 0;

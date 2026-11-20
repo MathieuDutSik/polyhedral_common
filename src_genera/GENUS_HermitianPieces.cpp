@@ -1,6 +1,8 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "Group.h"
+#include "Permutation.h"
 #include "HermitianLattice.h"
 #include <fstream>
 #include <sstream>
@@ -23,10 +25,13 @@
 
 using T = mpq_class;
 using Tint = mpz_class;
+using Tidx = uint32_t;
+using Telt = permutalib::SingleSidedPerm<Tidx>;
+using Tgroup = permutalib::Group<Telt, Tint>;
 
 void WritePieces(int64_t d, int b, Tint const &N, std::string const &out) {
   std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> pieces =
-      HermitianPieces<T, Tint>(d, b, N, std::cerr);
+      HermitianPieces<T, Tint, Tgroup>(d, b, N, std::cerr);
   std::ofstream os(out);
   os << 2 * pieces.size() << "\n";
   for (auto const &[G, P] : pieces) {
