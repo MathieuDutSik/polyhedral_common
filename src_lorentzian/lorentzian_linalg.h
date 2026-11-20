@@ -1010,39 +1010,6 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(
   return ListGens;
 }
 
-template <typename T>
-bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
-  int n = M.rows();
-  auto is_identity = [&](MyMatrix<T> const &A) -> bool {
-    for (int i = 0; i < n; i++)
-      for (int j = 0; j < n; j++) {
-        if (i == j && A(i, j) != 1)
-          return false;
-        if (i != j && A(i, j) != 0)
-          return false;
-      }
-    return true;
-  };
-  MyMatrix<T> ThePow = M;
-#ifdef DEBUG_LORENTZIAN_LINALG
-  size_t expo = 1;
-#endif
-  for (size_t u = 0; u <= max_finite_order; u++) {
-    // We go a little bit over the needed range
-    if (is_identity(ThePow)) {
-#ifdef DEBUG_LORENTZIAN_LINALG
-      std::cerr << "LORLIN: is_infinite_order expo=" << expo << "\n";
-#endif
-      return true;
-    }
-    ThePow *= M;
-#ifdef DEBUG_LORENTZIAN_LINALG
-    expo++;
-#endif
-  }
-  return false;
-}
-
 template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
   LorentzianFinitenessGroupTester(MyMatrix<T> const &_G, std::ostream &_os)
       : G(_G), os(_os) {
@@ -1072,7 +1039,8 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
 #ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time1;
 #endif
-    bool test = is_infinite_order(eP, max_finite_order);
+    // whether eP is of finite order (crystallographic bound of GL_n(Z))
+    bool test = IntegralMatrixFiniteOrder(eP).has_value();
     if (!test) {
       is_finite = false;
     }

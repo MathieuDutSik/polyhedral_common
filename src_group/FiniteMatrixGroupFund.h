@@ -115,6 +115,37 @@ T max_torsion_order_gl_nz(T const &N) {
   return l_order[len-1];
 }
 
+/*
+  The order of an integral matrix M of GL_n(Z) when it is finite, nullopt
+  otherwise. By the crystallographic restriction a finite order is at most
+  max_torsion_order_gl_nz(n), so the powers are computed up to that bound
+  only. T is the coefficient type of M, a ring or a field.
+ */
+template <typename T>
+std::optional<size_t> IntegralMatrixFiniteOrder(MyMatrix<T> const &M) {
+  int n = M.rows();
+  size_t max_order =
+      static_cast<size_t>(max_torsion_order_gl_nz<int64_t>(int64_t(n)));
+  auto is_identity = [&](MyMatrix<T> const &A) -> bool {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (A(i, j) != ((i == j) ? T(1) : T(0))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  MyMatrix<T> pw = M;
+  for (size_t k = 1; k <= max_order; k++) {
+    if (is_identity(pw)) {
+      return k;
+    }
+    pw = pw * M;
+  }
+  return {};
+}
+
 template<typename T>
 struct FiniteMatrixGroupTest {
 private:

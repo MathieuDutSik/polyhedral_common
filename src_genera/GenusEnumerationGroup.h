@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "GeneraArithmetic.h"
+#include "FiniteMatrixGroupFund.h"
 #include "GenusEnumeration.h"
 #include "LatticeOrbitSplitCanonical.h"
 #include "GroupNeighborModP.h"
@@ -714,18 +715,15 @@ PairCentralizer(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
                                                    os);
 }
 
+// The order of P, finite (IntegralMatrixFiniteOrder: the crystallographic
+// bound of GL_n(Z)).
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
-  int n = P.rows();
-  MyMatrix<Tint> Id = IdentityMat<Tint>(n);
-  MyMatrix<Tint> pw = P;
-  for (int k = 1; k <= 100000; k++) {
-    if (pw == Id) {
-      return k;
-    }
-    pw = pw * P;
+  std::optional<size_t> order = IntegralMatrixFiniteOrder(P);
+  if (!order) {
+    std::cerr << "GENUS_GROUP: the isometry is not of finite order\n";
+    throw TerminalException{1};
   }
-  std::cerr << "GENUS_GROUP: the isometry is not of finite order <= 100000\n";
-  throw TerminalException{1};
+  return static_cast<int>(*order);
 }
 
 /*

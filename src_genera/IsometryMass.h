@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
+#include "FiniteMatrixGroupFund.h"
 #include "MAT_MatrixPolynomial.h"
 #include "LocalDensity.h"
 #include "GenusMass.h"
@@ -1331,18 +1332,15 @@ struct IsometryMassBounds {
   bool allow_image_assumption = false;
 };
 
+// The order of P, finite (IntegralMatrixFiniteOrder: the crystallographic
+// bound of GL_n(Z)).
 template <typename T> int IsometryOrder(MyMatrix<T> const &P) {
-  int n = P.rows();
-  MyMatrix<T> Id = IdentityMat<T>(n);
-  MyMatrix<T> pw = P;
-  for (int k = 1; k <= 100000; k++) {
-    if (pw == Id) {
-      return k;
-    }
-    pw = pw * P;
+  std::optional<size_t> order = IntegralMatrixFiniteOrder(P);
+  if (!order) {
+    std::cerr << "ISOM_MASS: the isometry is not of finite order\n";
+    throw TerminalException{1};
   }
-  std::cerr << "ISOM_MASS: the isometry is not of finite order <= 100000\n";
-  throw TerminalException{1};
+  return static_cast<int>(*order);
 }
 
 /*
