@@ -138,29 +138,32 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       std::cerr << "LowRankMin=" << LowRankMin << " should be between 1 and LowRankMax=" << LowRankMax << "\n";
       throw TerminalException{1};
     }
-    std::vector<LowRankCell<T, Tint>> l_cell =
+    // ll_cell[rank - LowRankMin]: the cells of that rank.
+    std::vector<std::vector<LowRankCell<T, Tint>>> ll_cell =
         get_low_rank_well_rounded_cells<T, Tint, Tgroup>(LinSpa, fce.pctdi.l_perfect, LowRankMin, LowRankMax, os);
     bool compute_stabilizer = FileLowRankNumberOrientableCells != "null";
     if (compute_stabilizer) {
-      for (auto &cell : l_cell) {
-        set_low_rank_cell_stabilizer<T, Tint, Tgroup>(LinSpa, cell, os);
+      for (auto &l_cell : ll_cell) {
+        for (auto &cell : l_cell) {
+          set_low_rank_cell_stabilizer<T, Tint, Tgroup>(LinSpa, cell, os);
+        }
       }
     }
     // The number of cells of every rank satisfying f_select.
     auto write_number = [&](std::string const &file, std::function<bool(LowRankCell<T, Tint> const &)> const &f_select) -> void {
-      std::vector<int> l_number(LowRankMax - LowRankMin + 1, 0);
-      for (auto &cell : l_cell) {
-        if (f_select(cell)) {
-          l_number[cell.rank - LowRankMin]++;
-        }
-      }
       std::ofstream os_out(file);
       os_out << "return [";
-      for (size_t i = 0; i < l_number.size(); i++) {
-        if (i > 0) {
+      for (size_t i_rank = 0; i_rank < ll_cell.size(); i_rank++) {
+        if (i_rank > 0) {
           os_out << ",";
         }
-        os_out << l_number[i];
+        int n_select = 0;
+        for (auto &cell : ll_cell[i_rank]) {
+          if (f_select(cell)) {
+            n_select++;
+          }
+        }
+        os_out << n_select;
       }
       os_out << "];\n";
     };
@@ -173,17 +176,22 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     if (FileLowRankCells != "null") {
       std::ofstream os_out(FileLowRankCells);
       os_out << "return [";
-      for (size_t i_cell = 0; i_cell < l_cell.size(); i_cell++) {
-        if (i_cell > 0) {
-          os_out << ",\n";
+      bool is_first = true;
+      for (size_t i_rank = 0; i_rank < ll_cell.size(); i_rank++) {
+        int rank = LowRankMin + i_rank;
+        for (auto &cell : ll_cell[i_rank]) {
+          if (!is_first) {
+            os_out << ",\n";
+          }
+          is_first = false;
+          os_out << "rec(rank:=" << rank << ", EXT:=";
+          WriteMatrixGAP(os_out, cell.SHV);
+          if (compute_stabilizer) {
+            os_out << ", is_orientable:=" << GAP_logical(cell.is_orientable) << ", ListGen:=";
+            WriteListMatrixGAP(os_out, cell.l_gens);
+          }
+          os_out << ")";
         }
-        os_out << "rec(rank:=" << l_cell[i_cell].rank << ", EXT:=";
-        WriteMatrixGAP(os_out, l_cell[i_cell].SHV);
-        if (compute_stabilizer) {
-          os_out << ", is_orientable:=" << GAP_logical(l_cell[i_cell].is_orientable) << ", ListGen:=";
-          WriteListMatrixGAP(os_out, l_cell[i_cell].l_gens);
-        }
-        os_out << ")";
       }
       os_out << "];\n";
     }

@@ -254,8 +254,6 @@ std::vector<MyMatrix<T>> get_cell_form_multipliers(LinSpaceMatrix<T> const &LinS
 
 template <typename T, typename Tint>
 struct LowRankCell {
-  // The rank of the cone, that is the rank of the q(v) in the T-space.
-  int rank;
   // One vector per pair +-v.
   MyMatrix<Tint> SHV;
   // The form R_M.
@@ -289,7 +287,7 @@ template <typename T, typename Tint>
 LowRankCell<T, Tint> get_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
                                        std::vector<MyMatrix<T>> const &l_mult,
                                        MyMatrix<Tint> const &SHV,
-                                       int const &rank, std::ostream &os) {
+                                       std::ostream &os) {
   int n = LinSpa.n;
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   MyMatrix<T> S = ZeroMatrix<T>(n, n);
@@ -342,7 +340,7 @@ LowRankCell<T, Tint> get_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
   size_t seed = 1729;
   std::optional<MyMatrix<T>> CommonGramMat;
   size_t invariant = LINSPA_Invariant_SHV<T>(seed, LinSpa, R, SHVdisc_T, CommonGramMat, os);
-  return {rank, SHV, std::move(R), mult, std::move(SHVdisc_T), invariant, {}, false};
+  return {SHV, std::move(R), mult, std::move(SHVdisc_T), invariant, {}, false};
 }
 
 /*
@@ -377,8 +375,8 @@ test_equivalence_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
                                LowRankCell<T, Tint> const &cell1,
                                LowRankCell<T, Tint> const &cell2,
                                std::ostream &os) {
-  if (cell1.rank != cell2.rank || cell1.SHV.rows() != cell2.SHV.rows() ||
-      cell1.mult != cell2.mult || cell1.invariant != cell2.invariant) {
+  if (cell1.SHV.rows() != cell2.SHV.rows() || cell1.mult != cell2.mult ||
+      cell1.invariant != cell2.invariant) {
     return {};
   }
   std::optional<MyMatrix<T>> CommonGramMat;
@@ -450,31 +448,34 @@ void set_low_rank_cell_stabilizer(LinSpaceMatrix<T> const &LinSpa,
 
 /*
   The well rounded cells of rank min_rank to max_rank up to the group: the
-  well rounded faces of every perfect domain, reduced by equivalence. The
-  candidates are split into buckets by (rank, number of vectors,
+  well rounded faces of every perfect domain, reduced by equivalence.
+  ll_cell[rank - min_rank] is the list of the cells of that rank. Within a
+  rank, the candidates are split into buckets by (number of vectors,
   multiplier, invariant), so the equivalence is only tested within a
   bucket.
  */
 template <typename T, typename Tint, typename Tgroup>
-std::vector<LowRankCell<T, Tint>> get_low_rank_well_rounded_cells(
+std::vector<std::vector<LowRankCell<T, Tint>>> get_low_rank_well_rounded_cells(
     LinSpaceMatrix<T> const &LinSpa,
     std::vector<PerfectFormInfoForComplex<T, Tint, Tgroup>> const &l_perfect,
     int const &min_rank, int const &max_rank, std::ostream &os) {
   std::vector<MyMatrix<T>> l_mult = get_cell_form_multipliers(LinSpa);
-  std::vector<LowRankCell<T, Tint>> l_cell;
-  std::map<std::tuple<int, int, int, size_t>, std::vector<size_t>> buckets;
+  int n_rank = max_rank - min_rank + 1;
+  std::vector<std::vector<LowRankCell<T, Tint>>> ll_cell(n_rank);
+  std::vector<std::map<std::tuple<int, int, size_t>, std::vector<size_t>>> l_buckets(n_rank);
   for (size_t i_cone = 0; i_cone < l_perfect.size(); i_cone++) {
     PerfectConeLowRankFaces<T, Tint, Tgroup> cf =
         get_cone_low_rank_faces(LinSpa, l_perfect[i_cone], max_rank, os);
-    for (int rank = min_rank; rank <= max_rank; rank++) {
-      for (Face const &f : cf.levels[rank - 1]) {
+    for (int i_rank = 0; i_rank < n_rank; i_rank++) {
+      std::vector<LowRankCell<T, Tint>> &l_cell = ll_cell[i_rank];
+      for (Face const &f : cf.levels[min_rank + i_rank - 1]) {
         MyMatrix<Tint> SHV = cf.get_face_vectors(f);
         if (!is_well_rounded_cell(LinSpa, SHV, os)) {
           continue;
         }
-        LowRankCell<T, Tint> cell = get_low_rank_cell(LinSpa, l_mult, SHV, rank, os);
-        std::tuple<int, int, int, size_t> key{rank, static_cast<int>(SHV.rows()), cell.mult, cell.invariant};
-        std::vector<size_t> &bucket = buckets[key];
+        LowRankCell<T, Tint> cell = get_low_rank_cell(LinSpa, l_mult, SHV, os);
+        std::tuple<int, int, size_t> key{static_cast<int>(SHV.rows()), cell.mult, cell.invariant};
+        std::vector<size_t> &bucket = l_buckets[i_rank][key];
         bool is_new = true;
         for (size_t idx : bucket) {
           std::optional<MyMatrix<T>> opt =
@@ -491,10 +492,17 @@ std::vector<LowRankCell<T, Tint>> get_low_rank_well_rounded_cells(
       }
     }
 #ifdef DEBUG_PERFECT_LOW_DIM
-    os << "PERFLOWDIM: i_cone=" << i_cone << " |l_cell|=" << l_cell.size() << "\n";
+    os << "PERFLOWDIM: i_cone=" << i_cone << " |ll_cell|=[";
+    for (int i_rank = 0; i_rank < n_rank; i_rank++) {
+      if (i_rank > 0) {
+        os << ",";
+      }
+      os << ll_cell[i_rank].size();
+    }
+    os << "]\n";
 #endif
   }
-  return l_cell;
+  return ll_cell;
 }
 
 // clang-format off
