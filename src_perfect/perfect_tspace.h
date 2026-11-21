@@ -557,6 +557,11 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListIntValues["LowRankMin"] = 1;
     ListStringValues["FileLowRankNumberCells"] = "null";
     ListStringValues["FileLowRankCells"] = "null";
+    // The number of orbits of orientable well rounded cells of every rank
+    // (the ones whose stabilizer preserves the orientation). With it, the
+    // representatives of FileLowRankCells also have their orientability and
+    // the generators of their stabilizer.
+    ListStringValues["FileLowRankNumberOrientableCells"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);

@@ -267,6 +267,12 @@ struct LowRankCell {
   MyMatrix<T> SHVdisc_T;
   // The invariant of (R_M, SHVdisc_T), for the splitting into buckets.
   size_t invariant;
+  // Generators of the stabilizer of the cell, acting on the vectors by
+  // v -> v g (set by set_low_rank_cell_stabilizer).
+  std::vector<MyMatrix<Tint>> l_gens;
+  // Whether every element of the stabilizer preserves the orientation of
+  // the cone (set by set_low_rank_cell_stabilizer).
+  bool is_orientable;
 };
 
 template <typename T, typename Tint>
@@ -336,7 +342,7 @@ LowRankCell<T, Tint> get_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
   size_t seed = 1729;
   std::optional<MyMatrix<T>> CommonGramMat;
   size_t invariant = LINSPA_Invariant_SHV<T>(seed, LinSpa, R, SHVdisc_T, CommonGramMat, os);
-  return {rank, SHV, std::move(R), mult, std::move(SHVdisc_T), invariant};
+  return {rank, SHV, std::move(R), mult, std::move(SHVdisc_T), invariant, {}, false};
 }
 
 /*
@@ -397,6 +403,49 @@ test_equivalence_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
   }
 #endif
   return opt;
+}
+
+/*
+  The stabilizer of a cell and its orientability.
+
+  The stabilizer of (R_M, SHVdisc) is that of the cell: an element x with
+  x R_M x^T = R_M acts on the vectors by v -> v x^{-1}, so the generators
+  kept are the g = x^{-1}, in the convention v -> v g of perfect_complex.h.
+  The cell is orientable if every generator preserves the orientation of
+  the span of the q(v) in the T-space (is_face_orientable of
+  perfect_complex.h, which needs the vectors with both signs).
+ */
+template <typename T, typename Tint, typename Tgroup>
+void set_low_rank_cell_stabilizer(LinSpaceMatrix<T> const &LinSpa,
+                                  LowRankCell<T, Tint> &cell,
+                                  std::ostream &os) {
+  std::optional<MyMatrix<T>> CommonGramMat;
+  Result_ComputeStabilizer_SHV<T, Tgroup> result =
+      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, cell.R, cell.SHVdisc_T,
+                                              CommonGramMat, os);
+  std::vector<MyMatrix<T>> l_x =
+      result.get_list_matrix(cell.SHVdisc_T, cell.R, LinSpa, os);
+  MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(cell.SHV);
+  std::vector<MyMatrix<Tint>> l_gens;
+  for (auto &x : l_x) {
+    MyMatrix<T> g_T = Inverse(x);
+#ifdef SANITY_CHECK_PERFECT_LOW_DIM
+    if (!IsIntegralMatrix(g_T)) {
+      std::cerr << "PERFLOWDIM: A stabilizer element should be integral\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+    MyMatrix<T> EXT_img = EXT_T * g_T;
+    if (get_line_set(EXT_img) != get_line_set(EXT_T)) {
+      std::cerr << "PERFLOWDIM: A stabilizer element should preserve the cell\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_gens.push_back(UniversalMatrixConversion<Tint, T>(g_T));
+  }
+  OrientationInfo or_info = get_orientation_info(EXT, LinSpa.ListMat);
+  cell.is_orientable = is_face_orientable(EXT, LinSpa.ListMat, or_info, l_gens);
+  cell.l_gens = std::move(l_gens);
 }
 
 /*
