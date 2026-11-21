@@ -1,0 +1,8 @@
+&DATA
+ arithmetic = "gmp"
+ GenusSymbol = "II{1}^{2}_{II}{2}^{1}_{1}{9}^{-1}{81}^{-1}{7}^{1}{49}^{1}"
+/
+
+&METHOD
+ strategy = "two_plus_jumps"
+/

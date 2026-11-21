@@ -367,9 +367,13 @@ SpinorGenusData GenusSpinorData(GenusSymbol const &s,
     }
   }
   int n = G->rows();
+  // Random vectors of the LLL-reduced G, with coordinates in [-B, B], B
+  // growing with the number of draws: in small rank the vectors of small
+  // coordinates may all miss one of the valuations.
   std::mt19937_64 gen(1);
-  std::uniform_int_distribution<int> dist(-2, 2);
   for (int iter = 0; iter < 1000000; iter++) {
+    int B = 2 + iter / 1000;
+    std::uniform_int_distribution<int> dist(-B, B);
     MyVector<T> x(n);
     for (int i = 0; i < n; i++) {
       x(i) = T(dist(gen));

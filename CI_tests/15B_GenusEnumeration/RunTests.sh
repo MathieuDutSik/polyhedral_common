@@ -66,6 +66,14 @@ run_case I12_odd 3
 # kernels that 5 connects the two spinor genera, and close the mass with
 # the single seed built from the symbol.
 run_case spinor_two 3
+# The same genus with the strategy two_plus_jumps: expansions at
+# 2, and the jump prime computed from the spinor genera.
+run_case spinor_two_jumps 3
+# A genus with four spinor genera (rank 3, det 500094 = 2 3^6 7^3), built
+# from its symbol: no single prime connects it, and two_plus_jumps takes the
+# two jump primes 5 and 11 from the spinor genera and closes the mass from
+# the one seed.
+run_case spinor_four_jumps 38
 
 # A negative case. The same genus at the prime 7, whose neighbour graph
 # leaves out one of the two spinor genera: the program must terminate and

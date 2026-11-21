@@ -629,3 +629,32 @@ invariants only (vectors of norm at most 2, the number of minimal vectors).
 Timings must come from a release build: the `CHOICE_COMPILATION` of the
 environment adds `-DDEBUG -DTIMINGS -DSANITY_CHECK` to every build, which
 slowed the measurements above by up to a factor of 10 before it was noticed.
+
+## src_genera: genera with 8 and 16 spinor genera
+
+The CI (15B, `spinor_four_jumps`) has a genus with s = 4 spinor genera: rank
+3, det 500094 = 2 3^6 7^3, `II{1}^{2}_{II}{2}^{1}_{1}{9}^{-1}{81}^{-1}{7}^{1}{49}^{1}`,
+mass 9, 38 classes in 4 s. Larger s, found by building the even genus
+symbols of rank 3 and 4 from scratch (`EnumerateGenusSymbols` and
+`GenusSpinorData`, 2026-11-20):
+
+* s = 8: rank 3, det 5832000000 = 2^9 3^6 5^6,
+  `II{2}^{1}_{1}{8}^{1}_{1}{32}^{1}_{1}{9}^{-1}{81}^{-1}{25}^{-1}{625}^{-1}`,
+  mass 675 (Sage agrees, and on s = 8), seed diag(162, 1800, 20000); the
+  smallest mass among the 28 genera with s = 8 found for
+  det = 2^a 3^b 5^c 7^e, b, c, e in {0, 3, 6}, a <= 12. Neither iterate nor
+  two_plus_jumps finished in 30 min: the full restriction of the spinor
+  norms at 2, 3 and 5 (rank one Jordan components, scales 1, q^2, q^4)
+  leaves no neighbor at these primes, so every class is expanded at 7 or
+  beyond. Its class number and the comparison of the two strategies are
+  still to be done, with a cap of a few hours.
+* s = 16: none found up to det 8 10^12 in rank 3. It needs a fourth place
+  of fully restricted spinor norms, a factor 7^6 at least, and the mass
+  would be of the order of 10^5.
+
+A large s forces, at some prime q, Jordan components of rank one only, so
+v_q(det) >= n(n-1)/2 at an odd q (Conway-Sloane's criterion), and the
+genera with s > 1 are in rank <= 5 within det <= 2 10^5; their enumeration
+is slow for the same reason. To decide: whether these genera are worth an
+enumeration at all, as tests of two_plus_jumps with three and four jump
+primes.

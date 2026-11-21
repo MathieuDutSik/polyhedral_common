@@ -68,48 +68,84 @@ void ProcessGenus(FullNamelist const &eFull, std::ostream &os) {
   }
   Tmass TotalMass = GenusMass<mpq_class, mpz_class>(GramMass);
   os << "GENUS_Enumerate: the mass of the genus is " << TotalMass << "\n";
+  // The spinor genera of the enumerated genus (GenusSpinor.h). For odd
+  // seeds the enumerated genus is that of the even sublattices, of
+  // determinant 4 det. The rank must be at least 3 for Kneser's theorem.
+  T det_enum = even ? det : T(4) * det;
+  auto is_odd_prime = [](int l) -> bool {
+    for (int f = 3; f * f <= l; f += 2) {
+      if (l % f == 0) {
+        return false;
+      }
+    }
+    return l >= 3 && l % 2 == 1;
+  };
+  std::optional<SpinorGenusData> spinor;
+  if (rank >= 3) {
+    MyMatrix<mpq_class> G_enum = UniversalMatrixConversion<mpq_class, T>(
+        even ? ListSeed[0] : EvenSublatticeGram<T, Tint>(ListSeed[0]));
+    spinor = GenusSpinorData<mpq_class, mpz_class>(
+        GenusSymbolOfGram<mpq_class, mpz_class>(G_enum), G_enum);
+    os << "GENUS_Enumerate: " << spinor->n_spinor_genera()
+       << " spinor genera in the enumerated genus\n";
+  }
   int prime = spec.prime;
   if (spec.strategy == NeighborStrategy::OutPrime && prime == 0) {
-    // For odd seeds the enumerated genus is that of the even sublattices,
-    // of determinant 4 det.
-    T det_enum = even ? det : T(4) * det;
     prime = ChooseNeighborPrime<T>(det_enum);
-    // The spinor genera of the enumerated genus (GenusSpinor.h). When there
-    // are several, the l-neighbour graph of the genus is connected only for
-    // some primes l: the smallest odd one is taken, if there is one, so that
-    // a single seed suffices.
-    if (rank >= 3) {
-      MyMatrix<mpq_class> G_enum = UniversalMatrixConversion<mpq_class, T>(
-          even ? ListSeed[0] : EvenSublatticeGram<T, Tint>(ListSeed[0]));
-      SpinorGenusData spinor = GenusSpinorData<mpq_class, mpz_class>(
-          GenusSymbolOfGram<mpq_class, mpz_class>(G_enum), G_enum);
-      int n_spinor = spinor.n_spinor_genera();
-      os << "GENUS_Enumerate: " << n_spinor
-         << " spinor genera in the enumerated genus\n";
-      if (n_spinor > 1) {
-        std::optional<int> connected;
-        for (int l = 3; l < 1000 && !connected; l += 2) {
-          bool is_prime = true;
-          for (int f = 3; f * f <= l; f += 2) {
-            if (l % f == 0) {
-              is_prime = false;
-            }
-          }
-          if (is_prime && ResInt(det_enum, T(l)) != 0 &&
-              spinor.neighbor_components<mpz_class>(l) == 1) {
-            connected = l;
-          }
+    // When there are several spinor genera, the l-neighbour graph of the
+    // genus is connected only for some primes l: the smallest odd one is
+    // taken, if there is one, so that a single seed suffices.
+    if (spinor && spinor->n_spinor_genera() > 1) {
+      std::optional<int> connected;
+      for (int l = 3; l < 1000 && !connected; l += 2) {
+        if (is_odd_prime(l) && ResInt(det_enum, T(l)) != 0 &&
+            spinor->neighbor_components<mpz_class>(l) == 1) {
+          connected = l;
         }
-        if (connected) {
-          prime = *connected;
-          os << "GENUS_Enumerate: the prime " << prime
-             << " connects them, it is used\n";
-        } else {
-          os << "GENUS_Enumerate: no single prime connects them, use "
-                "iterate or random_walk\n";
+      }
+      if (connected) {
+        prime = *connected;
+        os << "GENUS_Enumerate: the prime " << prime
+           << " connects them, it is used\n";
+      } else {
+        os << "GENUS_Enumerate: no single prime connects them, use "
+              "two_plus_jumps, iterate or random_walk\n";
+      }
+    }
+  }
+  if (spec.strategy == NeighborStrategy::TwoPlusJumps) {
+    // The jump primes: the smallest odd primes not dividing det whose
+    // classes Delta(l) generate the group A of the spinor genera modulo the
+    // improper kernel, chosen greedily (the independent sets form a
+    // matroid, so this minimizes the largest one). Their neighbour graphs
+    // together connect the genus whatever the 2-neighbour graph does. Below
+    // rank 3, the smallest odd prime not dividing det.
+    std::vector<int> jump_primes;
+    if (spinor) {
+      SpinorSubspace span = spinor->kernel();
+      for (int l = 3; span.rank() < spinor->A.dim() && l < 100000; l += 2) {
+        if (is_odd_prime(l) && ResInt(det_enum, T(l)) != 0 &&
+            span.insert(SpinorDelta(spinor->A, mpz_class(l)))) {
+          jump_primes.push_back(l);
         }
       }
     }
+    // With one spinor genus (or below rank 3) any prime not dividing 2 det
+    // connects the genus: the smallest one, needed when 2 divides det since
+    // nothing is known of the 2-neighbour graph then.
+    if (jump_primes.empty()) {
+      int l = 3;
+      while (!is_odd_prime(l) || ResInt(det_enum, T(l)) == 0) {
+        l += 2;
+      }
+      jump_primes.push_back(l);
+    }
+    spec.rw.jump_primes = jump_primes;
+    os << "GENUS_Enumerate: two_plus_jumps, the jump primes are";
+    for (int l : jump_primes) {
+      os << " " << l;
+    }
+    os << "\n";
   }
   GenusEnumerationResult<T, Tgroup> result =
       even ? GenusEnumeration<T, Tint, Tgroup>(

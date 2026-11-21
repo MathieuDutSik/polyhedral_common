@@ -125,7 +125,26 @@
   the largest |Aut| goes first. Deterministic for a given seed, and
   terminating since the second phase is Iterate.
  */
-enum class NeighborStrategy { OutPrime, Iterate, RandomWalk };
+/*
+  TwoPlusJumps: p = 2, the cheapest prime by far, does most of
+  the work, and other primes come in only to reach the classes that the
+  2-neighbor graph does not. Every known class is expanded at 2. When all
+  of them have been and the mass is open, a round of jumps follows: random
+  neighbors of random known classes at the small odd primes up to the
+  largest jump prime, those dividing det included (an admissible neighbor
+  stays in the genus), until one of them is a new class, which is then
+  expanded at 2 in turn. When a whole round of jump_draws draws finds
+  nothing, the next jump prime comes in for full expansions, and then, as a
+  safety net, further primes as in Iterate. The jump primes (jump_primes,
+  computed by GENUS_Enumerate from the spinor genera, see GenusSpinor.h) are
+  the smallest primes not dividing 2 det whose classes generate the group of
+  the spinor genera: their neighbor graphs together are connected on the
+  genus (Kneser), whatever the 2-neighbor graph does, so the full
+  expansions at them complete the enumeration. For an odd det and one
+  spinor genus the 2-neighbor graph is connected and no jump is ever made.
+  Termination and the certificate are those of Iterate.
+ */
+enum class NeighborStrategy { OutPrime, Iterate, RandomWalk, TwoPlusJumps };
 
 /*
   The order of the full expansions at a prime, among the classes not yet
@@ -155,13 +174,18 @@ struct GenusOrderOptions {
   int mixed_aut = 1;
 };
 
-// The parameters of the random walk phase of the RandomWalk strategy.
+// The parameters of the random neighbors: the random walk phase of the
+// RandomWalk strategy, and the jumps of the TwoPlusJumps strategy.
 struct GenusRandomWalkOptions {
   uint64_t seed = 1;
   double hits_factor = 0.25;
   size_t failed_draws_factor = 16;
   int walk_prime_min = 2;
   int walk_prime_max = 2;
+  // TwoPlusJumps: the primes of the full expansions after 2, in increasing
+  // order, and the number of draws of a round of jumps
+  std::vector<int> jump_primes;
+  size_t jump_draws = 100;
 };
 
 /*
@@ -1407,6 +1431,56 @@ void GenusEnumerationIterate(GenusEnumerationState<T, Tint, Tgroup> &state) {
   }
 }
 
+/*
+  A random line mod p for a p-neighbor of the integral Gram matrix G_int: at
+  p = 2 a uniform projective line, most of them giving a neighbor; at an odd
+  prime an isotropic point, by rejection: about p draws of O(n^2) each,
+  nothing next to the canonical form of the neighbor, and exactly uniform
+  over the isotropic points. A form without isotropic point mod p (rank
+  <= 2) gives nothing after 64 p tries.
+ */
+template <typename Tint, typename Tengine>
+std::optional<std::vector<int>>
+GenusRandomNeighborLine(MyMatrix<Tint> const &G_int, int p, Tengine &engine) {
+  int n = G_int.rows();
+  if (p == 2) {
+    return ProjectiveLineOfIndex(
+        n, 2, random_index(engine, NumberProjectiveLines(n, 2)));
+  }
+  std::vector<int64_t> G_mod(n * n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      G_mod[i * n + j] = ResidueModP(G_int(i, j), p);
+    }
+  }
+  int64_t p64 = p;
+  std::vector<int> v(n);
+  for (int i_try = 0; i_try < 64 * p; i_try++) {
+    bool is_zero = true;
+    for (int i = 0; i < n; i++) {
+      v[i] = random_int(engine, 0, p - 1);
+      if (v[i] != 0) {
+        is_zero = false;
+      }
+    }
+    if (is_zero) {
+      continue;
+    }
+    int64_t q = 0;
+    for (int i = 0; i < n; i++) {
+      int64_t row = 0;
+      for (int j = 0; j < n; j++) {
+        row = (row + G_mod[i * n + j] * v[j]) % p64;
+      }
+      q = (q + row * v[i]) % p64;
+    }
+    if (q == 0) {
+      return v;
+    }
+  }
+  return {};
+}
+
 // The smallest b with g < 2^b, for a class with |Aut| = g: the scale of the
 // number of known classes the random walk must hit from that class before
 // it counts as treated.
@@ -1432,7 +1506,6 @@ template <typename T, typename Tint, typename Tgroup>
 void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
                                 GenusRandomWalkOptions const &rw) {
   auto &result = state.result;
-  int n = state.n;
   std::mt19937_64 engine(rw.seed);
   // The primes of the walk. At p = 2 the lines are drawn uniformly and most
   // of them give a neighbor; at an odd prime only about one line in p is
@@ -1456,48 +1529,9 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
               << "2 det\n";
     throw TerminalException{1};
   }
-  size_t n_line_2 = NumberProjectiveLines(n, 2);
-  // A random isotropic point mod p, by rejection: about p draws of O(n^2)
-  // each, nothing next to the canonical form of the neighbor, and exactly
-  // uniform over the isotropic points. A form without isotropic point mod p
-  // (rank <= 2) gives nothing after 64 p tries.
   auto draw_line = [&](MyMatrix<Tint> const &G_int,
                        int p) -> std::optional<std::vector<int>> {
-    if (p == 2) {
-      return ProjectiveLineOfIndex(n, 2, random_index(engine, n_line_2));
-    }
-    std::vector<int64_t> G_mod(n * n);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        G_mod[i * n + j] = ResidueModP(G_int(i, j), p);
-      }
-    }
-    int64_t p64 = p;
-    std::vector<int> v(n);
-    for (int i_try = 0; i_try < 64 * p; i_try++) {
-      bool is_zero = true;
-      for (int i = 0; i < n; i++) {
-        v[i] = random_int(engine, 0, p - 1);
-        if (v[i] != 0) {
-          is_zero = false;
-        }
-      }
-      if (is_zero) {
-        continue;
-      }
-      int64_t q = 0;
-      for (int i = 0; i < n; i++) {
-        int64_t row = 0;
-        for (int j = 0; j < n; j++) {
-          row = (row + G_mod[i * n + j] * v[j]) % p64;
-        }
-        q = (q + row * v[i]) % p64;
-      }
-      if (q == 0) {
-        return v;
-      }
-    }
-    return {};
+    return GenusRandomNeighborLine(G_int, p, engine);
   };
   // The position, among the indices in vec, of the class of largest |Aut|,
   // the first discovered among the ties.
@@ -1623,6 +1657,125 @@ void GenusEnumerationRandomWalk(GenusEnumerationState<T, Tint, Tgroup> &state,
 }
 
 /*
+  The two_plus_jumps schedule: see NeighborStrategy. The primes in play
+  are ListPrimeUsed, 2 first, then the jump primes, then further primes; at
+  each step the first prime with an unexpanded class is worked on, so 2 has
+  priority. When every class is expanded at every prime in play and the mass
+  is open, one round of jumps is made before a new prime comes in, unless
+  no new class has appeared since the last round, which found nothing.
+ */
+template <typename T, typename Tint, typename Tgroup>
+void GenusEnumerationTwoPlusJumps(
+    GenusEnumerationState<T, Tint, Tgroup> &state,
+    GenusRandomWalkOptions const &rw) {
+  auto &result = state.result;
+  std::mt19937_64 engine(rw.seed);
+  // the primes of the jumps: the odd primes up to the largest jump prime
+  int p_max_jump = 3;
+  for (int p : rw.jump_primes) {
+    p_max_jump = std::max(p_max_jump, p);
+  }
+  std::vector<int> jump_draw_primes;
+  for (int p = 3; p <= p_max_jump; p = NextPrimeAfter(p)) {
+    jump_draw_primes.push_back(p);
+  }
+  // the primes of the full expansions, in their order of entry
+  std::vector<int> ListPrimeOrder{2};
+  for (int p : rw.jump_primes) {
+    if (std::find(ListPrimeOrder.begin(), ListPrimeOrder.end(), p) ==
+        ListPrimeOrder.end()) {
+      ListPrimeOrder.push_back(p);
+    }
+  }
+  std::vector<int> &ListPrimeUsed = result.ListPrimeUsed;
+  std::vector<std::vector<bool>> is_expanded;
+  auto bring_in_prime = [&]() -> void {
+    int p_new;
+    if (ListPrimeUsed.size() < ListPrimeOrder.size()) {
+      p_new = ListPrimeOrder[ListPrimeUsed.size()];
+    } else {
+      int p_last = *std::max_element(ListPrimeUsed.begin(), ListPrimeUsed.end());
+      p_new = NextPrimeAfter(p_last);
+    }
+    ListPrimeUsed.push_back(p_new);
+    result.ListNewClassPerPrime.push_back(0);
+    is_expanded.push_back(std::vector<bool>(state.ListGramWork.size(), false));
+#ifdef DEBUG_GENUS_ENUMERATION
+    state.os << "GENUS: two_plus_jumps brings in prime " << p_new << "\n";
+#endif
+  };
+  // A round of jumps: whether it found a new class.
+  auto jump_round = [&]() -> bool {
+    result.n_walk++;
+    for (size_t i_draw = 0; i_draw < rw.jump_draws; i_draw++) {
+      size_t pos = random_index(engine, state.ListGramWork.size());
+      int p = jump_draw_primes[random_index(engine, jump_draw_primes.size())];
+      MyMatrix<Tint> G_int =
+          UniversalMatrixConversion<Tint, T>(state.ListGramWork[pos]);
+      std::optional<std::vector<int>> opt_line =
+          GenusRandomNeighborLine(G_int, p, engine);
+      if (!opt_line) {
+        continue;
+      }
+      std::optional<MyMatrix<T>> opt =
+          GenusNeighbor<T, Tint>(G_int, *opt_line, p, state.os);
+      if (!opt) {
+        continue;
+      }
+      result.n_neighbor_random++;
+      if (state.insert(*opt)) {
+        result.n_new_random++;
+#ifdef DEBUG_GENUS_ENUMERATION
+        state.os << "GENUS: a jump at p=" << p << " from lattice " << (pos + 1)
+                 << " found a new class after " << (i_draw + 1) << " draws\n";
+#endif
+        return true;
+      }
+    }
+    return false;
+  };
+  bring_in_prime();
+  bool jump_due = true;
+  while (!state.is_finished()) {
+    if (result.accumulated_mass > state.TotalMass) {
+      break;
+    }
+    size_t n_class = state.ListGramWork.size();
+    size_t i_work = ListPrimeUsed.size();
+    std::vector<size_t> unexpanded;
+    for (size_t i = 0; i < ListPrimeUsed.size(); i++) {
+      is_expanded[i].resize(n_class, false);
+      for (size_t pos = 0; pos < n_class; pos++) {
+        if (!is_expanded[i][pos]) {
+          unexpanded.push_back(pos);
+        }
+      }
+      if (!unexpanded.empty()) {
+        i_work = i;
+        break;
+      }
+    }
+    if (i_work == ListPrimeUsed.size()) {
+      // every class expanded at every prime in play
+      if (jump_due) {
+        jump_due = false;
+        if (jump_round()) {
+          jump_due = true;
+          continue;
+        }
+      }
+      bring_in_prime();
+      continue;
+    }
+    int p = ListPrimeUsed[i_work];
+    size_t pos = state.pick(unexpanded, p, i_work);
+    is_expanded[i_work][pos] = true;
+    state.expand_at(pos, p, i_work,
+                    [&](size_t) -> void { jump_due = true; });
+  }
+}
+
+/*
   The enumeration itself. Starts from the seed lattices, forms p-neighbors
   on the schedule of the strategy, keeps the new ones (recognized either by
   canonical form or by the isomorphism strategy), and stops when the
@@ -1655,6 +1808,8 @@ GenusEnumeration(std::vector<MyMatrix<T>> const &ListSeed,
     GenusEnumerationOutPrime(state, prime);
   } else if (strategy == NeighborStrategy::Iterate) {
     GenusEnumerationIterate(state);
+  } else if (strategy == NeighborStrategy::TwoPlusJumps) {
+    GenusEnumerationTwoPlusJumps(state, rw);
   } else {
     GenusEnumerationRandomWalk(state, rw);
   }
@@ -1720,6 +1875,10 @@ which bring in further primes, reach them from the one seed";
     std::map<std::string, std::string> ListBoolValues_doc;
     ListStringValues_doc["strategy"] = "Default: out_prime\n\
 The schedule of the neighbor steps, see NeighborStrategy:\n\
+two_plus_jumps: full expansions at 2; when they are exhausted and the mass\n\
+  is open, random neighbors at small odd primes (jumps) to reach the other\n\
+  components of the 2-neighbor graph, and full expansions at the jump\n\
+  primes, computed from the spinor genera, when the jumps find nothing\n\
 out_prime: one prime, the given one or the smallest not dividing det\n\
 iterate: the primes 2, 3, 5, ... in order, including those dividing det,\n\
   cheapest first, until the mass closes\n\
@@ -1728,6 +1887,9 @@ random_walk: every new class is first treated by random neighbors (the\n\
     ListIntValues_doc["prime"] = "Default: 0\n\
 The prime of out_prime, 0 for the smallest prime not dividing det. Ignored\n\
 by iterate and random_walk";
+    ListIntValues_doc["jump_draws"] = "Default: 100\n\
+With two_plus_jumps, the number of random neighbors of a round of jumps\n\
+before the next jump prime comes in for full expansions";
     ListStringValues_doc["recognition"] = "Default: canonical\n\
 How a known class is recognized, see GenusMethods: canonical (by the\n\
 canonical form of canonical_method), isomorphism (by the isometry test\n\
@@ -1843,11 +2005,20 @@ inline GenusSpec ReadGenusSpec(FullNamelist const &eFull) {
     spec.strategy = NeighborStrategy::Iterate;
   } else if (strat == "random_walk") {
     spec.strategy = NeighborStrategy::RandomWalk;
+  } else if (strat == "two_plus_jumps") {
+    spec.strategy = NeighborStrategy::TwoPlusJumps;
   } else {
     std::cerr << "GENUS: unrecognized strategy \"" << strat
-              << "\". Allowed: out_prime, iterate, random_walk\n";
+              << "\". Allowed: two_plus_jumps, out_prime, iterate, "
+                 "random_walk\n";
     throw TerminalException{1};
   }
+  int jump_draws = BlockMETHOD.get_int("jump_draws");
+  if (jump_draws <= 0) {
+    std::cerr << "GENUS: jump_draws must be positive\n";
+    throw TerminalException{1};
+  }
+  spec.rw.jump_draws = static_cast<size_t>(jump_draws);
   std::string recognition = BlockMETHOD.get_string("recognition");
   if (recognition == "canonical") {
     spec.methods.recognition = GenusRecognition::Canonical;
