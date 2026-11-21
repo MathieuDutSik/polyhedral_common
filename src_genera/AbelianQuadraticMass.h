@@ -5,6 +5,7 @@
 // clang-format off
 #include "MAT_MatrixModPrime.h"
 #include "NumberFieldElement.h"
+#include "FiniteField.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
 #include "AbelianHermitianMass.h"
@@ -361,86 +362,13 @@ inline T LocalFactorOddGram(std::vector<std::vector<ElemE<T>>> const &H,
       blocks, UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf));
 }
 
-/*
-  The residue field F = F_q[x] / g: elements as reduced polynomials.
- */
-struct ResidueFieldGF {
-  int64_t q;
-  PolyQ g;
-  int f;
-};
-
-inline PolyQ GFReduce(PolyQ a, ResidueFieldGF const &F) {
-  a = PolyReduce(a, F.q);
-  if (a.empty()) {
-    return a;
-  }
-  PolyQ r = PolyDivModQ(a, F.g, F.q).second;
-  PolyTrim(r);
-  return r;
-}
-
-inline PolyQ GFAdd(PolyQ a, PolyQ const &b, ResidueFieldGF const &F) {
-  if (a.size() < b.size()) {
-    a.resize(b.size(), 0);
-  }
-  for (size_t i = 0; i < b.size(); i++) {
-    a[i] = (a[i] + b[i]) % F.q;
-  }
-  PolyTrim(a);
-  return a;
-}
-
-inline PolyQ GFNeg(PolyQ a, ResidueFieldGF const &F) {
-  for (auto &x : a) {
-    x = (F.q - x) % F.q;
-  }
-  PolyTrim(a);
-  return a;
-}
-
-inline PolyQ GFMul(PolyQ const &a, PolyQ const &b, ResidueFieldGF const &F) {
-  return GFReduce(PolyMulQ(a, b, F.q), F);
-}
-
-inline PolyQ GFInv(PolyQ const &a, ResidueFieldGF const &F) {
-  return GFReduce(PolyInverseModQ(a, F.g, F.q), F);
-}
-
-// a^(q^k)
-inline PolyQ GFFrobenius(PolyQ a, int k, ResidueFieldGF const &F) {
-  for (int i = 0; i < k; i++) {
-    PolyQ b = {1};
-    for (int64_t j = 0; j < F.q; j++) {
-      b = GFMul(b, a, F);
-    }
-    a = b;
-  }
-  return a;
-}
-
-// the trace to F_q
-inline int64_t GFTrace(PolyQ const &a, ResidueFieldGF const &F) {
-  PolyQ t;
-  PolyQ x = a;
-  for (int i = 0; i < F.f; i++) {
-    t = GFAdd(t, x, F);
-    x = GFFrobenius(x, 1, F);
-  }
-  if (t.size() > 1) {
-    std::cerr << "ABQUAD: the trace is not in the prime field\n";
-    throw TerminalException{1};
-  }
-  return t.empty() ? 0 : t[0];
-}
-
-using GFMat = std::vector<std::vector<PolyQ>>;
+// The matrices over a residue field F (FiniteField.h).
+using FqMat = std::vector<std::vector<PolyQ>>;
 
 // A basis of {v : v M = 0} for M with nr rows.
-inline GFMat GFLeftKernel(GFMat const &M, size_t nr, size_t nc,
-                          ResidueFieldGF const &F) {
+inline FqMat FqLeftKernel(FiniteField const &F, FqMat const &M, size_t nr, size_t nc) {
   // row reduce [M | I]
-  GFMat A(nr, std::vector<PolyQ>(nc + nr));
+  FqMat A(nr, std::vector<PolyQ>(nc + nr));
   for (size_t i = 0; i < nr; i++) {
     for (size_t j = 0; j < nc; j++) {
       A[i][j] = M[i][j];
@@ -457,29 +385,29 @@ inline GFMat GFLeftKernel(GFMat const &M, size_t nr, size_t nc,
       continue;
     }
     std::swap(A[piv], A[row]);
-    PolyQ inv = GFInv(A[row][col], F);
+    PolyQ inv = FqInv(F, A[row][col]);
     for (auto &x : A[row]) {
-      x = GFMul(x, inv, F);
+      x = FqMul(F, x, inv);
     }
     for (size_t i = 0; i < nr; i++) {
       if (i != row && !A[i][col].empty()) {
         PolyQ c = A[i][col];
         for (size_t j = 0; j < nc + nr; j++) {
-          A[i][j] = GFAdd(A[i][j], GFNeg(GFMul(c, A[row][j], F), F), F);
+          A[i][j] = FqAdd(F, A[i][j], FqNeg(F, FqMul(F, c, A[row][j])));
         }
       }
     }
     row++;
   }
-  GFMat res;
+  FqMat res;
   for (size_t i = row; i < nr; i++) {
     res.push_back(std::vector<PolyQ>(A[i].begin() + nc, A[i].end()));
   }
   return res;
 }
 
-inline PolyQ GFBil(std::vector<PolyQ> const &x, GFMat const &Q,
-                   std::vector<PolyQ> const &y, ResidueFieldGF const &F) {
+inline PolyQ FqBil(FiniteField const &F, std::vector<PolyQ> const &x, FqMat const &Q,
+                   std::vector<PolyQ> const &y) {
   PolyQ res;
   for (size_t i = 0; i < x.size(); i++) {
     if (x[i].empty()) {
@@ -487,7 +415,7 @@ inline PolyQ GFBil(std::vector<PolyQ> const &x, GFMat const &Q,
     }
     for (size_t j = 0; j < y.size(); j++) {
       if (!y[j].empty() && !Q[i][j].empty()) {
-        res = GFAdd(res, GFMul(GFMul(x[i], Q[i][j], F), y[j], F), F);
+        res = FqAdd(F, res, FqMul(F, FqMul(F, x[i], Q[i][j]), y[j]));
       }
     }
   }
@@ -500,21 +428,21 @@ inline PolyQ GFBil(std::vector<PolyQ> const &x, GFMat const &Q,
   (the vectors of the radical of the polar form where Q vanishes) and, for
   that dimension even, the type: +1 when the Arf invariant has trace 0.
  */
-inline std::pair<int, int> QuadFormTypeChar2(GFMat const &Q, ResidueFieldGF const &F) {
+inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &F) {
   size_t n = Q.size();
   if (n == 0) {
     return {0, 1};
   }
-  GFMat Bf(n, std::vector<PolyQ>(n));
+  FqMat Bf(n, std::vector<PolyQ>(n));
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < n; j++) {
-      Bf[i][j] = GFAdd(Q[i][j], Q[j][i], F);
+      Bf[i][j] = FqAdd(F, Q[i][j], Q[j][i]);
     }
   }
-  GFMat N = GFLeftKernel(Bf, n, n, F);
+  FqMat N = FqLeftKernel(F, Bf, n, n);
   bool qzero = true;
   for (auto const &v : N) {
-    if (!GFBil(v, Q, v, F).empty()) {
+    if (!FqBil(F, v, Q, v).empty()) {
       qzero = false;
     }
   }
@@ -524,15 +452,15 @@ inline std::pair<int, int> QuadFormTypeChar2(GFMat const &Q, ResidueFieldGF cons
     return {mi, 1};
   }
   // a complement of N: standard vectors independent modulo N
-  GFMat basis = N;
-  GFMat comp;
+  FqMat basis = N;
+  FqMat comp;
   for (size_t k = 0; k < n && basis.size() < n; k++) {
     std::vector<PolyQ> e(n);
     e[k] = {1};
-    GFMat test = basis;
+    FqMat test = basis;
     test.push_back(e);
     // independent iff the left kernel of test (as rows) is trivial
-    if (GFLeftKernel(test, test.size(), n, F).empty()) {
+    if (FqLeftKernel(F, test, test.size(), n).empty()) {
       basis = test;
       comp.push_back(e);
     }
@@ -542,36 +470,36 @@ inline std::pair<int, int> QuadFormTypeChar2(GFMat const &Q, ResidueFieldGF cons
   while (!comp.empty()) {
     std::vector<PolyQ> x = comp[0];
     size_t j = 1;
-    while (j < comp.size() && GFBil(x, Bf, comp[j], F).empty()) {
+    while (j < comp.size() && FqBil(F, x, Bf, comp[j]).empty()) {
       j++;
     }
     if (j == comp.size()) {
       std::cerr << "ABQUAD: degenerate polar form\n";
       throw TerminalException{1};
     }
-    PolyQ c = GFInv(GFBil(x, Bf, comp[j], F), F);
+    PolyQ c = FqInv(F, FqBil(F, x, Bf, comp[j]));
     std::vector<PolyQ> y = comp[j];
     for (auto &t : y) {
-      t = GFMul(t, c, F);
+      t = FqMul(F, t, c);
     }
     // b(x, y) = 1
-    arf = GFAdd(arf, GFMul(GFBil(x, Q, x, F), GFBil(y, Q, y, F), F), F);
-    GFMat rest;
+    arf = FqAdd(F, arf, FqMul(F, FqBil(F, x, Q, x), FqBil(F, y, Q, y)));
+    FqMat rest;
     for (size_t k = 1; k < comp.size(); k++) {
       if (k == j) {
         continue;
       }
       std::vector<PolyQ> z = comp[k];
       // z <- z + b(z, y) x + b(z, x) y (char 2)
-      PolyQ a1 = GFBil(z, Bf, y, F), a2 = GFBil(z, Bf, x, F);
+      PolyQ a1 = FqBil(F, z, Bf, y), a2 = FqBil(F, z, Bf, x);
       for (size_t u = 0; u < n; u++) {
-        z[u] = GFAdd(z[u], GFAdd(GFMul(a1, x[u], F), GFMul(a2, y[u], F), F), F);
+        z[u] = FqAdd(F, z[u], FqAdd(F, FqMul(F, a1, x[u]), FqMul(F, a2, y[u])));
       }
       rest.push_back(z);
     }
     comp = rest;
   }
-  return {mi, (GFTrace(arf, F) == 0) ? 1 : -1};
+  return {mi, (FqTrace(F, arf) == 0) ? 1 : -1};
 }
 
 /*
@@ -585,7 +513,7 @@ inline std::pair<int, int> QuadFormTypeChar2(GFMat const &Q, ResidueFieldGF cons
  */
 template <typename T>
 inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
-                                       ResidueFieldGF const &F) {
+                                       FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   int v = LocalVal(d, P);
   if (v % 2 != 0) {
@@ -593,7 +521,7 @@ inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
   }
   ElemE<T> u = LocalShift(d, v, P);
   PolyQ ur = LocalResidue(u, P);
-  PolyQ wr = GFFrobenius(ur, F.f - 1, F);
+  PolyQ wr = FqFrobenius(F, ur, F.f - 1);
   ElemE<T> w(K.deg, T(0));
   for (size_t i = 0; i < wr.size(); i++) {
     w[i] = UniversalScalarConversion<T, int64_t>(wr[i]);
@@ -609,7 +537,7 @@ inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
     return 0;
   }
   PolyQ t = LocalResidue(LocalShift(x1, 2, P), P);
-  return (GFTrace(t, F) == 0) ? 0 : -1;
+  return (FqTrace(F, t) == 0) ? 0 : -1;
 }
 
 /*
@@ -626,7 +554,7 @@ template <typename T>
 inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
                                 LocalPrimeK<T> &P) {
   CyclotomicField<T> const &K = P.K;
-  ResidueFieldGF F{P.q, P.g, P.f_res};
+  FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
   T q = UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf);
   std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(H, P);
   int m = static_cast<int>(H.size());
@@ -680,22 +608,22 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
         }
       }
     }
-    GFMat Dcol(m, std::vector<PolyQ>(1));
+    FqMat Dcol(m, std::vector<PolyQ>(1));
     for (int a = 0; a < m; a++) {
       Dcol[a][0] = LocalResidue(EScal(AG[a][a], pow2(-s)), P);
     }
-    GFMat Bk = GFLeftKernel(Dcol, m, 1, F);
+    FqMat Bk = FqLeftKernel(F, Dcol, m, 1);
     size_t nb = Bk.size();
     std::vector<std::vector<ElemE<T>>> BK(nb, std::vector<ElemE<T>>(m, ElemE<T>(K.deg, T(0))));
     for (size_t i = 0; i < nb; i++) {
       for (int a = 0; a < m; a++) {
-        PolyQ r = GFFrobenius(Bk[i][a], F.f - 1, F);
+        PolyQ r = FqFrobenius(F, Bk[i][a], F.f - 1);
         for (size_t t = 0; t < r.size(); t++) {
           BK[i][a][t] = UniversalScalarConversion<T, int64_t>(r[t]);
         }
       }
     }
-    GFMat Q(nb, std::vector<PolyQ>(nb));
+    FqMat Q(nb, std::vector<PolyQ>(nb));
     for (size_t i = 0; i < nb; i++) {
       for (size_t j = i; j < nb; j++) {
         ElemE<T> val(K.deg, T(0));
@@ -841,10 +769,10 @@ inline ElemE<T> LiftResidue(PolyQ const &r, CyclotomicField<T> const &K) {
 // valuation), at a dyadic prime
 template <typename T>
 inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
-                                            ResidueFieldGF const &F) {
+                                            FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   auto sqrt_res = [&](ElemE<T> const &x) -> ElemE<T> {
-    return LiftResidue(GFFrobenius(LocalResidue(x, P), F.f - 1, F), K);
+    return LiftResidue(FqFrobenius(F, LocalResidue(x, P), F.f - 1), K);
   };
   ElemE<T> s = sqrt_res(a);
   a = EMul(a, EInv(EMul(s, s, K), K), K);
@@ -875,7 +803,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
     ElemE<T> am1 = a;
     am1[0] -= 1;
     PolyQ c = LocalResidue(EScal(am1, RationalFraction<T>(1, 4)), P);
-    if (GFTrace(c, F) == 0) {
+    if (FqTrace(F, c) == 0) {
       return {QD_INF, EOne(K)};
     }
   }
@@ -883,7 +811,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
 }
 
 template <typename T>
-inline int QuadDefect(ElemE<T> const &a, LocalPrimeK<T> &P, ResidueFieldGF const &F) {
+inline int QuadDefect(ElemE<T> const &a, LocalPrimeK<T> &P, FiniteField const &F) {
   if (EIsZero(a)) {
     return QD_INF;
   }
@@ -898,7 +826,7 @@ inline int QuadDefect(ElemE<T> const &a, LocalPrimeK<T> &P, ResidueFieldGF const
 // The Hilbert symbol (a, b)_p at the dyadic prime p (Kirschmer).
 template <typename T>
 inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
-                               ResidueFieldGF const &F) {
+                               FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   int v = LocalVal(a, P);
   int w = LocalVal(b, P);
@@ -931,7 +859,7 @@ inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
     ElemE<T> am1 = a;
     am1[0] -= 1;
     ElemE<T> sq = LiftResidue(
-        GFFrobenius(LocalResidue(EMul(am1, EInv(t, K), K), P), F.f - 1, F), K);
+        FqFrobenius(F, LocalResidue(EMul(am1, EInv(t, K), K), P), F.f - 1), K);
     ElemE<T> fac = EScal(EMul(EMul(sq, sq, K), t, K), T(-1));
     fac[0] += 1;
     a = EMul(a, fac, K);
@@ -999,7 +927,7 @@ inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, CyclotomicField<T> const &K
 
 template <typename T>
 inline int HasseInvariantDyadic(std::vector<ElemE<T>> const &D, LocalPrimeK<T> &P,
-                                ResidueFieldGF const &F) {
+                                FiniteField const &F) {
   int h = 1;
   for (size_t i = 0; i < D.size(); i++) {
     for (size_t j = i + 1; j < D.size(); j++) {
@@ -1021,7 +949,7 @@ inline ElemE<T> DetK(KMat<T> const &G, CyclotomicField<T> const &K) {
 // The Witt invariant of the space of G (Hecke: _hasse_witt).
 template <typename T>
 inline int WittInvariantDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
-                               ResidueFieldGF const &F) {
+                               FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   std::vector<ElemE<T>> D = DiagonalizeK(G, K);
   int h = HasseInvariantDyadic(D, P, F);
@@ -1091,7 +1019,7 @@ inline T QPowRat(T const &q, int64_t k) {
 // Hecke: _local_factor_maximal, on the space of G
 template <typename T>
 inline T LocalFactorMaximalDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
-                                          ResidueFieldGF const &F) {
+                                          FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   int m = static_cast<int>(G.size());
   int r = m / 2;
@@ -1144,7 +1072,7 @@ template <typename T> struct QuadKirschmerSymbol {
 
 template <typename T>
 inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
-                                             ResidueFieldGF const &F) {
+                                             FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(G, P);
   QuadKirschmerSymbol<T> S;
@@ -1220,7 +1148,7 @@ inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrime
 template <typename T>
 inline bool IsLocallyIsometricDyadic(QuadKirschmerSymbol<T> const &S1,
                                      QuadKirschmerSymbol<T> const &S2, LocalPrimeK<T> &P,
-                                     ResidueFieldGF const &F) {
+                                     FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   if (S1.dims != S2.dims || S1.sL != S2.sL || S1.wL != S2.wL ||
       S1.uL != S2.uL) {
@@ -1278,19 +1206,12 @@ inline bool IsLocallyIsometricDyadic(QuadKirschmerSymbol<T> const &S1,
 }
 
 // The vectors of k^m with first nonzero coordinate 1.
-inline std::vector<std::vector<PolyQ>> ProjectivePointsGF(int m,
-                                                          ResidueFieldGF const &F) {
+inline std::vector<std::vector<PolyQ>> FqAllProjectivePoints(FiniteField const &F, int m) {
   std::vector<PolyQ> elts;
-  int64_t qf = MyPow<int64_t>(F.q, F.f);
+  FqCheckCodes(F);
+  int64_t qf = static_cast<int64_t>(F.q);
   for (int64_t u = 0; u < qf; u++) {
-    PolyQ a;
-    int64_t t = u;
-    for (int i = 0; i < F.f; i++) {
-      a.push_back(t % F.q);
-      t /= F.q;
-    }
-    PolyTrim(a);
-    elts.push_back(a);
+    elts.push_back(FqDecode(F, static_cast<uint64_t>(u)));
   }
   std::vector<std::vector<PolyQ>> res;
   for (int lead = 0; lead < m; lead++) {
@@ -1386,10 +1307,10 @@ inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<PolyQ> const &lambda
 // An integral overlattice of index p of G (of integral norm), if any.
 template <typename T>
 inline std::optional<KMat<T>> IntegralOverlattice(KMat<T> const &G, LocalPrimeK<T> &P,
-                                               ResidueFieldGF const &F) {
+                                               FiniteField const &F) {
   CyclotomicField<T> const &K = P.K;
   size_t n = G.size();
-  for (auto const &c : ProjectivePointsGF(static_cast<int>(n), F)) {
+  for (auto const &c : FqAllProjectivePoints(F, static_cast<int>(n))) {
     std::vector<ElemE<T>> y(n, ElemE<T>(K.deg, T(0)));
     // y G: the products B(y, b_j)
     std::vector<ElemE<T>> cl;
@@ -1426,7 +1347,7 @@ inline std::optional<KMat<T>> IntegralOverlattice(KMat<T> const &G, LocalPrimeK<
 // Hecke: _local_factor_unimodular, G unimodular of integral norm
 template <typename T>
 inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
-                                             ResidueFieldGF const &F) {
+                                             FiniteField const &F) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   CyclotomicField<T> const &K = P.K;
   QuadKirschmerSymbol<T> S = KirschmerSymbolDyadic(G, P, F);
@@ -1538,7 +1459,7 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
 template <typename T>
 inline T LocalFactorDyadicRamified(KMat<T> const &H, LocalPrimeK<T> &P) {
   CyclotomicField<T> const &K = P.K;
-  ResidueFieldGF F{P.q, P.g, P.f_res};
+  FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
   int m = static_cast<int>(H.size());
   if (m == 1) {
     return T(1);
@@ -1562,13 +1483,13 @@ inline T LocalFactorDyadicRamified(KMat<T> const &H, LocalPrimeK<T> &P) {
     QuadKirschmerSymbol<T> Si = KirschmerSymbolDyadic(chain[i], P, F);
     QuadKirschmerSymbol<T> Sn = KirschmerSymbolDyadic(chain[i + 1], P, F);
     int64_t n_sub = 0, n_super = 0;
-    for (auto const &lam : ProjectivePointsGF(m, F)) {
+    for (auto const &lam : FqAllProjectivePoints(F, m)) {
       KMat<T> M = SublatticeGram(chain[i + 1], lam, P);
       if (IsLocallyIsometricDyadic(Si, KirschmerSymbolDyadic(M, P, F), P, F)) {
         n_sub++;
       }
     }
-    for (auto const &c : ProjectivePointsGF(m, F)) {
+    for (auto const &c : FqAllProjectivePoints(F, m)) {
       KMat<T> M = SuperlatticeGram(chain[i], c, P);
       if (IsLocallyIsometricDyadic(Sn, KirschmerSymbolDyadic(M, P, F), P, F)) {
         n_super++;
@@ -2706,7 +2627,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
   for (auto const &[g, e] : fac) {
     LocalPrimeK<T> P = MakeLocalPrimeK(*lg, g, e, p);
     CyclotomicField<T> const &K = P.K;
-    ResidueFieldGF F{p, g, P.f_res};
+    FiniteField F = MakeFiniteField(static_cast<T_small_prime>(p), g);
     int fr = P.f_res;
     // the conjugate of pi; the involution must be trivial on F_P
     ElemE<T> pibar = EConj(P.pi, K);
@@ -2802,7 +2723,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       for (int t = 0; t < fr; t++) {
         PolyQ xt(t + 1, 0);
         xt[t] = 1;
-        std::vector<int64_t> v = coeffs(GFMul(a, xt, F));
+        std::vector<int64_t> v = coeffs(FqMul(F, a, xt));
         for (int u = 0; u < fr; u++) {
           M[u][t] = v[u];
         }
@@ -2859,7 +2780,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         PolyQ v;
         for (int a = 0; a < m; a++) {
           for (int b = 0; b < m; b++) {
-            v = GFAdd(v, GFMul(GFMul(x[a], Hn[a][b], F), y[b], F), F);
+            v = FqAdd(F, v, FqMul(F, FqMul(F, x[a], Hn[a][b]), y[b]));
           }
         }
         return v;
@@ -2890,8 +2811,8 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             for (int b = 0; b < m; b++) {
               PolyQ v;
               for (int d = 0; d < m; d++) {
-                v = (side == 0) ? GFAdd(v, GFMul(Hn[b][d], ys[k][d], F), F)
-                                : GFAdd(v, GFMul(ys[k][d], Hn[d][b], F), F);
+                v = (side == 0) ? FqAdd(F, v, FqMul(F, Hn[b][d], ys[k][d]))
+                                : FqAdd(F, v, FqMul(F, ys[k][d], Hn[d][b]));
               }
               w[b] = v;
             }
@@ -2960,12 +2881,12 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             continue;
           }
           // independence over F_P
-          GFMat Mrows;
+          FqMat Mrows;
           for (auto const &yy : ys) {
             Mrows.push_back(yy);
           }
           Mrows.push_back(y);
-          if (!GFLeftKernel(Mrows, Mrows.size(), static_cast<size_t>(m), F).empty()) {
+          if (!FqLeftKernel(F, Mrows, Mrows.size(), static_cast<size_t>(m)).empty()) {
             continue;
           }
           ys.push_back(y);
@@ -3056,7 +2977,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             // Delta_{a d} A1_{d b}
             add(a * m + d, res_shift(A1[d][b], s0));
             // u_j A2_{a d} Delta_{b d}
-            add(b * m + d, GFMul(uj_res, res_shift(A2[a][d], s0), F));
+            add(b * m + d, FqMul(F, uj_res, res_shift(A2[a][d], s0)));
           }
           std::vector<int64_t> rc = coeffs(res_shift(E[a][b], j + s0));
           for (int u = 0; u < fr; u++) {
@@ -3251,7 +3172,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         PolyQ v;
         for (int a2 = 0; a2 < m; a2++) {
           for (int b2 = 0; b2 < m; b2++) {
-            v = GFAdd(v, GFMul(GFMul(x[a2], Hn[a2][b2], F), y[b2], F), F);
+            v = FqAdd(F, v, FqMul(F, FqMul(F, x[a2], Hn[a2][b2]), y[b2]));
           }
         }
         return v;
@@ -3268,8 +3189,8 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             for (int b2 = 0; b2 < m; b2++) {
               PolyQ v;
               for (int d2 = 0; d2 < m; d2++) {
-                v = (side == 0) ? GFAdd(v, GFMul(Hn[b2][d2], prefix[k][d2], F), F)
-                                : GFAdd(v, GFMul(prefix[k][d2], Hn[d2][b2], F), F);
+                v = (side == 0) ? FqAdd(F, v, FqMul(F, Hn[b2][d2], prefix[k][d2]))
+                                : FqAdd(F, v, FqMul(F, prefix[k][d2], Hn[d2][b2]));
               }
               w[b2] = v;
             }
@@ -3334,9 +3255,9 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             y[b2] = from_coeffs(v, static_cast<size_t>(b2 * fr));
           }
           if (bil2(y, y) == Hn[i][i]) {
-            GFMat Mrows(prefix.begin(), prefix.end());
+            FqMat Mrows(prefix.begin(), prefix.end());
             Mrows.push_back(y);
-            if (GFLeftKernel(Mrows, Mrows.size(), static_cast<size_t>(m), F)
+            if (FqLeftKernel(F, Mrows, Mrows.size(), static_cast<size_t>(m))
                     .empty() &&
                 f(y)) {
               return;
@@ -3419,7 +3340,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         for (int b2 = 0; b2 < m; b2++) {
           PolyQ v;
           for (int a2 = 0; a2 < m; a2++) {
-            v = GFAdd(v, GFMul(y[a2], g[a2][b2], F), F);
+            v = FqAdd(F, v, FqMul(F, y[a2], g[a2][b2]));
           }
           z[b2] = v;
         }

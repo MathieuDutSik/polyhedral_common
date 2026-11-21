@@ -1594,19 +1594,12 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
     }
     for (size_t i_type : order) {
       IrreducibleType const &tp = gm.types[i_type];
-      FiniteFieldModP F{p, tp.f, tp.mu, 1};
-      for (int a = 0; a < tp.f; a++) {
-        // the elements of F_q are coded by integers below q
-        if (F.q > kMaxResidueModulus / p) {
-          std::cerr << "GENUS: the field F_" << p << "^" << tp.f
-                    << " is too large for the codes of its elements\n";
-          throw TerminalException{1};
-        }
-        F.q *= p;
-      }
+      // the elements of F_q are coded by integers below q
+      FiniteField F = MakeFiniteField(p, tp.mu);
+      FqCheckCodes(F);
       int mdim = static_cast<int>(tp.Phi.size());
       std::vector<ModMatrix> theta_pow = ThetaPowers(tp, p);
-      std::vector<std::vector<std::vector<ModVector>>> ListAct;
+      std::vector<std::vector<std::vector<FqElt>>> ListAct;
       for (auto const &h : ListCent) {
         ListAct.push_back(ActionOnHom(tp, theta_pow, h, p));
       }
@@ -1629,7 +1622,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
                                 y_codes);
           size_t res = IndexOfProjectivePointCodes(tb, mdim, y_codes);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
-          std::vector<ModVector> alpha =
+          std::vector<FqElt> alpha =
               ProjectivePointFqOfIndex(F, mdim, idx);
           if (res != IndexOfProjectivePointFq(
                          F, mdim, ApplyActionOnHom(F, ListAct[i_gen], alpha))) {
@@ -1639,7 +1632,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
 #endif
           return res;
         }
-        std::vector<ModVector> alpha =
+        std::vector<FqElt> alpha =
             ProjectivePointFqOfIndex(F, mdim, idx);
         return IndexOfProjectivePointFq(
             F, mdim, ApplyActionOnHom(F, ListAct[i_gen], alpha));
@@ -1652,7 +1645,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
 #ifdef DEBUG_GENUS_ENUMERATION_GROUP
         n_orbit++;
 #endif
-        std::vector<ModVector> alpha =
+        std::vector<FqElt> alpha =
             ProjectivePointFqOfIndex(F, mdim, idx);
         ModMatrix S_rows = HomOfPoint(tp, theta_pow, alpha, p);
         if (!tp.isotypic_isotropic) {

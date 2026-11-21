@@ -3,7 +3,7 @@
 #define SRC_GENERA_FINITEFIELDPROJECTIVE_H_
 
 // clang-format off
-#include "PolynomialModQ.h"
+#include "FiniteField.h"
 #include "GeneraArithmetic.h"
 #include "MAT_MatrixModPrime.h"
 #include <cstdint>
@@ -12,9 +12,9 @@
 // clang-format on
 
 /*
-  Projective spaces over F_p and over F_q = F_p[theta]/mu, indexed without
-  being enumerated, and the arithmetic of F_q: on coefficient vectors, and
-  on the integer codes of the elements through tables for small q.
+  Projective spaces over F_p and over F_q (FiniteField.h), indexed without
+  being enumerated, on the elements and on their integer codes through the
+  tables of a small q.
  */
 
 /*
@@ -349,67 +349,6 @@ struct ProjectiveLineCoder {
 };
 
 /*
-  F_q = F_p[theta] / mu: elements as coefficient vectors of length f, and
-  an encoding as integers in [0, q).
- */
-struct FiniteFieldModP {
-  T_small_prime p;
-  int f;
-  PolyQ mu;
-  uint64_t q;
-};
-
-inline ModVector FqMul(FiniteFieldModP const &F,
-                                  ModVector const &a,
-                                  ModVector const &b) {
-  PolyQ prod = PolyMulQ(a, b, F.p);
-  std::pair<PolyQ, PolyQ> qr = PolyDivModQ(prod, F.mu, F.p);
-  ModVector r = qr.second;
-  r.resize(F.f, 0);
-  return r;
-}
-
-inline ModVector FqAdd(FiniteFieldModP const &F,
-                                  ModVector const &a,
-                                  ModVector const &b) {
-  ModVector r(F.f);
-  for (int i = 0; i < F.f; i++) {
-    r[i] = ResAdd(a[i], b[i], F.p);
-  }
-  return r;
-}
-
-inline bool FqIsZero(ModVector const &a) {
-  return std::all_of(a.begin(), a.end(), [](T_residue x) { return x == 0; });
-}
-
-inline ModVector FqInverse(FiniteFieldModP const &F,
-                                      ModVector const &a) {
-  PolyQ a2 = a;
-  PolyTrim(a2);
-  PolyQ inv = PolyInverseModQ(a2, F.mu, F.p);
-  inv.resize(F.f, 0);
-  return inv;
-}
-
-inline uint64_t FqEncode(FiniteFieldModP const &F, ModVector const &a) {
-  uint64_t c = 0;
-  for (int i = F.f; i-- > 0;) {
-    c = c * F.p + a[i];
-  }
-  return c;
-}
-
-inline ModVector FqDecode(FiniteFieldModP const &F, uint64_t c) {
-  ModVector a(F.f);
-  for (int i = 0; i < F.f; i++) {
-    a[i] = c % F.p;
-    c /= F.p;
-  }
-  return a;
-}
-
-/*
   The points of P^{m-1}(F_q), normalized with the first nonzero coordinate
   equal to 1, indexed by the position i of that coordinate (q^{m-1-i}
   points each) and the remaining coordinates in base q.
@@ -438,8 +377,8 @@ inline size_t NumberProjectivePointsFq(int m, uint64_t q) {
   return tot;
 }
 
-inline std::vector<ModVector>
-ProjectivePointFqOfIndex(FiniteFieldModP const &F, int m, size_t idx) {
+inline std::vector<FqElt>
+ProjectivePointFqOfIndex(FiniteField const &F, int m, size_t idx) {
   // the blocks in the order i = m-1 (one point) up to i = 0
   size_t q = static_cast<size_t>(F.q);
   std::vector<size_t> block(m);
@@ -456,8 +395,8 @@ ProjectivePointFqOfIndex(FiniteFieldModP const &F, int m, size_t idx) {
     }
     idx -= block[i];
   }
-  std::vector<ModVector> x(m, ModVector(F.f, 0));
-  x[lead][0] = 1;
+  std::vector<FqElt> x(m);
+  x[lead] = FqOne();
   for (int j = m - 1; j > lead; j--) {
     x[j] = FqDecode(F, idx % q);
     idx /= q;
@@ -465,14 +404,14 @@ ProjectivePointFqOfIndex(FiniteFieldModP const &F, int m, size_t idx) {
   return x;
 }
 
-inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
-                                       std::vector<ModVector> x) {
+inline size_t IndexOfProjectivePointFq(FiniteField const &F, int m,
+                                       std::vector<FqElt> x) {
   size_t q = static_cast<size_t>(F.q);
   int lead = 0;
   while (lead < m && FqIsZero(x[lead])) {
     lead++;
   }
-  ModVector inv = FqInverse(F, x[lead]);
+  FqElt inv = FqInv(F, x[lead]);
   for (int j = lead; j < m; j++) {
     x[j] = FqMul(F, x[j], inv);
   }
@@ -489,40 +428,10 @@ inline size_t IndexOfProjectivePointFq(FiniteFieldModP const &F, int m,
 }
 
 /*
-  F_q for a small q as tables on the codes of FqEncode, and the projective
-  points and the action on Hom of the orbit enumeration in those codes: the
-  same indices as ProjectivePointFqOfIndex and IndexOfProjectivePointFq,
-  without the polynomial arithmetic and the allocations of every product
-  (the orbits of P^11(F_4), 5.6 10^6 points, under the centralizer of
-  (A2^12, w) took about ten minutes per class).
+  The projective points and the action on Hom of the orbit enumeration in
+  the codes of the tables FqTables: the same indices as
+  ProjectivePointFqOfIndex and IndexOfProjectivePointFq.
  */
-struct FqTables {
-  uint64_t q;
-  std::vector<int> add;
-  std::vector<int> mul;
-  std::vector<int> inv;
-};
-
-inline size_t const fq_tables_max_q = 4096;
-
-inline FqTables BuildFqTables(FiniteFieldModP const &F) {
-  uint64_t q = F.q;
-  FqTables tb{q, std::vector<int>(q * q), std::vector<int>(q * q),
-              std::vector<int>(q, 0)};
-  for (uint64_t a = 0; a < q; a++) {
-    ModVector fa = FqDecode(F, a);
-    for (uint64_t b = 0; b < q; b++) {
-      ModVector fb = FqDecode(F, b);
-      tb.add[a * q + b] = static_cast<int>(FqEncode(F, FqAdd(F, fa, fb)));
-      int c = static_cast<int>(FqEncode(F, FqMul(F, fa, fb)));
-      tb.mul[a * q + b] = c;
-      if (c == 1) {
-        tb.inv[a] = static_cast<int>(b);
-      }
-    }
-  }
-  return tb;
-}
 
 // The point of index idx as codes, x of size m.
 inline void ProjectivePointCodesOfIndex(FqTables const &tb, int m, size_t idx,
@@ -576,8 +485,8 @@ inline size_t IndexOfProjectivePointCodes(FqTables const &tb, int m,
 
 // The action of ApplyActionOnHom in codes: cc[i * m + j] the code of c[i][j].
 inline std::vector<int>
-ActionOnHomCodes(FiniteFieldModP const &F,
-                 std::vector<std::vector<ModVector>> const &c) {
+ActionOnHomCodes(FiniteField const &F,
+                 std::vector<std::vector<FqElt>> const &c) {
   size_t m = c.size();
   std::vector<int> cc(m * m);
   for (size_t i = 0; i < m; i++) {

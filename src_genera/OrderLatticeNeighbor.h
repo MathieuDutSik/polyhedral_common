@@ -213,38 +213,21 @@ template <typename T> int64_t order_residue_rat(T const &x, int64_t const &ell) 
 }
 
 /*
-  The arithmetic of F_q = O_K / P on the codes: for f = 1 the residues mod
-  ell, for f = 2 the code a + ell b of a + b omega, omega^2 = s omega - n.
+  F_q = O_K / P (FiniteField.h) on the codes: for f = 1 the residues mod
+  ell, for f = 2 the code a + ell b of a + b omega, omega^2 = s omega - n,
+  that is F_ell[x] / (x^2 - s x + n).
  */
-struct ResidueField {
-  int64_t ell;
-  int f;
-  int64_t s;
-  int64_t n;
-  int64_t q() const { return f == 1 ? ell : ell * ell; }
-  int64_t mul(int64_t const &x, int64_t const &y) const {
-    if (f == 1) {
-      return (x * y) % ell;
-    }
-    int64_t a1 = x % ell, b1 = x / ell, a2 = y % ell, b2 = y / ell;
-    int64_t bb = (b1 * b2) % ell;
-    int64_t a = ResidueModPrime(a1 * a2 - n * bb, ell);
-    int64_t b = ResidueModPrime(a1 * b2 + a2 * b1 + s * bb, ell);
-    return a + ell * b;
+inline FiniteField OrderResidueField(int64_t ell, int f, int64_t s,
+                                     int64_t n) {
+  auto res = [&](int64_t v) -> T_residue {
+    return static_cast<T_residue>(((v % ell) + ell) % ell);
+  };
+  T_small_prime p = static_cast<T_small_prime>(ell);
+  if (f == 1) {
+    return MakePrimeField(p);
   }
-  int64_t inv(int64_t const &x) const {
-    if (f == 1) {
-      return InverseModPrime(x, ell);
-    }
-    // conj(a + b omega) = (a + s b) - b omega, divided by the norm
-    int64_t a = x % ell, b = x / ell;
-    int64_t norm = ResidueModPrime(a * a + s * a % ell * b + n * b % ell * b, ell);
-    int64_t norm_inv = InverseModPrime(norm, ell);
-    int64_t ca = ResidueModPrime((a + s * b) * norm_inv, ell);
-    int64_t cb = ResidueModPrime(-b * norm_inv, ell);
-    return ca + ell * cb;
-  }
-};
+  return MakeFiniteField(p, PolyQ{res(n), res(-s), 1});
+}
 
 // The rank mod ell of the rows of M.
 template <typename Tint>
@@ -262,27 +245,27 @@ int order_rank_mod(MyMatrix<Tint> const &M, int64_t const &ell) {
 struct LineSpace {
   int n = 0;
   int m = 0;
-  ResidueField F;
+  FiniteField F;
   // row major n x n, mod ell: the rows e_1, ..., e_m (split, Z), or e_1,
   // e_1 Omega, ..., e_m, e_m Omega (inert), then the complement
   std::vector<int64_t> basis;
   std::vector<int64_t> basis_inv;
-  int64_t modulus() const { return F.ell; }
+  int64_t modulus() const { return static_cast<int64_t>(F.p); }
   int dim() const { return n; }
-  size_t n_line() const { return NumberProjectiveLines(m, static_cast<int>(F.q())); }
+  size_t n_line() const { return NumberProjectiveLines(m, static_cast<int>(F.q)); }
   // The coordinates in F_q^m of the residue vector z (not normalized).
   std::vector<int64_t> coordinates(std::vector<int64_t> const &z) const {
     std::vector<int64_t> y(n, 0);
     for (int j = 0; j < n; j++) {
       int64_t sum = 0;
       for (int k = 0; k < n; k++) {
-        sum = (sum + z[k] * basis_inv[k * n + j]) % F.ell;
+        sum = (sum + z[k] * basis_inv[k * n + j]) % static_cast<int64_t>(F.p);
       }
       y[j] = sum;
     }
     std::vector<int64_t> c(m);
     for (int j = 0; j < m; j++) {
-      c[j] = F.f == 1 ? y[j] : y[2 * j] + F.ell * y[2 * j + 1];
+      c[j] = F.f == 1 ? y[j] : y[2 * j] + static_cast<int64_t>(F.p) * y[2 * j + 1];
     }
     return c;
   }
@@ -296,25 +279,25 @@ struct LineSpace {
     if (ipos == m) {
       return {};
     }
-    int64_t scal = F.inv(c[ipos]);
+    int64_t scal = static_cast<int64_t>(FqCodeInv(F, c[ipos]));
     std::vector<int> v(m);
     for (int j = 0; j < m; j++) {
-      v[j] = static_cast<int>(F.mul(c[j], scal));
+      v[j] = static_cast<int>(static_cast<int64_t>(FqCodeMul(F, c[j], scal)));
     }
-    return IndexOfProjectiveLine(v, static_cast<int>(F.q()));
+    return IndexOfProjectiveLine(v, static_cast<int>(F.q));
   }
   // A residue vector of L / ell L on the line of index idx.
   std::vector<int64_t> line_vector(size_t const &idx) const {
-    std::vector<int> c = ProjectiveLineOfIndex(m, static_cast<int>(F.q()), idx);
+    std::vector<int> c = ProjectiveLineOfIndex(m, static_cast<int>(F.q), idx);
     std::vector<int64_t> z(n, 0);
     for (int j = 0; j < m; j++) {
-      int64_t a = F.f == 1 ? c[j] : c[j] % F.ell;
-      int64_t b = F.f == 1 ? 0 : c[j] / F.ell;
+      int64_t a = F.f == 1 ? c[j] : c[j] % static_cast<int64_t>(F.p);
+      int64_t b = F.f == 1 ? 0 : c[j] / static_cast<int64_t>(F.p);
       int row_a = F.f == 1 ? j : 2 * j;
       for (int k = 0; k < n; k++) {
-        z[k] = (z[k] + a * basis[row_a * n + k]) % F.ell;
+        z[k] = (z[k] + a * basis[row_a * n + k]) % static_cast<int64_t>(F.p);
         if (b != 0) {
-          z[k] = (z[k] + b * basis[(row_a + 1) * n + k]) % F.ell;
+          z[k] = (z[k] + b * basis[(row_a + 1) * n + k]) % static_cast<int64_t>(F.p);
         }
       }
     }
@@ -339,7 +322,7 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
   int n = ring.n();
   ls.n = n;
   ls.m = ring.m;
-  ls.F = ResidueField{P.ell, P.f, ring.s, ring.p};
+  ls.F = OrderResidueField(P.ell, P.f, ring.s, ring.p);
   int64_t ell = P.ell;
   MyMatrix<Tint> Bas(n, n);
   if (ring.d == 1) {

@@ -443,13 +443,14 @@ inline std::vector<ModMatrix> ThetaPowers(IrreducibleType const &tp,
 // sum_i alpha_i(theta) Phi_i, a k x n matrix whose rows span the submodule.
 inline ModMatrix HomOfPoint(IrreducibleType const &tp,
                             std::vector<ModMatrix> const &theta_pow,
-                            std::vector<ModVector> const &alpha,
+                            std::vector<FqElt> const &alpha,
                             T_small_prime p) {
   int k = tp.S0.space.basis.rows();
   int n = tp.Phi[0].cols();
   ModMatrix res = ZeroMatrix<T_residue>(k, n);
   for (size_t i = 0; i < tp.Phi.size(); i++) {
-    for (int a = 0; a < tp.f; a++) {
+    // alpha_i an element of F_q (FiniteField.h), trimmed: its coefficients
+    for (size_t a = 0; a < alpha[i].size(); a++) {
       T_residue c = alpha[i][a];
       if (c != 0) {
         ModMatrix Y = ModMatrixProduct(theta_pow[a], tp.Phi[i], p);
@@ -469,7 +470,7 @@ inline ModMatrix HomOfPoint(IrreducibleType const &tp,
   Hom_G(S0, L/pL): Phi_i h = sum_j c_ij(theta) Phi_j, so that the point
   alpha goes to beta_j = sum_i alpha_i c_ij.
  */
-inline std::vector<std::vector<ModVector>>
+inline std::vector<std::vector<FqElt>>
 ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
             ModMatrix const &h, T_small_prime p) {
   size_t m = tp.Phi.size();
@@ -480,7 +481,7 @@ ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
                    FlattenModMatrix(ModMatrixProduct(theta_pow[a], tp.Phi[j], p)));
     }
   }
-  std::vector<std::vector<ModVector>> c(m, std::vector<ModVector>(m));
+  std::vector<std::vector<FqElt>> c(m, std::vector<FqElt>(m));
   for (size_t i = 0; i < m; i++) {
     std::optional<ModVector> sol = SolveRowsModP(
         basis, FlattenModMatrix(ModMatrixProduct(tp.Phi[i], h, p)), p);
@@ -489,18 +490,20 @@ ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
       throw TerminalException{1};
     }
     for (size_t j = 0; j < m; j++) {
-      c[i][j] = ModVector(sol->begin() + j * tp.f, sol->begin() + (j + 1) * tp.f);
+      // the trimmed element of F_q (FiniteField.h)
+      c[i][j] = FqElt(sol->begin() + j * tp.f, sol->begin() + (j + 1) * tp.f);
+      PolyTrim(c[i][j]);
     }
   }
   return c;
 }
 
-inline std::vector<ModVector>
-ApplyActionOnHom(FiniteFieldModP const &F,
-                 std::vector<std::vector<ModVector>> const &c,
-                 std::vector<ModVector> const &alpha) {
+inline std::vector<FqElt>
+ApplyActionOnHom(FiniteField const &F,
+                 std::vector<std::vector<FqElt>> const &c,
+                 std::vector<FqElt> const &alpha) {
   size_t m = alpha.size();
-  std::vector<ModVector> beta(m, ModVector(F.f, 0));
+  std::vector<FqElt> beta(m);
   for (size_t i = 0; i < m; i++) {
     if (!FqIsZero(alpha[i])) {
       for (size_t j = 0; j < m; j++) {

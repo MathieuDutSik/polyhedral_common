@@ -508,7 +508,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
             hp.chi = ResidueQuadraticCharacter(LocalResidue(u, P), g, p);
           }
         } else {
-          ResidueFieldGF F{P.q, P.g, P.f_res};
+          FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
           if (v % 2 != 0) {
             hp.chi = 0;
             hp.cond_exp = 2 * e + 1;
