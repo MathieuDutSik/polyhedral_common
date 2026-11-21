@@ -16,6 +16,8 @@
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
 #include "subgroup_algorithms.h"
+#include "hash_functions.h"
+#include <algorithm>
 #include <set>
 #include <vector>
 #include <unordered_map>
@@ -87,6 +89,26 @@ GetFamilyDiscMatrices(MyMatrix<T> const &eG,
   }
   for (auto &subspace : ListSubspace) {
     ListDisc.emplace_back(GetSubspaceDiscMatrix(eG, subspace));
+  }
+  return ListDisc;
+}
+
+/*
+  The family of matrices of eG that the stabilizer, the equivalence and the
+  invariant work with: the one of GetFamilyDiscMatrices, and the common Gram
+  matrix when one is imposed on all the domains. The stabilizer and the
+  equivalences must preserve it, and adding it to the list restricts them to
+  the elements that do.
+ */
+template <typename T>
+std::vector<MyMatrix<T>>
+GetFamilyDiscMatricesCommon(LinSpaceMatrix<T> const &LinSpa,
+                            MyMatrix<T> const &eG,
+                            std::optional<MyMatrix<T>> const &CommonGramMat) {
+  std::vector<MyMatrix<T>> ListDisc =
+      GetFamilyDiscMatrices(eG, LinSpa.ListComm, LinSpa.ListSubspaces);
+  if (CommonGramMat) {
+    ListDisc.push_back(*CommonGramMat);
   }
   return ListDisc;
 }
@@ -442,13 +464,7 @@ LINSPA_ComputeStabilizer_SHV_KernelInner(LinSpaceMatrix<T> const &LinSpa,
 #endif
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
-      GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
-  // When a common Gram matrix is imposed on all the domains, the stabilizer
-  // must preserve it. Adding it to the list restricts the automorphisms to
-  // the subgroup that also fixes CommonGramMat.
-  if (CommonGramMat) {
-    ListMat.push_back(*CommonGramMat);
-  }
+      GetFamilyDiscMatricesCommon(LinSpa, eMat, CommonGramMat);
 
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Stab, disc_matrices|=" << time_st << "\n";
@@ -562,21 +578,16 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV_KernelInner(
   MicrosecondTime time_eq;
 #endif
   std::vector<T> Vdiag1(n_row, T(0)), Vdiag2(n_row, T(0));
+  // The common Gram matrix, if any, is the last matrix of both lists, so
+  // that the transformation found satisfies
+  // P * CommonGramMat * P^T = CommonGramMat.
   std::vector<MyMatrix<T>> ListMat1 =
-      GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
+      GetFamilyDiscMatricesCommon(LinSpa, eMat1, CommonGramMat);
   std::vector<MyMatrix<T>> ListMat2 =
-      GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
+      GetFamilyDiscMatricesCommon(LinSpa, eMat2, CommonGramMat);
 #ifdef TIMINGS_TSPACE_FUNCTIONS
   os << "|TSPACE: Equiv, disc_matrices|=" << time_eq << "\n";
 #endif
-  // When a common Gram matrix is imposed on all the domains, the equivalence
-  // has to preserve it. Adding it identically to both lists forces the
-  // matching permutation (and thus the recovered transformation) to satisfy
-  // P * CommonGramMat * P^T = CommonGramMat.
-  if (CommonGramMat) {
-    ListMat1.push_back(*CommonGramMat);
-    ListMat2.push_back(*CommonGramMat);
-  }
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: Equiv, |ListComm|=" << LinSpa.ListComm.size()
      << " |ListSubspaces|=" << LinSpa.ListSubspaces.size() << "\n";
@@ -984,34 +995,38 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   return result.get_list_matrix(SHV_T, eMat, LinSpa, os);
 }
 
+/*
+  The invariant of (eMat, SHV_T) under the group G of the T-space: the
+  elements that preserve the family of GetFamilyDiscMatricesCommon, which is
+  the family of the stabilizer and of the equivalence.
+ */
 template <typename T>
-size_t LINSPA_Invariant_SHV_Inner(size_t const &seed,
-                                  LinSpaceMatrix<T> const &LinSpa,
-                                  MyMatrix<T> const &eMat,
-                                  MyMatrix<T> const &SHV_T,
-                                  std::optional<MyMatrix<T>> const &CommonGramMat,
-                                  std::ostream &os) {
+size_t LINSPA_Invariant_SHV_G(size_t const &seed,
+                              LinSpaceMatrix<T> const &LinSpa,
+                              MyMatrix<T> const &eMat, MyMatrix<T> const &SHV_T,
+                              std::optional<MyMatrix<T>> const &CommonGramMat,
+                              std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, T(0));
   std::vector<MyMatrix<T>> ListMat =
-      GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
-  // When a common Gram matrix is imposed on all the domains, the relevant
-  // equivalences must preserve it. Adding it to the list of matrices makes
-  // the invariant compatible with that restricted equivalence.
-  if (CommonGramMat) {
-    ListMat.push_back(*CommonGramMat);
-  }
+      GetFamilyDiscMatricesCommon(LinSpa, eMat, CommonGramMat);
   return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
 }
 
 /*
-  The invariant for the group K of the outer elements. The invariant for G
-  is not one for K: with ListComm, c changes Comm A into (c Comm c^{-1}) A,
-  which that invariant sees (it does for the Eisenstein and the d = -7
-  rings). The invariant of A alone, without the ListComm family, is
-  invariant under every integral transformation, so under K: it is the one
-  used, and it is also cheaper. ListSubspaces is empty with outer elements.
+  The invariant under the group K = G \cup G c_1 \cup ... of the outer
+  elements c_i (G alone if there are none).
+
+  The G-invariant is not a K-invariant: c changes Comm A into
+  (c Comm c^{-1}) A. But the outer elements form, with the identity, a
+  transversal c_0 = Id, c_1, ... of G in K that is closed modulo G (checked
+  by check_outer_elements). If B = x A x^T with x = g c_j in K, then for
+  every i the element c_i x is in G c_k, with k depending bijectively on i,
+  so the G-classes of the c_i B c_i^T are those of the c_k A c_k^T. The
+  sorted list of the G-invariants of the c_i A c_i^T (with the vectors
+  SHV_T c_i^{-1}, get_outer_image) is therefore a K-invariant, and it is
+  as fine as the G-invariant.
  */
 template <typename T>
 size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
@@ -1019,17 +1034,25 @@ size_t LINSPA_Invariant_SHV(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                             std::optional<MyMatrix<T>> const &CommonGramMat,
                             std::ostream &os) {
   if (LinSpa.l_outer_elements.empty()) {
-    return LINSPA_Invariant_SHV_Inner(seed, LinSpa, eMat, SHV_T, CommonGramMat,
-                                      os);
+    return LINSPA_Invariant_SHV_G(seed, LinSpa, eMat, SHV_T, CommonGramMat, os);
   }
-  using Tfield = typename overlying_field<T>::field_type;
-  int n_row = SHV_T.rows();
-  std::vector<T> Vdiag(n_row, T(0));
-  std::vector<MyMatrix<T>> ListMat{eMat};
-  if (CommonGramMat) {
-    ListMat.push_back(*CommonGramMat);
+  auto f_extra = []([[maybe_unused]] MyMatrix<T> const &x) -> bool {
+    return true;
+  };
+  check_outer_elements(LinSpa, CommonGramMat, f_extra);
+  std::vector<size_t> l_inv{
+      LINSPA_Invariant_SHV_G(seed, LinSpa, eMat, SHV_T, CommonGramMat, os)};
+  for (auto &c : LinSpa.l_outer_elements) {
+    OuterImage<T> img = get_outer_image(c, eMat, SHV_T);
+    l_inv.push_back(LINSPA_Invariant_SHV_G(seed, LinSpa, img.eMat, img.SHV_T,
+                                           CommonGramMat, os));
   }
-  return GetInvariant_ListMat_Vdiag<T, Tfield>(seed, SHV_T, ListMat, Vdiag, os);
+  std::sort(l_inv.begin(), l_inv.end());
+  size_t hash = seed;
+  for (auto &inv : l_inv) {
+    hash_utils::hash_combine(hash, inv);
+  }
+  return hash;
 }
 
 template <typename T, typename Tint>
