@@ -4,7 +4,9 @@
 
 // clang-format off
 #include "MAT_MatrixModPrime.h"
-#include "NumberFieldElement.h"
+#include "NumberField.h"
+#include "AbelianField.h"
+#include "LocalGramOverOK.h"
 #include "FiniteField.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
@@ -38,32 +40,9 @@
  */
 
 template <typename T>
-inline T DedekindZetaAbelian(AbelianCMField const &F, int k) {
+inline T DedekindZetaAbelian(AbelianField const &F, int k) {
   // zeta_K(1 - k): all the characters of K, even as K is real
   return ProductDirichletLValues<T>(F.n, k, 0, F.H);
-}
-
-// The quadratic field data: a totally real field as (n, H) with -1 in H.
-inline AbelianCMField MakeAbelianRealField(int64_t n,
-                                           std::vector<int64_t> const &gens) {
-  std::vector<int64_t> g = gens;
-  if (n > 2) {
-    g.push_back(n - 1);
-  }
-  // MakeAbelianCMField refuses -1: build the subgroup directly
-  std::set<int64_t> Hs{1 % std::max<int64_t>(n, 1)};
-  std::vector<int64_t> queue{1 % std::max<int64_t>(n, 1)};
-  while (!queue.empty()) {
-    int64_t a = queue.back();
-    queue.pop_back();
-    for (int64_t x : g) {
-      int64_t b = ((a * (x % n)) % n + n) % n;
-      if (Hs.insert(b).second) {
-        queue.push_back(b);
-      }
-    }
-  }
-  return {n, std::vector<int64_t>(Hs.begin(), Hs.end())};
 }
 
 /*
@@ -73,8 +52,8 @@ inline AbelianCMField MakeAbelianRealField(int64_t n,
  */
 template <typename T>
 inline std::optional<T>
-StandardQuadraticMassAbelian(AbelianCMField const &FK, int m, bool disc_square,
-                             std::optional<AbelianCMField> const &FE) {
+StandardQuadraticMassAbelian(AbelianField const &FK, int m, bool disc_square,
+                             std::optional<AbelianField> const &FE) {
   if (m == 0) {
     return T(1);
   }
@@ -212,7 +191,7 @@ template <typename T> struct LocalJordanComponent {
 template <typename T>
 inline std::vector<LocalJordanComponent<T>>
 LocalJordanDecomposition(std::vector<std::vector<ElemE<T>>> G, LocalPrimeK<T> &P) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   bool even = (P.q == 2);
   int n = static_cast<int>(G.size());
   auto swap_idx = [&](int a, int b) {
@@ -321,7 +300,7 @@ LocalJordanDecomposition(std::vector<std::vector<ElemE<T>>> G, LocalPrimeK<T> &P
 
 template <typename T>
 inline ElemE<T> LocalComponentDet(LocalJordanComponent<T> const &C,
-                               CyclotomicField<T> const &K) {
+                               NumberField<T> const &K) {
   ElemE<T> det = EZetaPower(0, K);
   for (auto const &G : C.pieces) {
     if (G.size() == 1) {
@@ -514,7 +493,7 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
 template <typename T>
 inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
                                        FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   int v = LocalVal(d, P);
   if (v % 2 != 0) {
     return 3;
@@ -553,7 +532,7 @@ inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
 template <typename T>
 inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
                                 LocalPrimeK<T> &P) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
   T q = UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf);
   std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(H, P);
@@ -757,7 +736,7 @@ template <typename T> using KMat = std::vector<std::vector<ElemE<T>>>;
 constexpr int QD_INF = 1 << 28;
 
 template <typename T>
-inline ElemE<T> LiftResidue(PolyQ const &r, CyclotomicField<T> const &K) {
+inline ElemE<T> LiftResidue(PolyQ const &r, NumberField<T> const &K) {
   ElemE<T> x(K.deg, T(0));
   for (size_t i = 0; i < r.size(); i++) {
     x[i] = UniversalScalarConversion<T, int64_t>(r[i]);
@@ -770,7 +749,7 @@ inline ElemE<T> LiftResidue(PolyQ const &r, CyclotomicField<T> const &K) {
 template <typename T>
 inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
                                             FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   auto sqrt_res = [&](ElemE<T> const &x) -> ElemE<T> {
     return LiftResidue(FqFrobenius(F, LocalResidue(x, P), F.f - 1), K);
   };
@@ -827,7 +806,7 @@ inline int QuadDefect(ElemE<T> const &a, LocalPrimeK<T> &P, FiniteField const &F
 template <typename T>
 inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
                                FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   int v = LocalVal(a, P);
   int w = LocalVal(b, P);
   if (v % 2 != 0) {
@@ -872,7 +851,7 @@ inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
 
 // A diagonal form isometric to the nondegenerate G.
 template <typename T>
-inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, CyclotomicField<T> const &K) {
+inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, NumberField<T> const &K) {
   int n = static_cast<int>(F.size());
   std::vector<ElemE<T>> res;
   for (int i = 0; i < n; i++) {
@@ -938,7 +917,7 @@ inline int HasseInvariantDyadic(std::vector<ElemE<T>> const &D, LocalPrimeK<T> &
 }
 
 template <typename T>
-inline ElemE<T> DetK(KMat<T> const &G, CyclotomicField<T> const &K) {
+inline ElemE<T> DetK(KMat<T> const &G, NumberField<T> const &K) {
   ElemE<T> d = EOne(K);
   for (auto const &x : DiagonalizeK(G, K)) {
     d = EMul(d, x, K);
@@ -950,7 +929,7 @@ inline ElemE<T> DetK(KMat<T> const &G, CyclotomicField<T> const &K) {
 template <typename T>
 inline int WittInvariantDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
                                FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   std::vector<ElemE<T>> D = DiagonalizeK(G, K);
   int h = HasseInvariantDyadic(D, P, F);
   ElemE<T> d = EOne(K);
@@ -970,7 +949,7 @@ inline int WittInvariantDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
 }
 
 template <typename T>
-inline KMat<T> ScaleKMat(KMat<T> G, ElemE<T> const &c, CyclotomicField<T> const &K) {
+inline KMat<T> ScaleKMat(KMat<T> G, ElemE<T> const &c, NumberField<T> const &K) {
   for (auto &row : G) {
     for (auto &x : row) {
       x = EMul(x, c, K);
@@ -1020,7 +999,7 @@ inline T QPowRat(T const &q, int64_t k) {
 template <typename T>
 inline T LocalFactorMaximalDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
                                           FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   int m = static_cast<int>(G.size());
   int r = m / 2;
   if (m == 1) {
@@ -1073,7 +1052,7 @@ template <typename T> struct QuadKirschmerSymbol {
 template <typename T>
 inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
                                              FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(G, P);
   QuadKirschmerSymbol<T> S;
   int t = static_cast<int>(comps.size());
@@ -1149,7 +1128,7 @@ template <typename T>
 inline bool IsLocallyIsometricDyadic(QuadKirschmerSymbol<T> const &S1,
                                      QuadKirschmerSymbol<T> const &S2, LocalPrimeK<T> &P,
                                      FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   if (S1.dims != S2.dims || S1.sL != S2.sL || S1.wL != S2.wL ||
       S1.uL != S2.uL) {
     return false;
@@ -1232,7 +1211,7 @@ inline std::vector<std::vector<PolyQ>> FqAllProjectivePoints(FiniteField const &
 }
 
 template <typename T>
-inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, CyclotomicField<T> const &K) {
+inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, NumberField<T> const &K) {
   size_t n = G.size();
   KMat<T> TG(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   for (size_t i = 0; i < n; i++) {
@@ -1262,7 +1241,7 @@ inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, CyclotomicFiel
 template <typename T>
 inline KMat<T> SuperlatticeGram(KMat<T> const &G, std::vector<PolyQ> const &c,
                              LocalPrimeK<T> const &P) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   size_t n = G.size();
   KMat<T> Tm(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   size_t lead = 0;
@@ -1286,7 +1265,7 @@ inline KMat<T> SuperlatticeGram(KMat<T> const &G, std::vector<PolyQ> const &c,
 template <typename T>
 inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<PolyQ> const &lambda,
                            LocalPrimeK<T> const &P) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   size_t n = G.size();
   KMat<T> Tm(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   size_t lead = 0;
@@ -1308,7 +1287,7 @@ inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<PolyQ> const &lambda
 template <typename T>
 inline std::optional<KMat<T>> IntegralOverlattice(KMat<T> const &G, LocalPrimeK<T> &P,
                                                FiniteField const &F) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   size_t n = G.size();
   for (auto const &c : FqAllProjectivePoints(F, static_cast<int>(n))) {
     std::vector<ElemE<T>> y(n, ElemE<T>(K.deg, T(0)));
@@ -1349,7 +1328,7 @@ template <typename T>
 inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
                                              FiniteField const &F) {
   using Tint = typename underlying_z_ring<T>::ring_type;
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   QuadKirschmerSymbol<T> S = KirschmerSymbolDyadic(G, P, F);
   if (S.sL.size() != 1 || S.sL[0] != 0) {
     std::cerr << "ABQUAD: the lattice is not unimodular\n";
@@ -1458,7 +1437,7 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
 
 template <typename T>
 inline T LocalFactorDyadicRamified(KMat<T> const &H, LocalPrimeK<T> &P) {
-  CyclotomicField<T> const &K = P.K;
+  NumberField<T> const &K = P.K;
   FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
   int m = static_cast<int>(H.size());
   if (m == 1) {
@@ -1843,7 +1822,7 @@ template <typename T>
 inline std::map<int64_t, std::optional<T>>
 QuadraticLocalFactors(MyMatrix<T> const &B,
                       std::vector<MyMatrix<T>> const &Omega,
-                      AbelianCMField const &F) {
+                      AbelianField const &F) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(Omega.size());
   int m = B.rows() / deg;
@@ -1905,7 +1884,7 @@ QuadraticLocalFactors(MyMatrix<T> const &B,
 }
 
 template <typename T>
-inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, CyclotomicField<T> const &K) {
+inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, NumberField<T> const &K) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int n = K.deg;
   if (EIsZero(d)) {
@@ -1999,7 +1978,7 @@ inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, CyclotomicField<T> con
 }
 
 // The field (n, H) seen in Q(zeta_N), n | N.
-inline AbelianCMField LiftAbelianField(AbelianCMField const &F, int64_t N) {
+inline AbelianField LiftAbelianField(AbelianField const &F, int64_t N) {
   std::set<int64_t> Hs(F.H.begin(), F.H.end());
   std::vector<int64_t> H;
   for (int64_t a = 1; a < N; a++) {
@@ -2035,7 +2014,7 @@ inline AbelianCMField LiftAbelianField(AbelianCMField const &F, int64_t N) {
  */
 template <typename T>
 ElemE<T> EApplyAut(ElemE<T> const &x, ElemE<T> const &g,
-                   CyclotomicField<T> const &K) {
+                   NumberField<T> const &K) {
   ElemE<T> res(K.deg, T(0));
   for (int i = K.deg - 1; i >= 0; i--) {
     res = EMul(res, g, K);
@@ -2045,7 +2024,7 @@ ElemE<T> EApplyAut(ElemE<T> const &x, ElemE<T> const &g,
 }
 
 template <typename T>
-std::vector<ElemE<T>> AutomorphismsTotallyReal(CyclotomicField<T> const &K) {
+std::vector<ElemE<T>> AutomorphismsTotallyReal(NumberField<T> const &K) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int n = K.deg;
   auto is_root = [&](ElemE<T> const &g) -> bool {
@@ -2118,7 +2097,7 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(CyclotomicField<T> const &K) {
 }
 
 template <typename T>
-bool IsAbelianQuadraticExtension(ElemE<T> const &d, CyclotomicField<T> const &K,
+bool IsAbelianQuadraticExtension(ElemE<T> const &d, NumberField<T> const &K,
                                  std::vector<ElemE<T>> const &auts) {
   ElemE<T> dinv = EInv(d, K);
   std::vector<ElemE<T>> sv;
@@ -2212,9 +2191,9 @@ IndexTwoSubgroups(std::vector<int64_t> const &Hl, int64_t N) {
   a basis local at another prime.
  */
 template <typename T>
-std::optional<AbelianCMField> AbelianQuadraticExtensionFieldPrimes(
+std::optional<AbelianField> AbelianQuadraticExtensionFieldPrimes(
     MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
-    AbelianCMField const &FK, ElemE<T> const &d, CyclotomicField<T> const &K,
+    AbelianField const &FK, ElemE<T> const &d, NumberField<T> const &K,
     int m, std::set<int64_t> ps) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<ElemE<T>> auts = AutomorphismsTotallyReal(K);
@@ -2239,7 +2218,7 @@ std::optional<AbelianCMField> AbelianQuadraticExtensionFieldPrimes(
     pk *= MyPow<int64_t>(p, k);
     N = std::lcm(N, pk);
   }
-  AbelianCMField FK2 = LiftAbelianField(FK, N);
+  AbelianField FK2 = LiftAbelianField(FK, N);
   bool real = (m % 4 == 0);
   std::vector<std::vector<int64_t>> cands;
   for (auto const &Hp : IndexTwoSubgroups(FK2.H, N)) {
@@ -2266,7 +2245,7 @@ std::optional<AbelianCMField> AbelianQuadraticExtensionFieldPrimes(
     if (!lg) {
       continue;
     }
-    CyclotomicField<T> Kl;
+    NumberField<T> Kl;
     Kl.d = 0;
     Kl.deg = K.deg;
     Kl.Phi = lg->f;
@@ -2297,7 +2276,7 @@ std::optional<AbelianCMField> AbelianQuadraticExtensionFieldPrimes(
               << " candidates for the abelian field E\n";
     throw TerminalException{1};
   }
-  return AbelianCMField{N, cands[0]};
+  return AbelianField{N, cands[0]};
 }
 
 /*
@@ -2357,8 +2336,8 @@ template <typename T>
 std::optional<T>
 QuadraticMassNonAbelianE(MyMatrix<T> const &B,
                          std::vector<MyMatrix<T>> const &Omega,
-                         AbelianCMField const &FK, ElemE<T> const &d,
-                         CyclotomicField<T> const &K, int m, T const &local,
+                         AbelianField const &FK, ElemE<T> const &d,
+                         NumberField<T> const &K, int m, T const &local,
                          QuadLValueMethod method);
 
 /*
@@ -2369,7 +2348,7 @@ QuadraticMassNonAbelianE(MyMatrix<T> const &B,
   has a local generator.
  */
 template <typename T>
-inline std::optional<std::pair<CyclotomicField<T>, ElemE<T>>>
+inline std::optional<std::pair<NumberField<T>, ElemE<T>>>
 QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
   int deg = static_cast<int>(Omega.size());
   int m = B.rows() / deg;
@@ -2394,7 +2373,7 @@ QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
       return {};
     }
   }
-  CyclotomicField<T> K;
+  NumberField<T> K;
   K.d = 0;
   K.deg = deg;
   K.Phi = lg->f;
@@ -2407,11 +2386,11 @@ QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
 }
 
 template <typename T>
-std::optional<AbelianCMField>
+std::optional<AbelianField>
 AbelianQuadraticExtensionField(MyMatrix<T> const &B,
                                std::vector<MyMatrix<T>> const &Omega,
-                               AbelianCMField const &FK, ElemE<T> const &d,
-                               CyclotomicField<T> const &K, int m) {
+                               AbelianField const &FK, ElemE<T> const &d,
+                               NumberField<T> const &K, int m) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   T Nd = DeterminantMat(EMulMatrix(d, K));
   std::set<int64_t> ps;
@@ -2438,7 +2417,7 @@ template <typename T>
 inline std::optional<T>
 QuadraticMassAbelianLattice(MyMatrix<T> const &B,
                             std::vector<MyMatrix<T>> const &Omega,
-                            AbelianCMField const &FK, QuadLValueMethod method) {
+                            AbelianField const &FK, QuadLValueMethod method) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(Omega.size());
   int m = B.rows() / deg;
@@ -2456,12 +2435,12 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
   if (m % 2 == 1) {
     sm = StandardQuadraticMassAbelian<T>(FK, m, false, {});
   } else {
-    std::optional<std::pair<CyclotomicField<T>, ElemE<T>>> Kd =
+    std::optional<std::pair<NumberField<T>, ElemE<T>>> Kd =
         QuadDiscriminantK(B, Omega);
     if (!Kd) {
       return {};
     }
-    CyclotomicField<T> const &K = Kd->first;
+    NumberField<T> const &K = Kd->first;
     ElemE<T> const &d = Kd->second;
 #ifdef DEBUG_ABQUAD
     std::cerr << "ABQUAD: disc =";
@@ -2508,7 +2487,7 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
           std::cerr << "ABQUAD: E = K(sqrt " << Dq << ")\n";
 #endif
           int64_t N = std::lcm(FK.n, std::abs(Dq));
-          AbelianCMField FK2 = LiftAbelianField(FK, N);
+          AbelianField FK2 = LiftAbelianField(FK, N);
           std::vector<int64_t> HE;
           for (int64_t a : FK2.H) {
             if (kronecker_symbol<int64_t>(Dq, a) == 1) {
@@ -2516,13 +2495,13 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
             }
           }
           sm = StandardQuadraticMassAbelian<T>(FK2, m, false,
-                                            AbelianCMField{N, HE});
+                                            AbelianField{N, HE});
           break;
         }
       }
       if (!sm) {
         // E abelian but not K(sqrt D)
-        std::optional<AbelianCMField> FE =
+        std::optional<AbelianField> FE =
             AbelianQuadraticExtensionField(B, Omega, FK, d, K, m);
         if (!FE) {
           // E not abelian: L(1 - r, chi_{E/K}) numerically, rounded
@@ -2626,7 +2605,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
   std::vector<IMat> result;
   for (auto const &[g, e] : fac) {
     LocalPrimeK<T> P = MakeLocalPrimeK(*lg, g, e, p);
-    CyclotomicField<T> const &K = P.K;
+    NumberField<T> const &K = P.K;
     FiniteField F = MakeFiniteField(static_cast<T_small_prime>(p), g);
     int fr = P.f_res;
     // the conjugate of pi; the involution must be trivial on F_P

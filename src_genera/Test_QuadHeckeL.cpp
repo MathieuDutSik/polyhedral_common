@@ -34,8 +34,8 @@ void Process(std::string const &FileGram, std::string const &FileOmega,
   MyMatrix<T> B = ReadMatrixFile<T>(FileGram);
   std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(FileOmega);
   int m = B.rows() / static_cast<int>(Omega.size());
-  AbelianCMField FK = MakeAbelianRealField(n, gens);
-  std::optional<std::pair<CyclotomicField<T>, ElemE<T>>> Kd =
+  AbelianField FK = MakeAbelianRealField(n, gens);
+  std::optional<std::pair<NumberField<T>, ElemE<T>>> Kd =
       QuadDiscriminantK(B, Omega);
   if (!Kd) {
     std::cout << "fail\n";

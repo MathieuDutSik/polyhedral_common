@@ -1217,7 +1217,7 @@ int QuaternionicRank(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &End,
 template <typename T, typename Tint>
 std::optional<T> QuaternionicComponentMass(
     MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Dspan,
-    std::optional<AbelianCMField> const &FK, T const &dK, int r,
+    std::optional<AbelianField> const &FK, T const &dK, int r,
     QuaternionicMassBounds const &bounds, std::ostream &os) {
   int k = B.rows();
   auto c_start = std::chrono::steady_clock::now();

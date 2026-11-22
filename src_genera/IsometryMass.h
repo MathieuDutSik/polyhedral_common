@@ -112,8 +112,8 @@ template <typename T> struct IsometryComponent {
   // End_G with a center K other than Q: the multiplicity lattice X, with
   // the actions of a Z-basis of O_K, is Hermitian over K when K is CM
   // (herm_field) and quadratic over K when K is totally real (quad_field)
-  std::optional<AbelianCMField> herm_field;
-  std::optional<AbelianCMField> quad_field;
+  std::optional<AbelianField> herm_field;
+  std::optional<AbelianField> quad_field;
   MyMatrix<T> center_gram;
   std::vector<MyMatrix<T>> center_omega;
   // End_G = M_r(D), D a totally definite quaternion algebra over a real
@@ -3548,7 +3548,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       // M_s(D)) the block goes on to the type I path.
       bool type2 = false;
       bool type2_split = false;
-      std::optional<AbelianCMField> FKq_holder;
+      std::optional<AbelianField> FKq_holder;
       T dKq_holder(1);
       if (rq == 0) {
         int r2 = AlbertTypeTwoRankCandidate(Gram, EndC, CenterC);
@@ -3621,7 +3621,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             throw TerminalException{1};
           }
         }
-        std::optional<AbelianCMField> FKq;
+        std::optional<AbelianField> FKq;
         T dKq(1);
         if (c > 1) {
           auto [ClassSumq, Nexpq, Hgensq] = center_field();
@@ -3967,7 +3967,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             Omega = Mult;
           }
         }
-        AbelianCMField Fk = is_cm ? MakeAbelianCMField(Nexp, Hgens)
+        AbelianField Fk = is_cm ? MakeAbelianCMField(Nexp, Hgens)
                                   : MakeAbelianRealField(Nexp, Hgens);
         // the order is O_K when its discriminant is that of K (the product
         // of the conductors of the characters)

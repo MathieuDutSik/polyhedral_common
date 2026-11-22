@@ -3,7 +3,8 @@
 #define SRC_GENERA_ABELIANHERMITIANMASS_H_
 
 // clang-format off
-#include "NumberFieldElement.h"
+#include "LocalGramOverOK.h"
+#include "AbelianField.h"
 #include "ClassicalGroupOrders.h"
 #include "PolynomialModQ.h"
 #include "MAT_MatrixModPrime.h"
@@ -17,7 +18,7 @@
 
 /*
   Masses of Hermitian lattices over an abelian CM field E that need not be
-  cyclotomic: E the subfield of Q(zeta_n) fixed by H (AbelianCMField), K
+  cyclotomic: E the subfield of Q(zeta_n) fixed by H (AbelianField), K
   its maximal real subfield.
 
   The lattice is given as a Z-lattice X with the Gram matrix B of the trace
@@ -48,324 +49,6 @@
   square classes, and the group orders of Hecke at q^{f_K}; for q = 2 the
   chain method with the relative different exponent.
  */
-
-// Tr(theta^k), k = 0, ..., 2 deg, from the minimal polynomial by Newton.
-template <typename T>
-inline std::vector<T> PowerTraces(std::vector<int64_t> const &f,
-                                          int kmax) {
-  int deg = static_cast<int>(f.size()) - 1;
-  // f = x^deg + c_{deg-1} x^{deg-1} + ... + c_0
-  std::vector<T> p(kmax + 1, T(0));
-  p[0] = deg;
-  for (int k = 1; k <= kmax; k++) {
-    T s(0);
-    // Newton: p_k + c_{deg-1} p_{k-1} + ... = -k c_{deg-k} for k <= deg
-    for (int i = 1; i <= std::min(k - 1, deg); i++) {
-      s += UniversalScalarConversion<T, int64_t>(f[deg - i]) * p[k - i];
-    }
-    if (k <= deg) {
-      s += UniversalScalarConversion<T, int64_t>(k) *
-           UniversalScalarConversion<T, int64_t>(f[deg - k]);
-    }
-    p[k] = -s;
-  }
-  return p;
-}
-
-/*
-  The minimal polynomial of a matrix S acting on an E-vector space (rows)
-  through a generator of E: the first dependence of v, v S, v S^2, ... for
-  a nonzero v, which is the minimal polynomial of the element. Also the
-  coordinates of a vector w = v M in v, v S, ..., v S^{deg-1} (M in E).
- */
-template <typename T> struct KrylovData {
-  std::vector<T> minpoly;
-  MyMatrix<T> basis;
-};
-
-template <typename T>
-inline KrylovData<T> KrylovMinimalPolynomial(MyMatrix<T> const &S) {
-  int r = S.rows();
-  MyVector<T> v = ZeroVector<T>(r);
-  v(0) = 1;
-  std::vector<MyVector<T>> pw{v};
-  for (int k = 1; k <= r; k++) {
-    MyVector<T> w = S.transpose() * pw.back();
-    std::vector<MyVector<T>> rows = pw;
-    rows.push_back(w);
-    MyMatrix<T> M = MatrixFromVectorFamily(rows);
-    MyMatrix<T> ker = NullspaceMat(M);
-    if (ker.rows() > 0) {
-      // sum_i ker(0, i) v S^i = 0, normalized at i = k
-      std::vector<T> mp(k + 1);
-      for (int i = 0; i <= k; i++) {
-        mp[i] = ker(0, i) / ker(0, k);
-      }
-      MyMatrix<T> basis(k, r);
-      for (int i = 0; i < k; i++) {
-        for (int j = 0; j < r; j++) {
-          basis(i, j) = pw[i](j);
-        }
-      }
-      return {mp, basis};
-    }
-    pw.push_back(w);
-  }
-  std::cerr << "ABHERM: no minimal polynomial\n";
-  throw TerminalException{1};
-}
-
-/*
-  A generator theta of E in O_E with q prime to the index, its matrix S on
-  X, its minimal polynomial f and the conjugate of theta as a polynomial in
-  theta. Nothing when no small combination works.
- */
-template <typename T> struct LocalGenerator {
-  MyMatrix<T> S;
-  std::vector<int64_t> f;
-  std::vector<T> conj;
-};
-
-template <typename T>
-inline std::optional<LocalGenerator<T>>
-FindLocalGenerator(MyMatrix<T> const &B,
-                   std::vector<MyMatrix<T>> const &Omega, int64_t q) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  int deg = static_cast<int>(Omega.size());
-  int r = B.rows();
-  int m = r / deg;
-  // disc O_E = det(Tr(omega_i omega_j)), Tr_{E/Q} = Tr on X / m
-  MyMatrix<T> Tr(deg, deg);
-  for (int i = 0; i < deg; i++) {
-    for (int j = 0; j < deg; j++) {
-      MyMatrix<T> P = Omega[i] * Omega[j];
-      T t(0);
-      for (int u = 0; u < r; u++) {
-        t += P(u, u);
-      }
-      Tr(i, j) = t / UniversalScalarConversion<T, int64_t>(m);
-    }
-  }
-  int vdisc = RationalValuation(DeterminantMat(Tr), q);
-  MyMatrix<T> Binv = Inverse(B);
-  // combinations with coefficients in [-2, 2], by increasing size
-  std::vector<std::vector<int>> cands;
-  int n_tot = MyPow<int>(5, deg);
-  for (int u = 0; u < n_tot; u++) {
-    std::vector<int> c(deg);
-    int t = u;
-    for (int i = 0; i < deg; i++) {
-      c[i] = t % 5 - 2;
-      t /= 5;
-    }
-    cands.push_back(c);
-  }
-  std::stable_sort(cands.begin(), cands.end(),
-                   [](std::vector<int> const &a, std::vector<int> const &b) {
-                     int na = 0, nb = 0;
-                     for (int x : a) {
-                       na += std::abs(x);
-                     }
-                     for (int x : b) {
-                       nb += std::abs(x);
-                     }
-                     return na < nb;
-                   });
-  for (auto const &c : cands) {
-    MyMatrix<T> S = ZeroMatrix<T>(r, r);
-    for (int i = 0; i < deg; i++) {
-      if (c[i] != 0) {
-        S += Omega[i] * T(c[i]);
-      }
-    }
-    KrylovData<T> kd = KrylovMinimalPolynomial(S);
-    if (static_cast<int>(kd.minpoly.size()) != deg + 1) {
-      continue;
-    }
-    std::vector<int64_t> f;
-    bool integral = true;
-    for (auto const &x : kd.minpoly) {
-      if (GetDenominator_z(x) != 1) {
-        integral = false;
-      }
-      f.push_back(UniversalScalarConversion<int64_t, Tint>(GetNumerator_z(x)));
-    }
-    if (!integral) {
-      continue;
-    }
-    // disc f = det(Tr(theta^{i+j}))
-    std::vector<T> pt = PowerTraces<T>(f, 2 * deg);
-    MyMatrix<T> D(deg, deg);
-    for (int i = 0; i < deg; i++) {
-      for (int j = 0; j < deg; j++) {
-        D(i, j) = pt[i + j];
-      }
-    }
-    if (RationalValuation(DeterminantMat(D), q) != vdisc) {
-      continue;
-    }
-    // the conjugate: S* = (B^{-1} S B)^T on the rows, v S* in the Krylov
-    // basis of v
-    MyMatrix<T> Sstar = (Binv * S * B).transpose();
-    MyVector<T> v = GetMatrixRow(kd.basis, 0);
-    MyVector<T> w = Sstar.transpose() * v;
-    // w = sum_i a_i v S^i
-    MyMatrix<T> M = kd.basis;
-    std::optional<MyVector<T>> sol = SolutionMat(M, w);
-    if (!sol) {
-      std::cerr << "ABHERM: the conjugate of theta is not in Q(theta)\n";
-      throw TerminalException{1};
-    }
-    std::vector<T> conj(deg);
-    for (int i = 0; i < deg; i++) {
-      conj[i] = (*sol)(i);
-    }
-    return LocalGenerator<T>{S, f, conj};
-  }
-  return {};
-}
-
-// The matrix of g(S) for a polynomial g with integer coefficients, or
-// residues read as integers.
-template <typename T, typename Tcoef>
-inline MyMatrix<T> PolyOfMatrixQ(std::vector<Tcoef> const &g,
-                                 MyMatrix<T> const &S) {
-  int r = S.rows();
-  MyMatrix<T> res = ZeroMatrix<T>(r, r);
-  for (size_t i = g.size(); i-- > 0;) {
-    res = res * S;
-    T g_i = UniversalScalarConversion<T, Tcoef>(g[i]);
-    for (int j = 0; j < r; j++) {
-      res(j, j) += g_i;
-    }
-  }
-  return res;
-}
-
-/*
-  A prime of E over q: the factor g, its multiplicity (the ramification
-  index over q), the conjugate factor, the type over K (0 split, 1 inert,
-  2 ramified), f_K = log_q of the residue field of the prime of K below,
-  and the idempotent of the prime on X modulo q^N.
- */
-struct AbelianPrime {
-  PolyQ g;
-  int e;
-  size_t conj_index;
-  int type;
-  int f_K;
-};
-
-template <typename T>
-inline std::vector<AbelianPrime>
-AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyReduceSigned(lg.f, q), q);
-  // the conjugate of the prime of g: the factor dividing g(conj(x))
-  auto compose_conj = [&](PolyQ const &g) -> PolyQ {
-    // g(c(x)) modulo f and q, c the conjugate of theta (q-integral)
-    PolyQ c;
-    for (auto const &x : lg.conj) {
-      c.push_back(ResidueModInt<T, Tint>(x, static_cast<T_residue>(q)));
-    }
-    PolyQ fq = PolyReduceSigned(lg.f, q);
-    PolyQ res = {0};
-    for (size_t i = g.size(); i-- > 0;) {
-      res = PolyDivModQ(PolyMulQ(res, c, q), fq, q).second;
-      if (res.empty()) {
-        res = {0};
-      }
-      res[0] = (res[0] + g[i]) % q;
-      PolyTrim(res);
-      if (res.empty()) {
-        res = {0};
-      }
-    }
-    return res;
-  };
-  std::vector<AbelianPrime> res;
-  for (size_t i = 0; i < fac.size(); i++) {
-    PolyQ gc = compose_conj(fac[i].first);
-    size_t j = i;
-    for (size_t u = 0; u < fac.size(); u++) {
-      PolyQ rr = PolyDivModQ(gc, fac[u].first, q).second;
-      PolyTrim(rr);
-      if (rr.empty()) {
-        j = u;
-        break;
-      }
-    }
-    AbelianPrime ap;
-    ap.g = fac[i].first;
-    ap.e = fac[i].second;
-    ap.conj_index = j;
-    int deg_g = static_cast<int>(fac[i].first.size()) - 1;
-    if (j != i) {
-      ap.type = 0;
-      ap.f_K = deg_g;
-    } else if (ap.e == 2 * eK) {
-      ap.type = 2;
-      ap.f_K = deg_g;
-    } else {
-      ap.type = 1;
-      ap.f_K = deg_g / 2;
-    }
-    res.push_back(ap);
-  }
-  return res;
-}
-
-/*
-  The idempotent on X of the prime (q, g(theta)) of ramification index e,
-  lifted modulo q^N: the CRT idempotent of g^e in F_q[x] / f, refined by e
-  <- 3 e^2 - 2 e^3 modulo (f, q^N), evaluated at theta.
- */
-template <typename Tint>
-inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
-                                        PolyQ const &g, int e, int64_t q,
-                                        int N) {
-  Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
-  PolyQ fq = PolyReduceSigned(f, q);
-  PolyQ P = {1};
-  for (int i = 0; i < e; i++) {
-    P = PolyMulQ(P, g, q);
-  }
-  PolyQ Qp = PolyDivModQ(fq, P, q).first;
-  PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
-  PolyZ<Tint> ez = PolyZOfPolyQ<Tint>(e0);
-  ez = PolyZReduce(ez, f, Q);
-  for (int it = 0; it < 64; it++) {
-    PolyZ<Tint> e2 = PolyZReduce(PolyZMul(ez, ez), f, Q);
-    PolyZ<Tint> e3 = PolyZReduce(PolyZMul(e2, ez), f, Q);
-    PolyZ<Tint> en(e2.size());
-    for (size_t k = 0; k < e2.size(); k++) {
-      en[k] = 3 * e2[k] - 2 * e3[k];
-    }
-    en = PolyZReduce(en, f, Q);
-    if (en == ez) {
-      break;
-    }
-    ez = en;
-  }
-  return ez;
-}
-
-template <typename T>
-inline MyMatrix<T> AbelianPrimeIdempotent(LocalGenerator<T> const &lg,
-                                                  PolyQ const &g, int e,
-                                                  int64_t q, int N) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  int r = lg.S.rows();
-  PolyZ<Tint> ez = AbelianPrimeIdempotentPoly<Tint>(lg.f, g, e, q, N);
-  MyMatrix<T> E = ZeroMatrix<T>(r, r);
-  MyMatrix<T> pw = IdentityMat<T>(r);
-  for (size_t k = 0; k < ez.size(); k++) {
-    E += pw * T(ez[k]);
-    pw = pw * lg.S;
-  }
-  return E;
-}
 
 /*
   The Jordan data at a prime of E over q unramified over K (split: one of
@@ -458,273 +141,6 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
 }
 
 /*
-  The arithmetic at a prime p = (q, g(theta)) of K, theta = theta_q with q
-  prime to the index: the elements of K are kept exactly on the powers of
-  theta, v_p(x) is v_q of the norm of eps x + 1 - eps over f (eps the
-  idempotent of p in Z_q[theta], known modulo q^N for an N raised until
-  the norm is nonzero modulo q^N), and the residue of x in F_q[x] / g is
-  read on eps x. This holds whatever the other primes over q are. The
-  same holds for a prime P of a CM field E, and LocalOKGram then gives the
-  Hermitian form over E (h linear in its first argument).
- */
-template <typename T> struct LocalPrimeK {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  CyclotomicField<T> K;
-  int64_t q;
-  PolyQ g;
-  int e;
-  int f_res;
-  // the order of the residue field, an abstract size
-  Tint qf;
-  ElemE<T> pi;
-  ElemE<T> pi_inv;
-  std::map<int, PolyZ<Tint>> eps;
-};
-
-template <typename T>
-inline LocalPrimeK<T> MakeLocalPrimeK(LocalGenerator<T> const &lg, PolyQ const &g,
-                                   int e, int64_t q) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  LocalPrimeK<T> P;
-  int deg = static_cast<int>(lg.f.size()) - 1;
-  P.K.d = 0;
-  P.K.deg = deg;
-  P.K.Phi = lg.f;
-  P.K.conj = lg.conj;
-  P.q = q;
-  P.g = g;
-  P.e = e;
-  P.f_res = static_cast<int>(g.size()) - 1;
-  P.qf = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), P.f_res);
-  if (e == 1) {
-    P.pi = ElemE<T>(deg, T(0));
-    P.pi[0] = UniversalScalarConversion<T, int64_t>(q);
-  } else {
-    P.pi = EPolyOfTheta(g, P.K);
-  }
-  P.pi_inv = EInv(P.pi, P.K);
-  return P;
-}
-
-template <typename T>
-inline PolyZ<typename underlying_z_ring<T>::ring_type> const &LocalEps(LocalPrimeK<T> &P, int N) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  auto it = P.eps.find(N);
-  if (it == P.eps.end()) {
-    it = P.eps.emplace(N, AbelianPrimeIdempotentPoly<Tint>(P.K.Phi, P.g, P.e, P.q, N))
-             .first;
-  }
-  return it->second;
-}
-
-// x = y / d with y in Z[theta] and d > 0
-template <typename T>
-inline std::pair<PolyZ<typename underlying_z_ring<T>::ring_type>, typename underlying_z_ring<T>::ring_type>
-ClearDenominators(ElemE<T> const &x) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  Tint d(1);
-  for (auto const &c : x) {
-    d = LCMpair(d, GetDenominator_z(c));
-  }
-  PolyZ<Tint> y;
-  for (auto const &c : x) {
-    T t = c * T(d);
-    y.push_back(GetNumerator_z(t));
-  }
-  return {y, d};
-}
-
-template <typename T>
-inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  if (EIsZero(x)) {
-    return 1 << 28;
-  }
-  auto [y, d] = ClearDenominators(x);
-  int k = IntegerValuation(d, P.q);
-  int N = P.f_res * (P.e * k + 4) + 4;
-  while (true) {
-    Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), N);
-    PolyZ<Tint> const &eps = LocalEps(P, N);
-    PolyZ<Tint> w = PolyZReduce(PolyZMul(eps, y), P.K.Phi, Q);
-    for (size_t i = 0; i < eps.size(); i++) {
-      w[i] -= eps[i];
-    }
-    w[0] += 1;
-    w = PolyZReduce(w, P.K.Phi, Q);
-    ElemE<T> we;
-    for (auto const &c : w) {
-      we.push_back(T(c));
-    }
-    T det = DeterminantMat(EMulMatrix(we, P.K));
-    Tint dn = GetNumerator_z(det);
-    if (ResInt(dn, Q) != 0) {
-      int v = IntegerValuation(dn, P.q);
-      return v / P.f_res - P.e * k;
-    }
-    N *= 2;
-  }
-}
-
-// The residue in F_q[x] / g of x with v_p(x) >= 0.
-template <typename T>
-inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  auto [y, d] = ClearDenominators(x);
-  int k = IntegerValuation(d, P.q);
-  Tint qk = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(P.q), k);
-  Tint Q = qk * UniversalScalarConversion<Tint, int64_t>(P.q);
-  PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
-  T_small_prime q_u = static_cast<T_small_prime>(P.q);
-  T_residue inv = ResInv(ResModOf(QuoInt(d, qk), q_u), q_u);
-  PolyQ res;
-  for (auto const &c : z) {
-    if (ResInt(c, qk) != 0) {
-      std::cerr << "ABQUAD: the residue of a non integral element\n";
-      throw TerminalException{1};
-    }
-    res.push_back(ResMul(ResModOf(QuoInt(c, qk), q_u), inv, q_u));
-  }
-  PolyTrim(res);
-  if (res.empty()) {
-    return {};
-  }
-  PolyQ r = PolyDivModQ(res, P.g, P.q).second;
-  PolyTrim(r);
-  return r;
-}
-
-/*
-  The Gram matrix over K of phi on the vectors v_i of X: phi(v_i, v_j) on
-  the powers of theta, from the traces Tr(theta^t phi(v_i, v_j)) = b(theta^t
-  v_i, v_j), theta being any generator of K.
- */
-template <typename T>
-inline std::vector<std::vector<ElemE<T>>>
-LocalOKGramFromVectors(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
-                       std::vector<MyVector<T>> const &chosen) {
-  int r = B.rows();
-  int deg = static_cast<int>(lg.f.size()) - 1;
-  int m = static_cast<int>(chosen.size());
-  std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
-  for (int t = 1; t < deg; t++) {
-    Spow.push_back(Spow.back() * lg.S);
-  }
-  std::vector<T> pt = PowerTraces<T>(lg.f, 2 * deg);
-  MyMatrix<T> Tm(deg, deg);
-  for (int a = 0; a < deg; a++) {
-    for (int b = 0; b < deg; b++) {
-      Tm(a, b) = pt[a + b];
-    }
-  }
-  MyMatrix<T> Tinv = Inverse(Tm);
-  std::vector<std::vector<ElemE<T>>> H(m, std::vector<ElemE<T>>(m));
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < m; j++) {
-      ElemE<T> val(deg, T(0));
-      for (int t = 0; t < deg; t++) {
-        MyVector<T> w = Spow[t].transpose() * chosen[i];
-        T bt = w.dot(B * chosen[j]);
-        for (int s2 = 0; s2 < deg; s2++) {
-          val[s2] += bt * Tinv(t, s2);
-        }
-      }
-      H[i][j] = val;
-    }
-  }
-  return H;
-}
-
-/*
-  The Gram matrix over K of phi on m vectors of X spanning X (x) Z_q over
-  O_K (x) Z_q: standard vectors first, then small combinations.
- */
-template <typename T> struct LocalOKBasisGram {
-  std::vector<MyVector<T>> basis;
-  std::vector<std::vector<ElemE<T>>> H;
-};
-
-template <typename T>
-inline LocalOKBasisGram<T>
-LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
-                 int64_t q) {
-  using Tint = typename underlying_z_ring<T>::ring_type;
-  int r = B.rows();
-  int deg = static_cast<int>(lg.f.size()) - 1;
-  int m = r / deg;
-  T_small_prime q_u = static_cast<T_small_prime>(q);
-  auto red = [&](T const &x) -> T_residue {
-    return ResidueModInt<T, Tint>(x, q_u);
-  };
-  std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
-  for (int t = 1; t < deg; t++) {
-    Spow.push_back(Spow.back() * lg.S);
-  }
-  auto orbit_rows = [&](MyVector<T> const &v) -> ModMatrix {
-    ModMatrix rows(deg, r);
-    for (int t = 0; t < deg; t++) {
-      MyVector<T> w = Spow[t].transpose() * v;
-      for (int j = 0; j < r; j++) {
-        rows(t, j) = red(w(j));
-      }
-    }
-    return rows;
-  };
-  std::vector<MyVector<T>> chosen;
-  ModMatrix acc(0, r);
-  auto try_add = [&](MyVector<T> const &v) -> void {
-    ModMatrix rows = orbit_rows(v);
-    ModMatrix test(acc.rows() + rows.rows(), r);
-    test.topRows(acc.rows()) = acc;
-    test.bottomRows(rows.rows()) = rows;
-    if (RankModPrime(test, q_u) == static_cast<size_t>(test.rows())) {
-      chosen.push_back(v);
-      acc = test;
-    }
-  };
-  for (int k = 0; k < r && static_cast<int>(chosen.size()) < m; k++) {
-    MyVector<T> v = ZeroVector<T>(r);
-    v(k) = 1;
-    try_add(v);
-  }
-  uint64_t seed = 1;
-  for (int it = 0; it < 1000 && static_cast<int>(chosen.size()) < m; it++) {
-    MyVector<T> v = ZeroVector<T>(r);
-    for (int j = 0; j < r; j++) {
-      seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
-      v(j) = static_cast<long>((seed >> 33) % 5) - 2;
-    }
-    try_add(v);
-  }
-  if (static_cast<int>(chosen.size()) != m) {
-    std::cerr << "ABQUAD: no local O_K-basis found\n";
-    throw TerminalException{1};
-  }
-  return {chosen, LocalOKGramFromVectors(B, lg, chosen)};
-}
-
-template <typename T>
-inline std::vector<std::vector<ElemE<T>>>
-LocalOKGram(MyMatrix<T> const &B, LocalGenerator<T> const &lg, int64_t q) {
-  return LocalOKGramBasis(B, lg, q).H;
-}
-
-// x pi^{-k}
-template <typename T>
-inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
-  if (k > 0) {
-    ElemE<T> pinv = P.pi_inv.empty() ? EInv(P.pi, P.K) : P.pi_inv;
-    for (int i = 0; i < k; i++) {
-      x = EMul(x, pinv, P.K);
-    }
-  }
-  for (int i = 0; i < -k; i++) {
-    x = EMul(x, P.pi, P.K);
-  }
-  return x;
-}
-
-/*
   The local factor at a ramified prime P of K over the odd prime q: the
   formula of HermitianLocalFactorRamified with the residue field of P, of
   order q^f. The Hermitian Gram matrix over E is that of m vectors of X
@@ -732,7 +148,8 @@ inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
   of LocalPrimeK, so P need not be alone over q.
  */
 template <typename T> struct AbelianLocalGram {
-  CyclotomicField<T> K;
+  NumberField<T> K;
+  PrimeValuation<T> v;
   int m;
   std::vector<std::vector<ElemE<T>>> H;
   std::shared_ptr<LocalPrimeK<T>> P;
@@ -745,12 +162,11 @@ inline AbelianLocalGram<T> AbelianLocalHermitianGram(MyMatrix<T> const &B,
                                                   int64_t q) {
   std::shared_ptr<LocalPrimeK<T>> P =
       std::make_shared<LocalPrimeK<T>>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
-  CyclotomicField<T> K = P->K;
-  K.val_div = static_cast<int>(ap.g.size()) - 1;
-  K.valuation = [P](ElemE<T> const &x) -> int { return LocalVal(x, *P); };
+  NumberField<T> K = P->K;
+  PrimeValuation<T> v{q, static_cast<int>(ap.g.size()) - 1, P};
   std::vector<std::vector<ElemE<T>>> H = LocalOKGram(B, lg, q);
   int m = static_cast<int>(H.size());
-  return {K, m, H, P};
+  return {K, v, m, H, P};
 }
 
 template <typename T>
@@ -758,11 +174,11 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
                                             LocalGenerator<T> const &lg,
                                             AbelianPrime const &ap, int64_t q) {
   AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, q);
-  CyclotomicField<T> const &K = alg.K;
+  NumberField<T> const &K = alg.K;
   int m = alg.m;
   std::vector<std::vector<ElemE<T>>> const &H = alg.H;
   std::map<int, std::pair<int, ElemE<T>>> blocks;
-  for (auto &kv : HermitianJordanSplit(H, K, q)) {
+  for (auto &kv : HermitianJordanSplit(H, K, alg.v)) {
     int rk = 0;
     ElemE<T> det = EZetaPower(0, K);
     for (auto &G : kv.second) {
@@ -801,7 +217,7 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
       // divided by (pi pi-bar)^{w / 2}, w of either sign (a block of
       // negative scale when the form has denominators at P)
       ElemE<T> u = kv.second.second;
-      int w = EValuation(u, K, q);
+      int w = PrimeVal(u, K, alg.v);
       for (int i = 0; i < w / 2; i++) {
         u = EMul(u, pinv, K);
       }
@@ -844,7 +260,8 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
   j < f, b_j in {0, 1}, over which the lines of L / pi L are taken.
  */
 template <typename T> struct GenericDyadic {
-  CyclotomicField<T> K;
+  NumberField<T> K;
+  PrimeValuation<T> v;
   ElemE<T> one;
   ElemE<T> pi;
   ElemE<T> pi_inv;
@@ -858,7 +275,7 @@ template <typename T> struct GenericDyadic {
 
 template <typename T>
 inline int GDVal(ElemE<T> const &x, GenericDyadic<T> const &C) {
-  return EValuation(x, C.K, 2);
+  return PrimeVal(x, C.K, C.v);
 }
 
 template <typename T>
@@ -888,7 +305,7 @@ inline int GDNormVal(std::vector<std::vector<ElemE<T>>> const &G,
 
 template <typename T>
 inline bool GDIsLocalNorm(ElemE<T> x, GenericDyadic<T> const &C) {
-  CyclotomicField<T> const &K = C.K;
+  NumberField<T> const &K = C.K;
   int w = GDVal(x, C);
   for (int i = 0; i < w / 2; i++) {
     x = EMul(x, C.pipibar_inv, K);
@@ -1017,7 +434,7 @@ template <typename T>
 inline std::vector<GDSymbolEntry<T>>
 GDKirschmerSymbol(std::vector<std::vector<ElemE<T>>> const &H,
                   GenericDyadic<T> const &C) {
-  std::map<int, std::vector<SmallGram<T>>> blocks = HermitianJordanSplit(H, C.K, 2);
+  std::map<int, std::vector<SmallGram<T>>> blocks = HermitianJordanSplit(H, C.K, C.v);
   std::vector<int> scales, nvals, ranks;
   std::vector<ElemE<T>> dets;
   for (auto &kv : blocks) {
@@ -1094,7 +511,8 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
   AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, 2);
   GenericDyadic<T> C;
   C.K = alg.K;
-  CyclotomicField<T> const &K = C.K;
+  C.v = alg.v;
+  NumberField<T> const &K = C.K;
   int deg = K.deg;
   int m = alg.m;
   C.one = EZetaPower(0, K);
@@ -1462,7 +880,7 @@ template <typename T>
 inline std::optional<T>
 HermitianMassAbelianLattice(MyMatrix<T> const &B,
                             std::vector<MyMatrix<T>> const &Omega,
-                            AbelianCMField const &F) {
+                            AbelianField const &F) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(AbelianFieldDegree(F));
   if (static_cast<int>(Omega.size()) != deg) {

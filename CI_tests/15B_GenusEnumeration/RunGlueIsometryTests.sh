@@ -147,6 +147,13 @@ if [ "$ours" != "$theirs" ]; then
     exit 1
 fi
 echo "--- the numbers of hermitian genera of $(echo "$theirs" | wc -l | tr -d ' ') cases agree with Hecke ---"
+# The primes of Q(zeta_d)^+ and their type in Q(zeta_d), from the Dirichlet
+# characters (AbelianField.h), against the explicit formulas
+if ! r=$($THG decomposition 2>&1 | tail -1) || [ "${r##*errors=}" != "0" ]; then
+    echo "ERROR: the prime decompositions differ: $r" >&2
+    exit 1
+fi
+echo "--- the prime decompositions agree with the formulas ($r) ---"
 
 # The pieces of GENUS_HermitianPieces (HermitianLattice.h, without Hecke)
 # against those of Hecke.jl: every genus of each file must be found

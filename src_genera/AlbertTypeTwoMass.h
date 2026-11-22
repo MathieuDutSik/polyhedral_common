@@ -90,7 +90,7 @@ template <typename Tint> Tint SquarefreePart(Tint const &x) {
   abelian CM field of conductor |disc| fixed by the kernel of the
   Kronecker character of disc.
  */
-inline AbelianCMField ImaginaryQuadraticField(int64_t d) {
+inline AbelianField ImaginaryQuadraticField(int64_t d) {
   int64_t disc = (d % 4 == 3) ? -d : -4 * d;
   int64_t n = -disc;
   std::vector<int64_t> H;
@@ -398,22 +398,22 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
 template <typename T>
 std::optional<T> RankOneHermitianMassOverK(MyMatrix<T> const &BM,
                                            std::vector<MyMatrix<T>> const &OmegaM,
-                                           AbelianCMField const &FK,
+                                           AbelianField const &FK,
                                            std::set<int64_t> const &ram_E,
                                            QuadLValueMethod method,
                                            [[maybe_unused]] std::ostream &os) {
-  std::optional<std::pair<CyclotomicField<T>, ElemE<T>>> Kd =
+  std::optional<std::pair<NumberField<T>, ElemE<T>>> Kd =
       QuadDiscriminantK(BM, OmegaM);
   if (!Kd) {
     return {};
   }
-  CyclotomicField<T> const &K = Kd->first;
+  NumberField<T> const &K = Kd->first;
   ElemE<T> const &d = Kd->second;
   if (SqrtInK(d, K)) {
     std::cerr << "ALB2_MASS: K(mu) is not a field\n";
     throw TerminalException{1};
   }
-  std::optional<AbelianCMField> FE;
+  std::optional<AbelianField> FE;
   {
     // the primes ramified in E: a rational D with K(sqrt d) = K(sqrt D)
     // is a product of them (and of those of 2 n)
@@ -441,14 +441,14 @@ std::optional<T> RankOneHermitianMassOverK(MyMatrix<T> const &BM,
           continue;
         }
         int64_t N = std::lcm(FK.n, std::abs(Dq));
-        AbelianCMField FK2 = LiftAbelianField(FK, N);
+        AbelianField FK2 = LiftAbelianField(FK, N);
         std::vector<int64_t> HE;
         for (int64_t a : FK2.H) {
           if (kronecker_symbol<int64_t>(Dq, a) == 1) {
             HE.push_back(a);
           }
         }
-        FE = AbelianCMField{N, HE};
+        FE = AbelianField{N, HE};
         break;
       }
     }
@@ -499,7 +499,7 @@ std::optional<T> RankOneHermitianMassOverK(MyMatrix<T> const &BM,
 template <typename T, typename Tint>
 std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
                                           std::vector<MyMatrix<T>> const &Dspan,
-                                          std::optional<AbelianCMField> const &FK,
+                                          std::optional<AbelianField> const &FK,
                                           T const &dK,
                                           AlbertTypeTwoMassBounds const &bounds,
                                           std::ostream &os) {

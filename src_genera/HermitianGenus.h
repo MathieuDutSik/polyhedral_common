@@ -6,6 +6,7 @@
 #include "NumberTheory.h"
 #include "GeneraArithmetic.h"
 #include "CyclotomicArithmetic.h"
+#include "AbelianField.h"
 #include "PolynomialModQ.h"
 #include <algorithm>
 #include <array>
@@ -70,29 +71,17 @@ inline int64_t HermPrimePowerPart(int64_t d, int64_t l) {
   return la;
 }
 
+// The primes of K_0 over l and their type in E, from the decomposition of
+// l in Q(zeta_d) and its real subfield (AbelianField.h).
 inline HermPrimeData HermPrimesAbove(int64_t d_in, int64_t l) {
   int64_t d = NormalizeCyclotomicIndex(d_in);
-  int64_t la = HermPrimePowerPart(d, l);
-  int64_t m = d / la;
+  CMPrimeDecomposition dec = DecomposePrimeCM(AbelianField{d, {1}}, l);
   HermPrimeData res;
   res.l = l;
   res.dyadic = (l == 2);
-  int64_t e_E = EulerPhi(la);
-  int64_t f = MultiplicativeOrder(l, m);
-  int64_t g_E = EulerPhi(m) / f;
-  if (la > 1 && m == 1) {
-    res.kind = 2;
-    res.n_prime = g_E;
-    res.e0 = e_E / 2;
-  } else if (IsPowerModulo(-1, l, m)) {
-    res.kind = 1;
-    res.n_prime = g_E;
-    res.e0 = e_E;
-  } else {
-    res.kind = 0;
-    res.n_prime = g_E / 2;
-    res.e0 = e_E;
-  }
+  res.kind = dec.type;
+  res.n_prime = dec.K.g;
+  res.e0 = dec.K.e;
   return res;
 }
 

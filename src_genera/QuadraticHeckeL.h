@@ -312,9 +312,9 @@ template <typename Tint> struct QuadHeckeGoodPrimes {
 
 template <typename T>
 QuadHeckeGoodPrimes<typename underlying_z_ring<T>::ring_type>
-MakeQuadHeckeGoodPrimes(AbelianCMField const &FK,
+MakeQuadHeckeGoodPrimes(AbelianField const &FK,
                         std::vector<typename underlying_z_ring<T>::ring_type> const &dint,
-                        CyclotomicField<T> const &K) {
+                        NumberField<T> const &K) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   QuadHeckeGoodPrimes<Tint> G;
   int n = K.deg;
@@ -352,7 +352,7 @@ MakeQuadHeckeGoodPrimes(AbelianCMField const &FK,
 template <typename T>
 std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
     MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
-    AbelianCMField const &FK, ElemE<T> const &d_in, CyclotomicField<T> const &K,
+    AbelianField const &FK, ElemE<T> const &d_in, NumberField<T> const &K,
     int m, int64_t X, bool store,
     std::function<void(int64_t, std::vector<QuadHeckePrime> const &)> const
         &f_prime) {
@@ -458,7 +458,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       auto disc_of = [&](LocalGenerator<T> const &lg,
                          std::vector<std::vector<ElemE<T>>> const &H)
           -> ElemE<T> {
-        CyclotomicField<T> Kp;
+        NumberField<T> Kp;
         Kp.d = 0;
         Kp.deg = n;
         Kp.Phi = lg.f;
@@ -978,9 +978,9 @@ template <typename T> struct QuadHeckeLData {
   using Tint = typename underlying_z_ring<T>::ring_type;
   MyMatrix<T> B;
   std::vector<MyMatrix<T>> Omega;
-  AbelianCMField FK;
+  AbelianField FK;
   ElemE<T> d;
-  CyclotomicField<T> K;
+  NumberField<T> K;
   int m;
   int n;
   int delta;
@@ -1000,8 +1000,8 @@ template <typename T> struct QuadHeckeLData {
 template <typename T>
 std::optional<QuadHeckeLData<T>>
 MakeQuadHeckeLData(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
-                   AbelianCMField const &FK, ElemE<T> const &d,
-                   CyclotomicField<T> const &K, int m) {
+                   AbelianField const &FK, ElemE<T> const &d,
+                   NumberField<T> const &K, int m) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   auto f_none = [](int64_t, std::vector<QuadHeckePrime> const &) -> void {};
   std::optional<QuadHeckeCharacter<T>> C =
@@ -1334,7 +1334,7 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
   multiple.
  */
 template <typename Tint>
-Tint MinkowskiMultiple(AbelianCMField const &FK, int m) {
+Tint MinkowskiMultiple(AbelianField const &FK, int m) {
   DirichletGroup G = ComputeDirichletGroup(FK.n);
   std::vector<std::vector<int64_t>> XK = FieldCharacters(G, FK.H, true);
   auto min_f = [&](int64_t p) -> int64_t {
@@ -1405,7 +1405,7 @@ Tint MinkowskiMultiple(AbelianCMField const &FK, int m) {
 template <typename T>
 std::optional<T> QuadraticMassNonAbelianE(
     MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
-    AbelianCMField const &FK, ElemE<T> const &d, CyclotomicField<T> const &K,
+    AbelianField const &FK, ElemE<T> const &d, NumberField<T> const &K,
     int m, T const &local, QuadLValueMethod method) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using mpfr::mpreal;

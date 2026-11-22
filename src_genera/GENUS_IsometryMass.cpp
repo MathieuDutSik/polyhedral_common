@@ -280,10 +280,10 @@ void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
       }
       return res;
     };
-    AbelianCMField FK = MakeAbelianRealField(n, parse(argv[3]));
+    AbelianField FK = MakeAbelianRealField(n, parse(argv[3]));
     int m = std::stoi(argv[4]);
     bool square = (argc >= 6 && std::string(argv[5]) == "square");
-    std::optional<AbelianCMField> FE;
+    std::optional<AbelianField> FE;
     if (argc >= 6 && !square) {
       FE = MakeAbelianCMField(n, parse(argv[5]));
     }
@@ -315,7 +315,7 @@ void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
         }
       }
     }
-    AbelianCMField FK = MakeAbelianRealField(n, gens);
+    AbelianField FK = MakeAbelianRealField(n, gens);
     std::map<int64_t, std::optional<T>> facs =
         QuadraticLocalFactors(B, Omega, FK);
     std::optional<T> local_mass = T(1);
@@ -372,7 +372,7 @@ void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
         }
       }
     }
-    AbelianCMField F = MakeAbelianCMField(n, gens);
+    AbelianField F = MakeAbelianCMField(n, gens);
     std::optional<T> ms = HermitianMassAbelianLattice(B, Omega, F);
     if (ms) {
       std::cout << "return rec(mass:=" << *ms << ");\n";
@@ -397,7 +397,7 @@ void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
       }
     }
     int m = std::stoi(argv[4]);
-    AbelianCMField F = MakeAbelianCMField(n, gens);
+    AbelianField F = MakeAbelianCMField(n, gens);
     std::cout << "return rec(n:=" << n
               << ", degree:=" << AbelianFieldDegree(F) << ", m:=" << m
               << ", standard_mass:="

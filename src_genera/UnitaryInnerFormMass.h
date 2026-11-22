@@ -44,14 +44,14 @@
 template <typename T, typename Tint>
 std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
                                       std::vector<MyMatrix<T>> const &gens,
-                                      AbelianCMField const &FK, int n,
+                                      AbelianField const &FK, int n,
                                       QuaternionicMassBounds const &bounds,
                                       [[maybe_unused]] std::ostream &os) {
   if (n < 1 || n > 2) {
     return {};
   }
   int k = B.rows();
-  AbelianCMField FKp = MakeAbelianRealField(FK.n, FK.H);
+  AbelianField FKp = MakeAbelianRealField(FK.n, FK.H);
   int c = static_cast<int>(AbelianFieldDegree(FKp));
   int dim_u = n * n * c;
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(gens, k);
@@ -72,7 +72,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
     Forms = QuatIntegralPoints<T, Tint>(L, k);
   }
   // the discriminants of K and K^+, products of the conductors
-  auto disc_of = [&](AbelianCMField const &F) -> T {
+  auto disc_of = [&](AbelianField const &F) -> T {
     DirichletGroup Gd = ComputeDirichletGroup(F.n);
     T d(1);
     for (auto const &t : FieldCharacters(Gd, F.H, false)) {
