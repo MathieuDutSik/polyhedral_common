@@ -263,36 +263,6 @@ GroupLattice<T> DirectSumGroupLattice(GroupLattice<T> const &X,
   return res;
 }
 
-// The flattened matrices (rows of length n^2) and back.
-template <typename T>
-MyMatrix<T> FlattenMatrices(std::vector<MyMatrix<T>> const &mats) {
-  int n = mats[0].rows();
-  MyMatrix<T> R(static_cast<int>(mats.size()), n * n);
-  for (size_t k = 0; k < mats.size(); k++) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        R(static_cast<int>(k), i * n + j) = mats[k](i, j);
-      }
-    }
-  }
-  return R;
-}
-
-template <typename T>
-std::vector<MyMatrix<T>> UnflattenMatrices(MyMatrix<T> const &R, int n) {
-  std::vector<MyMatrix<T>> res;
-  for (int k = 0; k < R.rows(); k++) {
-    MyMatrix<T> X(n, n);
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        X(i, j) = R(k, i * n + j);
-      }
-    }
-    res.push_back(X);
-  }
-  return res;
-}
-
 // clang-format off
 #endif  // SRC_GENERA_GROUPLATTICE_H_
 // clang-format on

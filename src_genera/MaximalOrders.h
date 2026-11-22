@@ -1,0 +1,439 @@
+// Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+#ifndef SRC_GENERA_MAXIMALORDERS_H_
+#define SRC_GENERA_MAXIMALORDERS_H_
+
+// clang-format off
+#include "GeneraArithmetic.h"
+#include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
+#include "MAT_MatrixModPrime.h"
+#include <optional>
+#include <vector>
+// clang-format on
+
+/*
+  Maximal orders of the semisimple Q-algebras given by matrices (an order
+  as a Z-basis of k x k rational matrices closed under the product), a
+  construction on the number fields and the algebras of the
+  representations:
+  - CommutativeMaximalOrder, for a commutative algebra (a number field, a
+    product of them): Round 2 at each prime whose square divides the
+    discriminant, polynomial in the dimension;
+  - MaximalOrderOfSpanAt, for any order, at one prime p: the overorders
+    inside p^{-1} Lambda tried in p^{-1} Lambda / Lambda, of p^dim
+    elements (a bound refuses the larger ones), the method of the
+    algebras Z rho(G), which need not be commutative.
+  The maximal orders of the quaternion algebras are in QuaternionicMass.h
+  (QuatMaximalOrder, through the dual for the reduced trace).
+ */
+
+// The flattened matrices (rows of length n^2) and back.
+template <typename T>
+MyMatrix<T> FlattenMatrices(std::vector<MyMatrix<T>> const &mats) {
+  int n = mats[0].rows();
+  MyMatrix<T> R(static_cast<int>(mats.size()), n * n);
+  for (size_t k = 0; k < mats.size(); k++) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        R(static_cast<int>(k), i * n + j) = mats[k](i, j);
+      }
+    }
+  }
+  return R;
+}
+
+template <typename T>
+std::vector<MyMatrix<T>> UnflattenMatrices(MyMatrix<T> const &R, int n) {
+  std::vector<MyMatrix<T>> res;
+  for (int k = 0; k < R.rows(); k++) {
+    MyMatrix<T> X(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        X(i, j) = R(k, i * n + j);
+      }
+    }
+    res.push_back(X);
+  }
+  return res;
+}
+
+/*
+  The maximal order of a commutative Q-algebra E (a field) given by a
+  Z-basis O of an order (k x k integral matrices), by Round 2 at each p
+  with p^2 dividing the discriminant: I the p-radical, the kernel of the
+  Frobenius x -> x^q (q = p^j >= rank) on O / pO, which is additive, and
+  O' = {x in E : x I subset I}, contained in p^{-1} O; O is p-maximal when
+  O' = O. The elements are coordinate vectors on the given basis O, with
+  its integral structure constants.
+ */
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const &O0,
+                                                 int k) {
+  int n = static_cast<int>(O0.size());
+  MyMatrix<T> F(n, k * k);
+  for (int i = 0; i < n; i++) {
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        F(i, u * k + v) = O0[i](u, v);
+      }
+    }
+  }
+  auto coords0 = [&](MyMatrix<T> const &Y) -> MyVector<T> {
+    MyVector<T> y(k * k);
+    for (int u = 0; u < k; u++) {
+      for (int v = 0; v < k; v++) {
+        y(u * k + v) = Y(u, v);
+      }
+    }
+    std::optional<MyVector<T>> s = SolutionMat(F, y);
+    if (!s) {
+      std::cerr << "MAX_ORDER: a product is not in the algebra\n";
+      throw TerminalException{1};
+    }
+    return *s;
+  };
+  // the structure constants on O0: e_i e_j = sum_l C0[i][j](l) e_l
+  std::vector<std::vector<MyVector<T>>> C0(n, std::vector<MyVector<T>>(n));
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      C0[i][j] = coords0(MyMatrix<T>(O0[i] * O0[j]));
+    }
+  }
+  auto mult = [&](MyVector<T> const &a, MyVector<T> const &b) -> MyVector<T> {
+    MyVector<T> c = ZeroVector<T>(n);
+    for (int i = 0; i < n; i++) {
+      if (a(i) != 0) {
+        for (int j = 0; j < n; j++) {
+          if (b(j) != 0) {
+            c += a(i) * b(j) * C0[i][j];
+          }
+        }
+      }
+    }
+    return c;
+  };
+  // the current order: rows of Bo, coordinates on O0
+  MyMatrix<T> Bo = IdentityMat<T>(n);
+  auto disc = [&]() -> T {
+    MyMatrix<T> G(n, n);
+    std::vector<MyMatrix<T>> mats;
+    for (int i = 0; i < n; i++) {
+      MyMatrix<T> Y = ZeroMatrix<T>(k, k);
+      for (int l = 0; l < n; l++) {
+        Y += Bo(i, l) * O0[l];
+      }
+      mats.push_back(Y);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        MyMatrix<T> P = mats[i] * mats[j];
+        T tr(0);
+        for (int u = 0; u < k; u++) {
+          tr += P(u, u);
+        }
+        G(i, j) = tr;
+      }
+    }
+    return T_abs(DeterminantMat(G));
+  };
+  T D = disc();
+  std::vector<int64_t> primes;
+  {
+    Tint num = GetNumerator_z(D);
+    if (num > 1) {
+      for (auto const &[q, mult_q] : FactorsIntMap(num)) {
+        if (mult_q >= 2) {
+          primes.push_back(UniversalScalarConversion<int64_t, Tint>(q));
+        }
+      }
+    }
+  }
+  for (int64_t p : primes) {
+    T_small_prime pu = static_cast<T_small_prime>(p);
+    T pT = ScalarFromInt64<T>(p);
+    while (true) {
+      MyMatrix<T> Boinv = Inverse(Bo);
+      auto row = [&](int i) -> MyVector<T> {
+        MyVector<T> v(n);
+        for (int l = 0; l < n; l++) {
+          v(l) = Bo(i, l);
+        }
+        return v;
+      };
+      auto in_basis = [&](MyVector<T> const &a, MyMatrix<T> const &Binv) -> MyVector<T> {
+        return Binv.transpose() * a;
+      };
+      // the Frobenius on O / p O, x^q by squarings, reduced modulo p O to
+      // keep the entries small
+      uint64_t q = static_cast<uint64_t>(p);
+      while (q < static_cast<uint64_t>(n)) {
+        q *= static_cast<uint64_t>(p);
+      }
+      auto reduce = [&](MyVector<T> const &y) -> MyVector<T> {
+        MyVector<T> cy = in_basis(y, Boinv);
+        for (int l = 0; l < n; l++) {
+          if (!IsInteger(cy(l))) {
+            std::cerr << "MAX_ORDER: the order is not closed\n";
+            throw TerminalException{1};
+          }
+          cy(l) = UniversalScalarConversion<T, T_residue>(
+              ResModOf(GetNumerator_z(cy(l)), pu));
+        }
+        return Bo.transpose() * cy;
+      };
+      ModMatrix Frob(n, n);
+      for (int i = 0; i < n; i++) {
+        MyVector<T> x = row(i);
+        MyVector<T> y = x;
+        MyVector<T> base = x;
+        for (uint64_t e = q - 1; e > 0; e >>= 1) {
+          if (e & 1) {
+            y = reduce(mult(y, base));
+          }
+          if (e > 1) {
+            base = reduce(mult(base, base));
+          }
+        }
+        MyVector<T> cy = in_basis(y, Boinv);
+        for (int l = 0; l < n; l++) {
+          if (!IsInteger(cy(l))) {
+            std::cerr << "MAX_ORDER: the order is not closed\n";
+            throw TerminalException{1};
+          }
+          Frob(i, l) = ResModOf(GetNumerator_z(cy(l)), pu);
+        }
+      }
+      // the radical: the a with sum_i a_i x_i^q = 0 mod p
+      ModMatrix rad = LeftNullspaceModP(Frob, pu);
+      std::vector<MyVector<T>> gensI;
+      for (int t = 0; t < rad.rows(); t++) {
+        MyVector<T> a = ZeroVector<T>(n);
+        for (int i = 0; i < n; i++) {
+          a += UniversalScalarConversion<T, T_residue>(rad(t, i)) * row(i);
+        }
+        gensI.push_back(a);
+      }
+      for (int i = 0; i < n; i++) {
+        gensI.push_back(MyVector<T>(pT * row(i)));
+      }
+      MyMatrix<T> Gi(static_cast<int>(gensI.size()), n);
+      for (size_t t = 0; t < gensI.size(); t++) {
+        for (int l = 0; l < n; l++) {
+          Gi(static_cast<int>(t), l) = gensI[t](l);
+        }
+      }
+      MyMatrix<T> BI = GetZbasis(Gi);
+      MyMatrix<T> BIinv = Inverse(BI);
+      // the a modulo p with (sum a_i x_i) y in p I for the basis y of I
+      ModMatrix Cond(n, n * n);
+      for (int i = 0; i < n; i++) {
+        for (int t = 0; t < n; t++) {
+          MyVector<T> yt(n);
+          for (int l = 0; l < n; l++) {
+            yt(l) = BI(t, l);
+          }
+          MyVector<T> c = in_basis(mult(row(i), yt), BIinv);
+          for (int l = 0; l < n; l++) {
+            if (!IsInteger(c(l))) {
+              std::cerr << "MAX_ORDER: O I is not in I\n";
+              throw TerminalException{1};
+            }
+            Cond(i, t * n + l) = ResModOf(GetNumerator_z(c(l)), pu);
+          }
+        }
+      }
+      ModMatrix ker = LeftNullspaceModP(Cond, pu);
+      if (ker.rows() == 0) {
+        break;
+      }
+      MyMatrix<T> Gn(n + ker.rows(), n);
+      for (int i = 0; i < n; i++) {
+        for (int l = 0; l < n; l++) {
+          Gn(i, l) = Bo(i, l);
+        }
+      }
+      for (int t = 0; t < ker.rows(); t++) {
+        MyVector<T> a = ZeroVector<T>(n);
+        for (int i = 0; i < n; i++) {
+          a += UniversalScalarConversion<T, T_residue>(ker(t, i)) * row(i);
+        }
+        for (int l = 0; l < n; l++) {
+          Gn(n + t, l) = a(l) / pT;
+        }
+      }
+      MyMatrix<T> Bnew = GetZbasis(Gn);
+      if (T_abs(DeterminantMat(Bnew)) == T_abs(DeterminantMat(Bo))) {
+        break;
+      }
+      Bo = Bnew;
+    }
+  }
+  std::vector<MyMatrix<T>> res;
+  for (int i = 0; i < n; i++) {
+    MyMatrix<T> Y = ZeroMatrix<T>(k, k);
+    for (int l = 0; l < n; l++) {
+      Y += Bo(i, l) * O0[l];
+    }
+    res.push_back(Y);
+  }
+  return res;
+}
+
+/*
+  A maximal order Lambda'_p of B_p containing Lambda = Z rho(G) (rho on M,
+  matrices acting on the columns), as a Z-basis of Lambda + (p-power
+  denominators), with a, p^a Lambda' in Lambda; nullopt when p^dim B is
+  beyond max_elt.
+ */
+template <typename T, typename Tint> struct MaximalOrderData {
+  std::vector<MyMatrix<T>> basis;
+  int a;
+};
+
+template <typename T, typename Tint>
+std::optional<MaximalOrderData<T, Tint>>
+MaximalOrderOfSpanAt(std::vector<MyMatrix<T>> const &mats, Tint const &p,
+                     size_t max_elt) {
+  int n = mats[0].rows();
+  MyMatrix<T> Lam0 = GetZbasis(FlattenMatrices(mats));
+  int dim = Lam0.rows();
+  T p_T = UniversalScalarConversion<T, Tint>(p);
+  size_t n_elt = 1;
+  for (int i = 0; i < dim; i++) {
+    n_elt *= UniversalScalarConversion<size_t, Tint>(p);
+    if (n_elt > max_elt) {
+      return {};
+    }
+  }
+  int p_i = UniversalScalarConversion<int, Tint>(p);
+  // the coordinates of rows of B (rational span of Lam0) in the basis Lam0,
+  // and the volume of a lattice of B relative to Lam0
+  MyMatrix<T> Lam0T = Lam0.transpose();
+  MyMatrix<T> Pinv = Lam0T * Inverse(MyMatrix<T>(Lam0 * Lam0T));
+  auto coords = [&](MyMatrix<T> const &S) -> MyMatrix<T> { return S * Pinv; };
+  auto volume = [&](MyMatrix<T> const &S) -> T {
+    return T_abs(DeterminantMat(coords(S)));
+  };
+  MyMatrix<T> Lam = Lam0;
+  // the ring generated by the rows of S and the products, inside
+  // p^{-1} Lam, or nullopt
+  auto closure = [&](MyMatrix<T> S) -> std::optional<MyMatrix<T>> {
+    MyMatrix<T> LamInv = Inverse(coords(Lam));
+    while (true) {
+      std::vector<MyMatrix<T>> mats = UnflattenMatrices(S, n);
+      std::vector<MyMatrix<T>> prods = mats;
+      for (auto const &x : mats) {
+        for (auto const &y : mats) {
+          prods.push_back(x * y);
+        }
+      }
+      MyMatrix<T> S2 = GetZbasis(FlattenMatrices(prods));
+      // inside p^{-1} Lam: p S2 Lam^{-1} integral
+      MyMatrix<T> C = p_T * coords(S2) * LamInv;
+      if (!IsIntegralMatrix(C)) {
+        return {};
+      }
+      if (volume(S2) == volume(S)) {
+        return S2;
+      }
+      S = S2;
+    }
+  };
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    // a necessary condition on x = y / p: y Lam y in p Lam, the quadratic
+    // forms sum_{j,k} c_j c_k [b_j b_i b_k] modulo p (Lam a ring: integral
+    // coordinates)
+    std::vector<MyMatrix<T>> bas = UnflattenMatrices(Lam, n);
+    MyMatrix<T> LamCoordInv = Inverse(coords(Lam));
+    // tri[(j * dim + i) * dim + k] = coordinates of b_j b_i b_k mod p
+    std::vector<std::vector<int64_t>> tri(dim * dim * dim);
+    for (int j = 0; j < dim; j++) {
+      for (int i = 0; i < dim; i++) {
+        MyMatrix<T> ji = bas[j] * bas[i];
+        for (int k = 0; k < dim; k++) {
+          MyMatrix<T> prod = ji * bas[k];
+          MyMatrix<T> fl = FlattenMatrices(std::vector<MyMatrix<T>>{prod});
+          MyMatrix<T> co = coords(fl) * LamCoordInv;
+          std::vector<int64_t> v(dim);
+          for (int u = 0; u < dim; u++) {
+            Tint cu = UniversalScalarConversion<Tint, T>(co(0, u));
+            v[u] = UniversalScalarConversion<int64_t, Tint>(ResInt(cu, p));
+          }
+          tri[(j * dim + i) * dim + k] = v;
+        }
+      }
+    }
+    auto passes = [&](std::vector<int> const &c) -> bool {
+      for (int i = 0; i < dim; i++) {
+        std::vector<int64_t> acc(dim, 0);
+        for (int j = 0; j < dim; j++) {
+          if (c[j] == 0) {
+            continue;
+          }
+          for (int k = 0; k < dim; k++) {
+            if (c[k] == 0) {
+              continue;
+            }
+            int64_t f = c[j] * c[k];
+            std::vector<int64_t> const &t = tri[(j * dim + i) * dim + k];
+            for (int u = 0; u < dim; u++) {
+              acc[u] = (acc[u] + f * t[u]) % p_i;
+            }
+          }
+        }
+        for (int u = 0; u < dim; u++) {
+          if (acc[u] != 0) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+    std::vector<int> c(dim, 0);
+    for (size_t idx = 1; idx < n_elt && !changed; idx++) {
+      size_t x = idx;
+      int lead = -1;
+      for (int i = 0; i < dim; i++) {
+        c[i] = static_cast<int>(x % p_i);
+        x /= p_i;
+        if (c[i] != 0 && lead < 0) {
+          lead = i;
+        }
+      }
+      // up to the scalars, and the cheap condition first
+      if (c[lead] != 1 || !passes(c)) {
+        continue;
+      }
+      MyMatrix<T> S(dim + 1, n * n);
+      for (int i = 0; i < dim; i++) {
+        S.row(i) = Lam.row(i);
+      }
+      for (int j = 0; j < n * n; j++) {
+        T v(0);
+        for (int i = 0; i < dim; i++) {
+          v += T(c[i]) * Lam(i, j);
+        }
+        S(dim, j) = v / p_T;
+      }
+      std::optional<MyMatrix<T>> opt = closure(GetZbasis(S));
+      if (opt && volume(*opt) < volume(Lam)) {
+        Lam = *opt;
+        changed = true;
+      }
+    }
+  }
+  // a: p^a Lam in Lam0
+  MyMatrix<T> C = coords(Lam);
+  int a = 0;
+  while (!IsIntegralMatrix(C)) {
+    C *= p_T;
+    a++;
+  }
+  return MaximalOrderData<T, Tint>{UnflattenMatrices(Lam, n), a};
+}
+
+// clang-format off
+#endif  // SRC_GENERA_MAXIMALORDERS_H_
+// clang-format on

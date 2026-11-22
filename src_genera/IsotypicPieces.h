@@ -639,7 +639,7 @@ IsotypicPiecesMaximalOrder(GroupLattice<T> const &M, int c,
   real != Q, or K^+ != Q).
 
   M is first replaced by M' = O_K M (O_K the maximal order of the
-  commutant, MaximalOrderOfSpanAt), locally free over O_K of rank n / d, d
+  commutant, CommutativeMaximalOrder), locally free over O_K of rank n / d, d
   = [K : Q], with b_M' = Tr_{K/Q} h' for a K-valued form h'. Let P be a
   piece with c copies, of determinant at most D. X = Hom_G(M', P) is an
   O_K-module of rank c with the form h, b_P(x m, y m') = Tr h'(h(x, y) m,
@@ -716,26 +716,8 @@ IsotypicPiecesTwisted(GroupLattice<T> const &M_in, int c,
     }
     return GroupLatticeOfRows(L, Gen);
   };
-  // O_K, at the primes of the discriminant of C, then M' = O_K M
-  std::vector<MyMatrix<T>> OK = C;
-  {
-    T disc = T_abs(DeterminantMat(trace_form(C)));
-    Tint disc_i =
-        UniversalScalarConversion<Tint, T>(disc * GetDenominator(disc));
-    if (disc_i > 1) {
-      for (auto const &[q, e] : FactorsIntMap(disc_i)) {
-        if (e < 2) {
-          continue;
-        }
-        std::optional<MaximalOrderData<T, Tint>> opt =
-            MaximalOrderOfSpanAt<T, Tint>(OK, q, 100000000);
-        if (!opt) {
-          return {};
-        }
-        OK = opt->basis;
-      }
-    }
-  }
+  // O_K (Round 2), then M' = O_K M
+  std::vector<MyMatrix<T>> OK = CommutativeMaximalOrder<T, Tint>(C, n);
   GroupLattice<T> M = saturate(M_in, OK);
   // then M'' = Lambda'_p M' at the primes of G, with the a_p
   std::vector<Tint> gp = GroupLatticePrimes<T, Tint>(M_in);

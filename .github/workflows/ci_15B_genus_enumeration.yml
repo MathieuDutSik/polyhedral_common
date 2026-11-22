@@ -107,6 +107,7 @@ jobs:
         run: |
           cd CI_tests/15B_GenusEnumeration
           ../../src_genera/Test_FiniteField
+          ../../src_genera/Test_MaximalOrders
           ../../src_genera/Test_IsometryGlueFactors
           rm -f CI_CONCLUSION
           ./RunCharPolyTests.sh
