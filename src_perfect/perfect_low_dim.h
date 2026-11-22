@@ -209,6 +209,10 @@ struct LowRankCell {
   // Whether every element of the stabilizer preserves the orientation of
   // the cone (set by set_low_rank_cell_stabilizer).
   bool is_orientable;
+  // The vectors with both signs and the orientation of the cone, in the
+  // conventions of perfect_complex.h (set by set_low_rank_cell_stabilizer).
+  MyMatrix<Tint> EXT;
+  OrientationInfo or_info;
 };
 
 template <typename T, typename Tint>
@@ -278,7 +282,7 @@ LowRankCell<T, Tint> get_low_rank_cell(LinSpaceMatrix<T> const &LinSpa,
   size_t seed = 1729;
   std::optional<MyMatrix<T>> CommonGramMat;
   size_t invariant = LINSPA_Invariant_SHV<T>(seed, LinSpa, R, SHVdisc_T, CommonGramMat, os);
-  return {SHV, std::move(R), mult, std::move(SHVdisc_T), invariant, {}, false};
+  return {SHV, std::move(R), mult, std::move(SHVdisc_T), invariant, {}, false, {}, {}};
 }
 
 /*
@@ -382,6 +386,8 @@ void set_low_rank_cell_stabilizer(LinSpaceMatrix<T> const &LinSpa,
   OrientationInfo or_info = get_orientation_info(EXT, LinSpa.ListMat);
   cell.is_orientable = is_face_orientable(EXT, LinSpa.ListMat, or_info, l_gens);
   cell.l_gens = std::move(l_gens);
+  cell.EXT = std::move(EXT);
+  cell.or_info = std::move(or_info);
 }
 
 /*
@@ -441,6 +447,155 @@ std::vector<std::vector<LowRankCell<T, Tint>>> get_low_rank_well_rounded_cells(
 #endif
   }
   return ll_cell;
+}
+
+/*
+  The boundary of the well rounded cells of small rank, in the conventions
+  of perfect_complex.h: for the cell i_cell of rank min_rank + i_rank
+  (i_rank >= 1), ll_bound[i_rank][i_cell] is the list of the facets of the
+  cell, each one given as the image EXT M (rows v M) of the cell iOrb of rank
+  min_rank + i_rank - 1, with its sign. The facets that are not well rounded
+  are on the boundary of the space and are not in the boundary map.
+  ll_bound[0] is empty, the rank below min_rank not being computed.
+
+  The facets of a cell are those of its cone, up to its stabilizer
+  (GetNakedPerfectCone_GRP). Every well rounded facet has to be equivalent to
+  a cell of the rank below: otherwise the program stops, since the list of
+  the cells is then incomplete. The sign of a facet and its orbit under the
+  stabilizer are those of the full complex (get_boundary_sign and
+  get_boundary_orbit). The stabilizers, orientations and vectors of the
+  cells must have been set (set_low_rank_cell_stabilizer).
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<std::vector<std::vector<BoundEntry<Tint>>>> get_low_rank_boundaries(
+    LinSpaceMatrix<T> const &LinSpa,
+    std::vector<std::vector<LowRankCell<T, Tint>>> const &ll_cell,
+    std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<MyMatrix<T>> const &ListMat = LinSpa.ListMat;
+  std::vector<MyMatrix<T>> l_mult = get_cell_form_multipliers(LinSpa);
+  size_t n_rank = ll_cell.size();
+  std::vector<std::vector<std::vector<BoundEntry<Tint>>>> ll_bound(n_rank);
+  for (size_t i_rank = 1; i_rank < n_rank; i_rank++) {
+    std::vector<LowRankCell<T, Tint>> const &l_cell_low = ll_cell[i_rank - 1];
+    for (auto &cell : ll_cell[i_rank]) {
+      int n_ext = cell.EXT.rows();
+      ElementMapper<Tint, Telt> elt_mapper(cell.EXT);
+      std::vector<Telt> l_perm;
+      for (auto &eGen : cell.l_gens) {
+        l_perm.push_back(elt_mapper.map_elt(eGen));
+      }
+      Tgroup GRP_ext(l_perm, n_ext);
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(cell.EXT);
+      RyshkovGRP<T, Tgroup> cone =
+          GetNakedPerfectCone_GRP<T, Tgroup>(LinSpa, EXT_T, GRP_ext, os);
+      MyVector<T> interior_pt = get_cell_interior_point(cell.EXT, cell.or_info, ListMat);
+      std::vector<Telt> l_gens_perm;
+      std::vector<int> l_gens_sign;
+      for (size_t i_gen = 0; i_gen < cell.l_gens.size(); i_gen++) {
+        l_gens_perm.push_back(cone.map_elt(l_perm[i_gen]));
+        l_gens_sign.push_back(get_face_orientation(cell.EXT, ListMat, cell.or_info, cell.l_gens[i_gen]));
+      }
+      std::vector<BoundEntry<Tint>> l_bound;
+      for (auto &incd_sma : cone.ListIncd) {
+        Face incd_big = get_big_incd(cone, incd_sma);
+        // The rows 2i and 2i+1 of EXT are v and -v: one vector per pair.
+        std::vector<int> l_row;
+        for (int i_row = 0; i_row < n_ext; i_row += 2) {
+          if (incd_big[i_row] == 1) {
+            l_row.push_back(i_row);
+          }
+        }
+        MyMatrix<Tint> SHV_facet = SelectRow(cell.EXT, l_row);
+        if (!is_well_rounded_cell(LinSpa, SHV_facet, os)) {
+          continue;
+        }
+        LowRankCell<T, Tint> facet = get_low_rank_cell(LinSpa, l_mult, SHV_facet, os);
+        std::optional<std::pair<int, MyMatrix<Tint>>> opt_match;
+        for (size_t j_cell = 0; j_cell < l_cell_low.size(); j_cell++) {
+          std::optional<MyMatrix<T>> opt =
+              test_equivalence_low_rank_cell<T, Tint, Tgroup>(LinSpa, l_cell_low[j_cell], facet, os);
+          if (opt) {
+            MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(Inverse(*opt));
+            opt_match = std::pair<int, MyMatrix<Tint>>{static_cast<int>(j_cell), M};
+            break;
+          }
+        }
+        if (!opt_match) {
+          std::cerr << "PERFLOWDIM: A well rounded facet is not equivalent to a cell of the rank below\n";
+          std::cerr << "PERFLOWDIM: The list of the cells is incomplete\n";
+          throw TerminalException{1};
+        }
+        int j_cell = opt_match->first;
+        MyMatrix<Tint> const &M = opt_match->second;
+        LowRankCell<T, Tint> const &cell_low = l_cell_low[j_cell];
+        int sign = get_boundary_sign(ListMat, interior_pt, cell.or_info, cell_low.EXT, cell_low.or_info, M);
+        std::pair<std::vector<Face>, std::vector<BoundEntry<Tint>>> orbit =
+            get_boundary_orbit(j_cell, incd_sma, sign, M, cell.l_gens, l_gens_perm, l_gens_sign);
+        for (auto &be : orbit.second) {
+#ifdef SANITY_CHECK_PERFECT_LOW_DIM
+          MyMatrix<T> EXT_img = UniversalMatrixConversion<T, Tint>(cell_low.EXT * be.M);
+          std::set<MyVector<T>> set_cell = get_line_set(EXT_T);
+          for (auto &V : get_line_set(EXT_img)) {
+            if (set_cell.count(V) == 0) {
+              std::cerr << "PERFLOWDIM: A facet should be contained in the cell\n";
+              throw TerminalException{1};
+            }
+          }
+#endif
+          l_bound.push_back(be);
+        }
+      }
+      ll_bound[i_rank].emplace_back(std::move(l_bound));
+    }
+#ifdef DEBUG_PERFECT_LOW_DIM
+    os << "PERFLOWDIM: boundary of the rank i_rank=" << i_rank << " done\n";
+#endif
+  }
+  return ll_bound;
+}
+
+/*
+  Whether d d = 0 on the cells of small rank, in the way of
+  is_product_zero of perfect_complex.h: for every cell of rank
+  min_rank + i_rank with i_rank >= 2, the boundary of its boundary, computed
+  in CellChainBuilder (which identifies the images of the same cell with
+  the sign of the orientation), is zero.
+ */
+template <typename T, typename Tint>
+bool is_low_rank_product_zero(
+    LinSpaceMatrix<T> const &LinSpa,
+    std::vector<std::vector<LowRankCell<T, Tint>>> const &ll_cell,
+    std::vector<std::vector<std::vector<BoundEntry<Tint>>>> const &ll_bound,
+    std::ostream &os) {
+  using Fcell = typename CellChainBuilder<T, Tint>::Fcell;
+  auto get_f_cell = [&](size_t i_rank) -> Fcell {
+    return [&ll_cell, i_rank](int const &iOrb) -> std::pair<MyMatrix<Tint> const *, OrientationInfo const *> {
+      LowRankCell<T, Tint> const &cell = ll_cell[i_rank][iOrb];
+      return {&cell.EXT, &cell.or_info};
+    };
+  };
+  for (size_t i_rank = 2; i_rank < ll_cell.size(); i_rank++) {
+    for (size_t i_cell = 0; i_cell < ll_cell[i_rank].size(); i_cell++) {
+      CellChainBuilder<T, Tint> cb1(LinSpa.ListMat, get_f_cell(i_rank - 1), os);
+      for (auto &be : ll_bound[i_rank][i_cell]) {
+        cb1.f_insert(T(be.sign), be.iOrb, be.M);
+      }
+      CellChainBuilder<T, Tint> cb2(LinSpa.ListMat, get_f_cell(i_rank - 2), os);
+      for (auto &fe : cb1.get_faces()) {
+        for (auto &be : ll_bound[i_rank - 1][fe.iOrb]) {
+          cb2.f_insert(fe.value * be.sign, be.iOrb, be.M * fe.M);
+        }
+      }
+      if (!cb2.is_zero_chain()) {
+#ifdef DEBUG_PERFECT_LOW_DIM
+        os << "PERFLOWDIM: d d is not zero for the cell " << i_cell << " of i_rank=" << i_rank << "\n";
+#endif
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 // clang-format off

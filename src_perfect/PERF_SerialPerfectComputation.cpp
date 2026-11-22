@@ -132,7 +132,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileLowRankNumberCells = BlockQUERIES.get_string("FileLowRankNumberCells");
   std::string FileLowRankCells = BlockQUERIES.get_string("FileLowRankCells");
   std::string FileLowRankNumberOrientableCells = BlockQUERIES.get_string("FileLowRankNumberOrientableCells");
-  if (FileLowRankNumberCells != "null" || FileLowRankCells != "null" || FileLowRankNumberOrientableCells != "null") {
+  std::string FileLowRankBoundary = BlockQUERIES.get_string("FileLowRankBoundary");
+  if (FileLowRankNumberCells != "null" || FileLowRankCells != "null" || FileLowRankNumberOrientableCells != "null" || FileLowRankBoundary != "null") {
     int LowRankMin = BlockQUERIES.get_int("LowRankMin");
     if (LowRankMin < 1 || LowRankMin > LowRankMax) {
       std::cerr << "LowRankMin=" << LowRankMin << " should be between 1 and LowRankMax=" << LowRankMax << "\n";
@@ -141,7 +142,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     // ll_cell[rank - LowRankMin]: the cells of that rank.
     std::vector<std::vector<LowRankCell<T, Tint>>> ll_cell =
         get_low_rank_well_rounded_cells<T, Tint, Tgroup>(LinSpa, fce.pctdi.l_perfect, LowRankMin, LowRankMax, os);
-    bool compute_stabilizer = FileLowRankNumberOrientableCells != "null";
+    bool compute_stabilizer = FileLowRankNumberOrientableCells != "null" || FileLowRankBoundary != "null";
     if (compute_stabilizer) {
       for (auto &l_cell : ll_cell) {
         for (auto &cell : l_cell) {
@@ -191,6 +192,40 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
             WriteListMatrixGAP(os_out, cell.l_gens);
           }
           os_out << ")";
+        }
+      }
+      os_out << "];\n";
+    }
+    if (FileLowRankBoundary != "null") {
+      std::vector<std::vector<std::vector<BoundEntry<Tint>>>> ll_bound =
+          get_low_rank_boundaries<T, Tint, Tgroup>(LinSpa, ll_cell, os);
+      bool test = is_low_rank_product_zero(LinSpa, ll_cell, ll_bound, os);
+      std::cerr << "is_low_rank_product_zero, test=" << GAP_logical(test) << "\n";
+      if (!test) {
+        std::cerr << "The products of successive boundary maps of the cells of small rank are not zero\n";
+        throw TerminalException{1};
+      }
+      std::ofstream os_out(FileLowRankBoundary);
+      os_out << "return [";
+      bool is_first = true;
+      for (size_t i_rank = 1; i_rank < ll_bound.size(); i_rank++) {
+        int rank = LowRankMin + i_rank;
+        for (size_t i_cell = 0; i_cell < ll_bound[i_rank].size(); i_cell++) {
+          if (!is_first) {
+            os_out << ",\n";
+          }
+          is_first = false;
+          os_out << "rec(rank:=" << rank << ", iOrb:=" << (i_cell + 1) << ", ListBnd:=[";
+          std::vector<BoundEntry<Tint>> const &l_bound = ll_bound[i_rank][i_cell];
+          for (size_t i_bnd = 0; i_bnd < l_bound.size(); i_bnd++) {
+            if (i_bnd > 0) {
+              os_out << ",\n";
+            }
+            os_out << "rec(sign:=" << l_bound[i_bnd].sign << ", jOrb:=" << (l_bound[i_bnd].iOrb + 1) << ", M:=";
+            WriteMatrixGAP(os_out, l_bound[i_bnd].M);
+            os_out << ")";
+          }
+          os_out << "])";
         }
       }
       os_out << "];\n";

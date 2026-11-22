@@ -562,6 +562,10 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     // representatives of FileLowRankCells also have their orientability and
     // the generators of their stabilizer.
     ListStringValues["FileLowRankNumberOrientableCells"] = "null";
+    // The boundary of the cells of rank LowRankMin + 1 to LowRankMax, in the
+    // format of FileListLowerBoundary (the sign, the cell jOrb of the rank
+    // below and the matrix M of every facet). d d = 0 is checked.
+    ListStringValues["FileLowRankBoundary"] = "null";
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);
