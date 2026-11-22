@@ -330,6 +330,28 @@ inline void serialize(Archive &ar, OrientationInfo &val,
 // This is the orientation coming from the 
 //
 
+/*
+  An interior point of a cell, in the coordinates selected by or_info: the
+  sum of the q(v) of the rows of EXT that or_info selects.
+ */
+template<typename T, typename Tint>
+MyVector<T> get_cell_interior_point(MyMatrix<Tint> const& EXT, OrientationInfo const& or_info,
+                                    std::vector<MyMatrix<T>> const& ListMat) {
+  int n_row = or_info.ListRowSelect.size();
+  int n_col = or_info.ListColSelect.size();
+  MyVector<T> interior_pt = ZeroVector<T>(n_col);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int j_row = or_info.ListRowSelect[i_row];
+    MyVector<Tint> V = GetMatrixRow(EXT, j_row);
+    for (int i_col=0; i_col<n_col; i_col++) {
+      int i_mat = or_info.ListColSelect[i_col];
+      T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], V);
+      interior_pt(i_col) += scal;
+    }
+  }
+  return interior_pt;
+}
+
 template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {
   std::vector<triple<Tint>> l_triple; // The containing triples.
@@ -340,19 +362,7 @@ struct FacePerfectComplex {
   OrientationInfo or_info; // The info for determining the orientation.
   bool is_orientable; // Whether the cell was orientable.
   MyVector<T> get_interior_point(std::vector<MyMatrix<T>> const& ListMat) const {
-    int n_row = or_info.ListRowSelect.size();
-    int n_col = or_info.ListColSelect.size();
-    MyVector<T> interior_pt = ZeroVector<T>(n_col);
-    for (int i_row=0; i_row<n_row; i_row++) {
-      int j_row = or_info.ListRowSelect[i_row];
-      MyVector<Tint> V = GetMatrixRow(EXT, j_row);
-      for (int i_col=0; i_col<n_col; i_col++) {
-        int i_mat = or_info.ListColSelect[i_col];
-        T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], V);
-        interior_pt(i_col) += scal;
-      }
-    }
-    return interior_pt;
+    return get_cell_interior_point(EXT, or_info, ListMat);
   }
 };
 
@@ -1692,22 +1702,28 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
 }
 
 
-template<typename T, typename Tint, typename Tgroup>
-struct ChainBuilder {
+/*
+  A chain of the cells of one level, built by adding multiples of images
+  F M of cells F: the images that are equal as sets are merged, with the
+  sign of the orientation. The cells are given by f_cell, which returns the
+  vectors and the orientation of the cell iOrb of the level.
+ */
+template<typename T, typename Tint>
+struct CellChainBuilder {
+  using Fcell = std::function<std::pair<MyMatrix<Tint> const*, OrientationInfo const*>(int const&)>;
 private:
   std::unordered_map<MyMatrix<Tint>, size_t> map_ext_set;
-  int index;
-  FullComplexEnumeration<T,Tint,Tgroup> const& fce;
+  std::vector<MyMatrix<T>> const& ListMat;
+  Fcell f_cell;
   std::ostream& os;
 public:
   std::vector<PerfectFaceEntry<T, Tint>> chain;
-  ChainBuilder(int _index, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : index(_index), fce(_fce), os(_os) {
+  CellChainBuilder(std::vector<MyMatrix<T>> const& _ListMat, Fcell _f_cell, std::ostream& _os) : ListMat(_ListMat), f_cell(_f_cell), os(_os) {
   }
   void f_insert(T const& value, int const& iOrb, MyMatrix<Tint> const& M) {
-    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
-    MyMatrix<Tint> const& EXT1 = face.EXT;
-    OrientationInfo const& or_info = face.or_info;
-    std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
+    std::pair<MyMatrix<Tint> const*, OrientationInfo const*> cell = f_cell(iOrb);
+    MyMatrix<Tint> const& EXT1 = *cell.first;
+    OrientationInfo const& or_info = *cell.second;
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
     size_t& idx = map_ext_set[EXT3];
@@ -1751,6 +1767,18 @@ public:
       }
     }
     return true;
+  }
+};
+
+// The chains of the level index of the full complex.
+template<typename T, typename Tint, typename Tgroup>
+struct ChainBuilder : public CellChainBuilder<T, Tint> {
+  ChainBuilder(int index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os)
+    : CellChainBuilder<T, Tint>(fce.pctdi.LinSpa.ListMat,
+                                [&fce, index](int const& iOrb) -> std::pair<MyMatrix<Tint> const*, OrientationInfo const*> {
+                                  FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
+                                  return {&face.EXT, &face.or_info};
+                                }, os) {
   }
 };
 
