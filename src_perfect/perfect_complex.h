@@ -484,6 +484,49 @@ bool is_face_orientable(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> cons
   return true;
 }
 
+/*
+  The sign of a facet in the boundary of a cell. The facet is the image
+  EXT_low M (the rows v M) of a cell of the lower level with vectors EXT_low
+  and orientation or_info_low, and interior_pt is an interior point of the
+  cell (get_interior_point). The sign compares the orientation of the basis
+  made of the oriented basis of the facet followed by interior_pt with the
+  orientation or_info_up of the cell.
+ */
+template<typename T, typename Tint>
+int get_boundary_sign(std::vector<MyMatrix<T>> const& ListMat, MyVector<T> const& interior_pt,
+                      OrientationInfo const& or_info_up, MyMatrix<Tint> const& EXT_low,
+                      OrientationInfo const& or_info_low, MyMatrix<Tint> const& M) {
+  int dim = or_info_up.ListRowSelect.size();
+  MyMatrix<T> Mat(dim, dim);
+  for (int i=0; i<dim; i++) {
+    Mat(dim-1, i) = interior_pt(i);
+  }
+  for (int u=0; u<dim-1; u++) {
+    int i_row = or_info_low.ListRowSelect[u];
+    MyVector<Tint> V = GetMatrixRow(EXT_low, i_row);
+    MyVector<Tint> Vimg = M.transpose() * V;
+    for (int i_col=0; i_col<dim; i_col++) {
+      int i_mat = or_info_up.ListColSelect[i_col];
+      T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], Vimg);
+      Mat(u, i_col) = scal;
+    }
+  }
+  T det = DeterminantMat(Mat);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  if (det == 0) {
+    std::cerr << "PERFCOMP: determinant is 0, big error C\n";
+    throw TerminalException{1};
+  }
+#endif
+  int sign = or_info_up.sign;
+  if (det > 0) {
+    return sign;
+  } else {
+    return -sign;
+  }
+}
+
+
 template<typename T, typename Tint, typename Tgroup>
 FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
@@ -569,6 +612,51 @@ inline void serialize(Archive &ar, BoundEntry<Tint> &val,
   ar &make_nvp("M", val.M);
 }
 }  // namespace boost::serialization
+
+/*
+  The facets of a cell in the orbit of one facet under the stabilizer of
+  the cell, as boundary entries: the facet incd_sma, the image EXT_low M of
+  the cell iOrb of the lower level, with the sign sign. The generators of
+  the stabilizer are given by their matrices l_gens (acting by v -> v g),
+  their action l_gens_perm on the facets of the cell, and their orientation
+  signs l_gens_sign. The entries are in the order in which the orbit is
+  generated, starting with the given facet.
+ */
+template<typename Tint, typename Telt>
+std::pair<std::vector<Face>, std::vector<BoundEntry<Tint>>>
+get_boundary_orbit(int const& iOrb, Face const& incd_sma, int const& sign, MyMatrix<Tint> const& M,
+                   std::vector<MyMatrix<Tint>> const& l_gens, std::vector<Telt> const& l_gens_perm,
+                   std::vector<int> const& l_gens_sign) {
+  std::unordered_set<Face> set_faces_gen;
+  std::vector<Face> l_faces_gen;
+  std::vector<BoundEntry<Tint>> l_bound;
+  auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
+    if (set_faces_gen.insert(new_incd_sma).second) {
+      l_faces_gen.push_back(new_incd_sma);
+      BoundEntry<Tint> be{iOrb, new_sign, new_mat};
+      l_bound.push_back(be);
+    }
+  };
+  insert_entry(incd_sma, sign, M);
+  size_t n_gen = l_gens.size();
+  size_t start = 0;
+  while(true) {
+    size_t len = l_faces_gen.size();
+    for (size_t u=start; u<len; u++) {
+      for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+        Face new_incd_sma = OnFace(l_faces_gen[u], l_gens_perm[i_gen]);
+        int new_sign = l_bound[u].sign * l_gens_sign[i_gen];
+        MyMatrix<Tint> new_mat = l_bound[u].M * l_gens[i_gen];
+        insert_entry(new_incd_sma, new_sign, new_mat);
+      }
+    }
+    start = len;
+    if (start == l_faces_gen.size()) {
+      break;
+    }
+  }
+  return {std::move(l_faces_gen), std::move(l_bound)};
+}
 
 
 template<typename Tint>
@@ -906,41 +994,21 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   std::unordered_set<MyVector<Tint>> set_EXT;
 #endif
   auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, std::pair<int, MyMatrix<Tint>> const& p) -> int {
-    int dim = face.or_info.ListRowSelect.size();
-    MyMatrix<T> M(dim, dim);
-    for (int i=0; i<dim; i++) {
-      M(dim-1, i) = interior_pt(i);
-    }
     int iOrb = p.first;
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    int dim = face.or_info.ListRowSelect.size();
     for (int u=0; u<dim-1; u++) {
       int i_row = l_faces[iOrb].or_info.ListRowSelect[u];
       MyVector<Tint> V = GetMatrixRow(l_faces[iOrb].EXT, i_row);
       MyVector<Tint> Vimg = p.second.transpose() * V;
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
       if (!set_EXT.contains(Vimg)) {
         std::cerr << "PERFCOMP: The vector does not belong to set\n";
         throw TerminalException{1};
       }
-#endif
-      for (int i_col=0; i_col<dim; i_col++) {
-        int i_mat = face.or_info.ListColSelect[i_col];
-        T scal = EvaluationQuadForm<T,Tint>(pctdi.LinSpa.ListMat[i_mat], Vimg);
-        M(u, i_col) = scal;
-      }
-    }
-    T det = DeterminantMat(M);
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
-    if (det == 0) {
-      std::cerr << "PERFCOMP: determinant is 0, big error C\n";
-      throw TerminalException{1};
     }
 #endif
-    int sign = face.or_info.sign;
-    if (det > 0) {
-      return sign;
-    } else {
-      return -sign;
-    }
+    return get_boundary_sign(pctdi.LinSpa.ListMat, interior_pt, face.or_info,
+                             l_faces[iOrb].EXT, l_faces[iOrb].or_info, p.second);
   };
   auto initial_boundary_setup=[&](size_t const& i, RyshkovGRP<T, Tgroup> const& cone) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
@@ -968,53 +1036,26 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
                            Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     int sign = get_sign(interior_pt, face, p);
-    std::unordered_set<Face> set_faces_gen;
-    std::vector<Face> l_faces_gen;
-    std::vector<int> l_sign;
-    std::vector<MyMatrix<Tint>> l_mat;
-    auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
-      if (set_faces_gen.insert(new_incd_sma).second) {
-        l_faces_gen.push_back(new_incd_sma);
-        l_sign.push_back(new_sign);
-        l_mat.push_back(new_mat);
-        BoundEntry<Tint> be{p.first, new_sign, new_mat};
+    std::pair<std::vector<Face>, std::vector<BoundEntry<Tint>>> orbit =
+      get_boundary_orbit(p.first, incd_sma, sign, p.second, face.l_gens, l_gens_perm, l_gens_sign);
+    for (auto & be: orbit.second) {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-        MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * be.M;
-        for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
-          MyVector<Tint> Vimg = GetMatrixRow(EXTimg, iRow);
-          if (!set_EXT.contains(Vimg)) {
-            std::cerr << "PERFCOMP: The vector should belong to the image\n";
-            throw TerminalException{1};
-          }
+      MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * be.M;
+      for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
+        MyVector<Tint> Vimg = GetMatrixRow(EXTimg, iRow);
+        if (!set_EXT.contains(Vimg)) {
+          std::cerr << "PERFCOMP: The vector should belong to the image\n";
+          throw TerminalException{1};
         }
+      }
 #endif
-        l_bound.push_back(be);
-      }
-    };
-    insert_entry(incd_sma, sign, p.second);
-    std::vector<MyMatrix<Tint>> const& l_gens = face.l_gens;
-    size_t n_gen = l_gens.size();
-    size_t start = 0;
-    while(true) {
-      size_t len = l_faces_gen.size();
-      for (size_t u=start; u<len; u++) {
-        for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
-          Face new_incd_sma = OnFace(l_faces_gen[u], l_gens_perm[i_gen]);
-          int new_sign = l_sign[u] * l_gens_sign[i_gen];
-          MyMatrix<Tint> new_mat = l_mat[u] * l_gens[i_gen];
-          insert_entry(new_incd_sma, new_sign, new_mat);
-        }
-      }
-      start = len;
-      if (start == l_faces_gen.size()) {
-        break;
-      }
+      l_bound.push_back(be);
     }
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     using TintGroup = typename Tgroup::Tint;
     Tgroup stab = cone.GRPsub.Stabilizer_OnSets(incd_sma);
     TintGroup size1 = cone.GRPsub.size() / stab.size();
-    TintGroup size2 = l_faces_gen.size();
+    TintGroup size2 = orbit.first.size();
     if (size1 != size2) {
       std::cerr << "PERFCOMP: Inconsistent orbit sizes size1=" << size1 << " size2=" << size2 << "\n";
       throw TerminalException{1};
@@ -1022,8 +1063,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: append_boundary l_sign=";
-    for (auto &esign: l_sign) {
-      os << " " << esign;
+    for (auto &be: orbit.second) {
+      os << " " << be.sign;
     }
     os << "\n";
 #endif
