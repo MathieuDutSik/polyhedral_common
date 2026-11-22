@@ -658,3 +658,35 @@ genera with s > 1 are in rank <= 5 within det <= 2 10^5; their enumeration
 is slow for the same reason. To decide: whether these genera are worth an
 enumeration at all, as tests of two_plus_jumps with three and four jump
 primes.
+
+## src_perfect: the outer elements in the form of a cell of small rank (to clarify)
+
+The cells of small rank (`perfect_low_dim.h`) are compared through the form
+R_M = (sum_{c in C} sum_{v in M} (v c)^T (v c))^{-1}, where C is {Id} and
+ListComm closed under the conjugation by the outer elements. The matrices of
+ListComm commute with the group G of the T-space, which makes R_M equivariant
+(R_{M x^{-1}} = x R_M x^T) and positive definite for the Hermitian spaces,
+whose cells span K^m without always spanning Q^{2m}. The outer elements
+(the Galois conjugation) only normalize G, so they are not in C.
+
+Experiment (2026-11-22): the outer elements added to C, GL_3 over the rings
+of discriminant -4, -3, -7, UseOuterElements = T, numbers of orbits by rank:
+
+| d  | correct (full complex)  | outer elements in C        |
+|----|-------------------------|----------------------------|
+| -4 | 0,0,2,3,4,5,3,1,1       | 0,0,5,8,10,10,3,1,1        |
+| -3 | 0,0,1,2,3,4,3,2,2       | 0,0,3,5,7,7,4,3,2          |
+| -7 | 0,0,2,5,8,10,7,2,2      | 0,0,20,39,42,28,11,3,2     |
+
+Never fewer orbits and no wrong identification (the marking of the cell
+vectors by +-k v in SHVdisc keeps the identifications right), but too many at
+the low ranks, while the top ranks are mostly right. So the outer elements do
+not give an equivariant form this way. Open questions:
+- why the top ranks are right: a large cell is perhaps closer to being stable
+  under the outer element;
+- whether the outer elements can be used in another way to get a full rank
+  configuration, for instance for the T-spaces with outer elements and no
+  ListComm, where R_M is singular and the program stops; a K-invariant can be
+  made from the K-orbit (as LINSPA_Invariant_SHV does), but the form has to
+  transform under each element, which a symmetrization over the orbit does
+  not obviously give.
