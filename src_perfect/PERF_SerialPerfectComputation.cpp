@@ -107,7 +107,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       if (i_cone > 0) {
         os_out << ",\n";
       }
-      os_out << "rec(n_ray:=" << cf.FAC.rows() << ", ListNbOrbit:=[";
+      os_out << "rec(n_ray:=" << cf.rays.PerfDomEXT.rows() << ", ListNbOrbit:=[";
       for (size_t i_lev = 0; i_lev < cf.levels.size(); i_lev++) {
         if (i_lev > 0) {
           os_out << ",";
@@ -121,7 +121,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         }
         TintGroup n_face = 0;
         for (Face const &f : cf.levels[i_lev]) {
-          n_face += cf.GRP.OrbitSize_OnSets(f);
+          n_face += cf.rays.GRPsub.OrbitSize_OnSets(f);
         }
         os_out << n_face;
       }

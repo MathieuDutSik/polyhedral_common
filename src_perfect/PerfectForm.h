@@ -72,11 +72,18 @@ template <typename T, typename Tgroup> struct RyshkovGRP {
   }
 };
 
+/*
+  The rays of the cone spanned by the q(v), v in SHV_T: the vectors are
+  grouped into blocks with the same evaluations on the basis of the T-space
+  (in a Hermitian space the unit multiples of a vector give the same ray),
+  PerfDomEXT has one row per block and GRPsub is the action of GRP (acting
+  on the rows of SHV_T) induced on the blocks. ListIncd is left empty.
+ */
 template <typename T, typename Tgroup>
 RyshkovGRP<T, Tgroup>
-GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
-                        MyMatrix<T> const &SHV_T,
-                        Tgroup const &GRP, std::ostream &os) {
+GetPerfectConeRays_GRP(LinSpaceMatrix<T> const &LinSpa,
+                       MyMatrix<T> const &SHV_T,
+                       Tgroup const &GRP, [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int nbSHV = SHV_T.rows();
@@ -140,9 +147,23 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
     l_gens.emplace_back(std::move(eElt));
   }
   Tgroup GRPsub(l_gens, nbBlock);
-  vectface ListIncd =
-    DualDescriptionStandard<T, Tgroup>(PerfDomEXT, GRPsub, os);
+  vectface ListIncd(nbBlock);
   return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd), std::move(ListPos), std::move(ListBlockFirst)};
+}
+
+/*
+  The rays of the cone (GetPerfectConeRays_GRP) and the orbits of its
+  facets under GRPsub (ListIncd).
+ */
+template <typename T, typename Tgroup>
+RyshkovGRP<T, Tgroup>
+GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
+                        MyMatrix<T> const &SHV_T,
+                        Tgroup const &GRP, std::ostream &os) {
+  RyshkovGRP<T, Tgroup> ryshk = GetPerfectConeRays_GRP(LinSpa, SHV_T, GRP, os);
+  ryshk.ListIncd =
+    DualDescriptionStandard<T, Tgroup>(ryshk.PerfDomEXT, ryshk.GRPsub, os);
+  return ryshk;
 }
 
 template <typename T, typename Tgroup>
