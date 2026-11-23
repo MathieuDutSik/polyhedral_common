@@ -150,13 +150,7 @@ FindLocalGenerator(MyMatrix<T> const &B,
       continue;
     }
     // disc f = det(Tr(theta^{i+j}))
-    std::vector<T> pt = PowerTraces<T>(f, 2 * deg);
-    MyMatrix<T> D(deg, deg);
-    for (int i = 0; i < deg; i++) {
-      for (int j = 0; j < deg; j++) {
-        D(i, j) = pt[i + j];
-      }
-    }
+    MyMatrix<T> D = PowerTraceMatrix<T>(f);
     if (RationalValuation(DeterminantMat(D), q) != vdisc) {
       continue;
     }

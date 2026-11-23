@@ -31,13 +31,7 @@ LocalOKGramFromVectors(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   for (int t = 1; t < deg; t++) {
     Spow.push_back(Spow.back() * lg.S);
   }
-  std::vector<T> pt = PowerTraces<T>(lg.f, 2 * deg);
-  MyMatrix<T> Tm(deg, deg);
-  for (int a = 0; a < deg; a++) {
-    for (int b = 0; b < deg; b++) {
-      Tm(a, b) = pt[a + b];
-    }
-  }
+  MyMatrix<T> Tm = PowerTraceMatrix<T>(lg.f);
   MyMatrix<T> Tinv = Inverse(Tm);
   std::vector<std::vector<ElemE<T>>> H(m, std::vector<ElemE<T>>(m));
   for (int i = 0; i < m; i++) {

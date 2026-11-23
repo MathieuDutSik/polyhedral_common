@@ -370,13 +370,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
   // the bad primes: 2, those of disc(f) and of N(d)
   std::set<int64_t> bad{2};
   {
-    std::vector<T> pt = PowerTraces<T>(K.Phi, 2 * n);
-    MyMatrix<T> Tm(n, n);
-    for (int a = 0; a < n; a++) {
-      for (int b = 0; b < n; b++) {
-        Tm(a, b) = pt[a + b];
-      }
-    }
+    MyMatrix<T> Tm = PowerTraceMatrix<T>(K.Phi);
     ElemE<T> dT(n);
     for (int i = 0; i < n; i++) {
       dT[i] = UniversalScalarConversion<T, Tint>(dint[i]);

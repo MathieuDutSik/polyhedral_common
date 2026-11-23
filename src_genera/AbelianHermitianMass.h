@@ -65,18 +65,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   int vdet = RationalValuation(DeterminantMat(B), q);
   std::vector<int64_t> f = lg.f;
   // the precision covers the discriminant group and the different
-  int vdiscf = 0;
-  {
-    std::vector<T> pt = PowerTraces<T>(f, 2 * (static_cast<int>(f.size()) - 1));
-    int deg = static_cast<int>(f.size()) - 1;
-    MyMatrix<T> D(deg, deg);
-    for (int a = 0; a < deg; a++) {
-      for (int b = 0; b < deg; b++) {
-        D(a, b) = pt[a + b];
-      }
-    }
-    vdiscf = RationalValuation(DeterminantMat(D), q);
-  }
+  int vdiscf = RationalValuation(DeterminantMat(PowerTraceMatrix<T>(f)), q);
   int N = vdet + vdiscf + 6;
   MyMatrix<T> Id = IdentityMat<T>(r);
   MyMatrix<T> E = AbelianPrimeIdempotent(lg, ap.g, ap.e, q, N);

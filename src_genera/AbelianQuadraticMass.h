@@ -1756,13 +1756,7 @@ inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, NumberField<T> const &
     Tint prod = dz[i] * den;
     dd[i] = UniversalScalarConversion<T, Tint>(prod);
   }
-  std::vector<T> pt = PowerTraces<T>(K.Phi, 2 * n);
-  MyMatrix<T> Tm(n, n);
-  for (int a = 0; a < n; a++) {
-    for (int b = 0; b < n; b++) {
-      Tm(a, b) = pt[a + b];
-    }
-  }
+  MyMatrix<T> Tm = PowerTraceMatrix<T>(K.Phi);
   T discf = DeterminantMat(Tm);
   Tint D = T_abs(GetNumerator_z(discf));
   // the precision, in bits, from the sizes of the data

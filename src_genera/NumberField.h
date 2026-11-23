@@ -208,10 +208,10 @@ inline ElemE<T> EPolyOfTheta(PolyQ const &g, NumberField<T> const &K) {
   return res;
 }
 
-// Tr(theta^k), k = 0, ..., 2 deg, from the minimal polynomial by Newton.
+// Tr(theta^k), k = 0, ..., kmax, theta a root of the monic f (by
+// increasing degree), from the coefficients of f by Newton's identities.
 template <typename T>
-inline std::vector<T> PowerTraces(std::vector<int64_t> const &f,
-                                          int kmax) {
+inline std::vector<T> PowerTraces(std::vector<int64_t> const &f, int kmax) {
   int deg = static_cast<int>(f.size()) - 1;
   // f = x^deg + c_{deg-1} x^{deg-1} + ... + c_0
   std::vector<T> p(kmax + 1, T(0));
@@ -229,6 +229,21 @@ inline std::vector<T> PowerTraces(std::vector<int64_t> const &f,
     p[k] = -s;
   }
   return p;
+}
+
+// The trace form on the powers of theta: the matrix (Tr(theta^{a + b}))
+// for 0 <= a, b < deg f, of determinant disc(f).
+template <typename T>
+inline MyMatrix<T> PowerTraceMatrix(std::vector<int64_t> const &f) {
+  int deg = static_cast<int>(f.size()) - 1;
+  std::vector<T> pt = PowerTraces<T>(f, 2 * deg);
+  MyMatrix<T> M(deg, deg);
+  for (int a = 0; a < deg; a++) {
+    for (int b = 0; b < deg; b++) {
+      M(a, b) = pt[a + b];
+    }
+  }
+  return M;
 }
 
 // clang-format off
