@@ -8,6 +8,8 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
 #include <cmath>
+#include <map>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -1500,6 +1502,30 @@ public:
       }
       eff_norm = eff_norm * factor;
     }
+  }
+  // The number of vectors up to sign of each norm at most MaxNorm, from the
+  // norms the enumeration computes, without keeping the vectors; nothing if
+  // there are more than max_count of them, the enumeration stopping there.
+  std::optional<std::map<T, size_t>>
+  norm_counts_at_most(T const &MaxNorm, size_t max_count) const {
+    std::map<T, size_t> counts;
+    size_t total = 0;
+    bool over = false;
+    auto f_insert = [&]([[maybe_unused]] const MyVector<Tint> &V,
+                        const T &norm) -> bool {
+      counts[norm]++;
+      total++;
+      if (total > max_count) {
+        over = true;
+        return false;
+      }
+      return true;
+    };
+    central_enumeration(MaxNorm, f_insert);
+    if (over) {
+      return {};
+    }
+    return counts;
   }
   std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
     std::vector<MyVector<Tint>> ListVect;
