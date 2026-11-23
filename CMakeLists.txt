@@ -968,6 +968,9 @@ if(WITH_MPI)
   add_polyhedral_binary(LORENTZ_MPI_PerfectLorentzian
     "${CMAKE_SOURCE_DIR}/src_lorentzian/LORENTZ_MPI_PerfectLorentzian.cpp"
     polyhedral_lorentzian_support)
+  add_polyhedral_binary(GENUS_MPI_Enumerate
+    "${CMAKE_SOURCE_DIR}/src_genera/GENUS_MPI_Enumerate.cpp"
+    polyhedral_latt_support)
 endif()
 
 set(

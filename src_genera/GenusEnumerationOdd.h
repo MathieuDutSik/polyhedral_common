@@ -286,6 +286,50 @@ void GenusOddOverlattices(MyMatrix<T> const &GramM,
 }
 
 /*
+  The classes of the odd genus of the seed SeedOdd from those of the genus
+  of its even sublattices (resEven): the odd overlattices of index 2 of
+  each even class, in its own Aut-orbits (see the top of the file). The
+  classes of resEven may be a part of the even genus only (the classes of
+  one node of the distributed enumeration), and the result is then the
+  corresponding part of the odd genus.
+ */
+template <typename T, typename Tint, typename Tgroup>
+GenusEnumerationResult<T, Tgroup> GenusOddClassesOfEven(
+    MyMatrix<T> const &SeedOdd,
+    typename GenusEnumerationResult<T, Tgroup>::Tmass const &TotalMassOdd,
+    GenusEnumerationResult<T, Tgroup> const &resEven,
+    GenusMethods const &methods, std::ostream &os) {
+  using Tmass = typename GenusEnumerationResult<T, Tgroup>::Tmass;
+  GenusEnumerationResult<T, Tgroup> result = resEven;
+  result.ListGram.clear();
+  result.ListAutOrder.clear();
+  result.accumulated_mass = Tmass(0);
+  result.target_mass = TotalMassOdd;
+  std::vector<int> key_odd = OddTwoAdicKey<T, Tint>(SeedOdd);
+  for (size_t i = 0; i < resEven.ListGram.size(); i++) {
+    MyMatrix<T> const &GramM = resEven.ListGram[i];
+    std::vector<MyMatrix<T>> ListMatM{GramM};
+    IntAutomorphismGroup<Tint, Tgroup> aut =
+        LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMatM,
+                                                   methods.automorphism, os);
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_ODD
+    if (aut.order != resEven.ListAutOrder[i]) {
+      std::cerr << "GENUS_ODD: the automorphism group of class " << i
+                << " has order " << aut.order << " against "
+                << resEven.ListAutOrder[i] << " in the enumeration\n";
+      throw TerminalException{1};
+    }
+#endif
+    GenusOddOverlattices<T, Tint, Tgroup>(GramM, aut.ListGen, aut.order,
+                                          key_odd, result, os);
+  }
+  result.complete =
+      resEven.complete && result.accumulated_mass == TotalMassOdd;
+  return result;
+}
+
+
+/*
   The classes of the genus of the odd seeds ListSeed, through the genus of
   their even sublattices. TotalMassOdd is the mass of the odd genus; the
   mass of the even genus is computed. The other arguments are those of
@@ -313,32 +357,8 @@ GenusEnumerationResult<T, Tgroup> GenusEnumerationOdd(
   GenusEnumerationResult<T, Tgroup> resEven = GenusEnumeration<T, Tint, Tgroup>(
       ListSeedEven, TotalMassEven, prime, methods, strategy, rw, hecke, order,
       max_runtime_second, os);
-  GenusEnumerationResult<T, Tgroup> result = resEven;
-  result.ListGram.clear();
-  result.ListAutOrder.clear();
-  result.accumulated_mass = Tmass(0);
-  result.target_mass = TotalMassOdd;
-  std::vector<int> key_odd = OddTwoAdicKey<T, Tint>(ListSeed[0]);
-  for (size_t i = 0; i < resEven.ListGram.size(); i++) {
-    MyMatrix<T> const &GramM = resEven.ListGram[i];
-    std::vector<MyMatrix<T>> ListMatM{GramM};
-    IntAutomorphismGroup<Tint, Tgroup> aut =
-        LatticeAutomorphismGroup<T, Tint, Tgroup>(ListMatM,
-                                                   methods.automorphism, os);
-#ifdef SANITY_CHECK_GENUS_ENUMERATION_ODD
-    if (aut.order != resEven.ListAutOrder[i]) {
-      std::cerr << "GENUS_ODD: the automorphism group of class " << i
-                << " has order " << aut.order << " against "
-                << resEven.ListAutOrder[i] << " in the enumeration\n";
-      throw TerminalException{1};
-    }
-#endif
-    GenusOddOverlattices<T, Tint, Tgroup>(GramM, aut.ListGen, aut.order,
-                                          key_odd, result, os);
-  }
-  result.complete =
-      resEven.complete && result.accumulated_mass == TotalMassOdd;
-  return result;
+  return GenusOddClassesOfEven<T, Tint, Tgroup>(ListSeed[0], TotalMassOdd,
+                                                resEven, methods, os);
 }
 
 // clang-format off

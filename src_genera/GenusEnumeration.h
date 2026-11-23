@@ -22,6 +22,7 @@
 #include "ResidueArithmetic.h"
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -997,9 +998,26 @@ struct GenusEnumerationState {
 
   bool is_mass_closed() const { return result.accumulated_mass == TotalMass; }
 
-  // The mass is closed, or the time limit is reached.
+  // The distributed enumeration (GenusEnumerationMPI.h): every node holds
+  // the classes it owns, the neighbors of its expansions are handed to
+  // f_route (which inserts them here or sends them to their owner, and
+  // returns the insertion result only in the first case), and the stop is
+  // decided by the coordinator from the masses of all the nodes, not from
+  // the local mass.
+  bool distributed = false;
+  bool stop_requested = false;
+  std::function<std::optional<std::pair<bool, size_t>>(
+      MyMatrix<T> const &, size_t, size_t, size_t)>
+      f_route;
+
+  // The mass is closed, or the time limit is reached; in the distributed
+  // enumeration, the coordinator asked to stop.
   bool is_finished() {
-    if (is_mass_closed()) {
+    if (distributed) {
+      if (stop_requested) {
+        return true;
+      }
+    } else if (is_mass_closed()) {
       return true;
     }
     if (max_runtime_second > 0 && !result.stopped_by_runtime) {
@@ -1039,32 +1057,43 @@ struct GenusEnumerationState {
   // The same, with the index of the class of the lattice, new or known. The
   // lattice need not be reduced: the methods of LatticeMethods.h reduce their
   // input.
+  // The class of a canonical Gram matrix (recognition Canonical), known
+  // or added.
+  std::pair<bool, size_t> insert_canonical(MyMatrix<T> const &GramCan) {
+    // One search of the map: the entry is created here and its index
+    // filled in once the class is added.
+    auto [iter, is_new] = MapCanonic.try_emplace(GramCan, 0);
+    if (!is_new) {
+      return {false, iter->second};
+    }
+    LatticeAutInfo<T, Tint, Tgroup> info =
+        GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, methods, os);
+    iter->second = add(iter->first, info);
+    return {true, iter->second};
+  }
+
+  // The class of a lattice of BV invariant bv (recognition Invariant), known
+  // or added, see GenusMethods.
+  std::pair<bool, size_t> insert_with_bv(MyMatrix<T> const &GramMat,
+                                         LatticeBVInvariant<T> const &bv) {
+    auto [iter, is_new] = MapBV.try_emplace(bv, 0);
+    if (!is_new) {
+      return {false, iter->second};
+    }
+    LatticeAutInfo<T, Tint, Tgroup> info =
+        GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, methods, os);
+    iter->second = add(GramMat, info);
+    return {true, iter->second};
+  }
+
   std::pair<bool, size_t> insert_index(MyMatrix<T> const &GramMat) {
     if (methods.recognition == GenusRecognition::Canonical) {
-      MyMatrix<T> GramCan =
-          GenusCanonicalGram<T, Tint, Tgroup>(GramMat, methods.canonical, os);
-      // One search of the map: the entry is created here and its index
-      // filled in once the class is added.
-      auto [iter, is_new] = MapCanonic.try_emplace(GramCan, 0);
-      if (!is_new) {
-        return {false, iter->second};
-      }
-      LatticeAutInfo<T, Tint, Tgroup> info =
-          GetLatticeAutInfo<T, Tint, Tgroup>(iter->first, methods, os);
-      iter->second = add(iter->first, info);
-      return {true, iter->second};
+      return insert_canonical(
+          GenusCanonicalGram<T, Tint, Tgroup>(GramMat, methods.canonical, os));
     }
     if (methods.recognition == GenusRecognition::Invariant) {
-      // By the BV invariant alone, see GenusMethods.
-      LatticeBVInvariant<T> bv = LatticeBV<T, Tint>(GramMat, methods.bv, os);
-      auto [iter, is_new] = MapBV.try_emplace(bv, 0);
-      if (!is_new) {
-        return {false, iter->second};
-      }
-      LatticeAutInfo<T, Tint, Tgroup> info =
-          GetLatticeAutInfo<T, Tint, Tgroup>(GramMat, methods, os);
-      iter->second = add(GramMat, info);
-      return {true, iter->second};
+      return insert_with_bv(GramMat,
+                            LatticeBV<T, Tint>(GramMat, methods.bv, os));
     }
     // By isometry: bucket by the cheap invariant, then run the isometry
     // test against the same-invariant classes, with the automorphism
@@ -1282,13 +1311,20 @@ struct GenusEnumerationState {
         }
 #endif
         result.n_neighbor_full++;
-        std::pair<bool, size_t> pair = insert_index(*opt);
-        if (hecke) {
-          row[pair.second] += ListRepr.orbit_size(i_orbit);
-        }
-        if (pair.first) {
-          result.ListNewClassPerPrime[i_prime]++;
-          f_new(pair.second);
+        // In the distributed enumeration a neighbor owned by another node
+        // is sent to it, with its Hecke contribution, and gives no result
+        // here.
+        std::optional<std::pair<bool, size_t>> opt_pair =
+            f_route ? f_route(*opt, pos, i_prime, ListRepr.orbit_size(i_orbit))
+                    : std::optional<std::pair<bool, size_t>>(insert_index(*opt));
+        if (opt_pair) {
+          if (hecke) {
+            row[opt_pair->second] += ListRepr.orbit_size(i_orbit);
+          }
+          if (opt_pair->first) {
+            result.ListNewClassPerPrime[i_prime]++;
+            f_new(opt_pair->second);
+          }
         }
         if (is_finished()) {
           return;
