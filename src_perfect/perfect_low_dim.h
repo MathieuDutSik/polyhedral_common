@@ -410,6 +410,9 @@ std::vector<std::vector<LowRankCell<T, Tint>>> get_low_rank_well_rounded_cells(
   for (size_t i_cone = 0; i_cone < l_perfect.size(); i_cone++) {
     PerfectConeLowRankFaces<T, Tint, Tgroup> cf =
         get_cone_low_rank_faces(LinSpa, l_perfect[i_cone], max_rank, os);
+#ifdef DEBUG_PERFECT_LOW_DIM
+    std::vector<size_t> l_n_well_rounded(n_rank, 0);
+#endif
     for (int i_rank = 0; i_rank < n_rank; i_rank++) {
       std::vector<LowRankCell<T, Tint>> &l_cell = ll_cell[i_rank];
       for (Face const &f : cf.levels[min_rank + i_rank - 1]) {
@@ -417,6 +420,9 @@ std::vector<std::vector<LowRankCell<T, Tint>>> get_low_rank_well_rounded_cells(
         if (!is_well_rounded_cell(LinSpa, SHV, os)) {
           continue;
         }
+#ifdef DEBUG_PERFECT_LOW_DIM
+        l_n_well_rounded[i_rank]++;
+#endif
         LowRankCell<T, Tint> cell = get_low_rank_cell(LinSpa, l_mult, SHV, os);
         std::tuple<int, int, size_t> key{static_cast<int>(SHV.rows()), cell.mult, cell.invariant};
         std::vector<size_t> &bucket = l_buckets[i_rank][key];
@@ -436,14 +442,14 @@ std::vector<std::vector<LowRankCell<T, Tint>>> get_low_rank_well_rounded_cells(
       }
     }
 #ifdef DEBUG_PERFECT_LOW_DIM
-    os << "PERFLOWDIM: i_cone=" << i_cone << " |ll_cell|=[";
+    // For every rank: the number of orbits of faces of the cone, of well
+    // rounded ones among them, and of cells found so far up to the group.
     for (int i_rank = 0; i_rank < n_rank; i_rank++) {
-      if (i_rank > 0) {
-        os << ",";
-      }
-      os << ll_cell[i_rank].size();
+      os << "PERFLOWDIM: i_cone=" << i_cone << " rank=" << (min_rank + i_rank)
+         << " n_face_orbit=" << cf.levels[min_rank + i_rank - 1].size()
+         << " n_well_rounded=" << l_n_well_rounded[i_rank]
+         << " n_cell=" << ll_cell[i_rank].size() << "\n";
     }
-    os << "]\n";
 #endif
   }
   return ll_cell;
