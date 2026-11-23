@@ -446,13 +446,18 @@ bits, enough when the integer to round has at most about 26 bits, the
 mass being left not computed otherwise; about twice as fast as Mpfr on
 the cubic examples. With Arb, which needs a build with
 flint (`make ENABLE_FLINT_SUPPORT=1`) and takes about twice the time, the
-rounding is certified (`QuadraticHeckeLArb.h`): the same sum evaluated in balls, with
+rounding is certified: the same sum evaluated in balls, with
 proven bounds for the truncation of the series at the poles (Cauchy on
 circles around them), for the Chebyshev interpolation (a majorant on the
 Bernstein ellipse) and for the terms beyond X (G_s(t) <= gamma(sigma)
 t^{-sigma} as phi > 0, and |a_k| <= tau_n(k)); the ball of mu num(local)
 times the standard mass must contain the integer found with MPFR and no
-other. The 54 masses of rank 2 and 19 of rank 4 are certified.
+other. The 54 masses of rank 2 and 19 of rank 4 are certified. The kernel, the
+interpolation and the sum are one template on the real type Tfloat
+(`QuadHeckeLNegative<Tfloat>`, over double, DoubleDouble, mpreal or
+ArbReal through `RealFunctions.h` of basic_common_cpp): a ball type adds
+the bounds to its radius, and the other types evaluate each term in the
+cheapest of double, DoubleDouble and Tfloat that has the bits it needs.
 
 With L_d = L cap ker Phi_d(g) and L_0 = (+)_d L_d, the stabilizer of L in
 the adelic centralizer is a subgroup of finite index of that of L_0, so

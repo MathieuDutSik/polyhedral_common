@@ -317,7 +317,8 @@ void PrintQuadHeckeL(std::string const &FileGram, std::string const &FileOmega,
   if (prec_bits > 0) {
     std::optional<QuadHeckeLData<T>> Ld =
         MakeQuadHeckeLData(B, Omega, FK, Kd->second, Kd->first, m);
-    std::optional<mpfr::mpreal> L = QuadHeckeLNegative(*Ld, prec_bits, false);
+    std::optional<mpfr::mpreal> L =
+        QuadHeckeLNegative<mpfr::mpreal>(*Ld, prec_bits, false);
     if (L) {
       std::cout << "L: "
                 << L->toString(static_cast<int>(prec_bits * 0.30103) + 5)
@@ -326,7 +327,8 @@ void PrintQuadHeckeL(std::string const &FileGram, std::string const &FileOmega,
       std::cout << "L: fail\n";
     }
 #ifdef ENABLE_FLINT_SUPPORT
-    std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, prec_bits);
+    std::optional<ArbReal> La =
+        QuadHeckeLNegative<ArbReal>(*Ld, prec_bits, false);
     if (La) {
       std::cout << "Larb: "
                 << La->str(static_cast<slong>(prec_bits * 0.30103) + 5) << "\n";

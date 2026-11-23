@@ -4,8 +4,7 @@
 
 // clang-format off
 #include "AbelianQuadraticMass.h"
-#include "MprealConversion.h"
-#include "DoubleDouble.h"
+#include "RealFunctions.h"
 #include <cmath>
 #include <chrono>
 #include <functional>
@@ -612,106 +611,141 @@ std::vector<int64_t> QuadHeckeCoefficients(QuadHeckeCharacter<T> const &C,
   working precision of about twice the target. The sum over k stops at
   t = k / A where n pi t^{2/n} exceeds the target.
  */
-struct QuadHeckeKernel {
+template <typename Tf> Tf QuadHeckeGamma(Tf const &s, int n, int delta) {
+  Tf u = (s + real_from_int<Tf>(delta)) / real_from_int<Tf>(2);
+  Tf g = real_exp(-u * real_log(real_pi<Tf>())) * real_gamma(u);
+  return real_pow_int(g, n);
+}
+
+/*
+  The kernel in a type Tf (double, DoubleDouble, mpreal or ArbReal, see
+  RealFunctions.h), with the coefficients q[k][j] of t^{delta + 2j} (log
+  t)^k of the series cut after J terms, and the bounds of what is cut:
+
+  - By Cauchy on the circle |w - z_j| = 1 the j-th residue of gamma(w)
+    t^{-w} / (s - w) is at most
+      pi^{n(j+1/2)} (2 pi / Gamma(j + 1/2))^n |t^{-w}| / (|s - z_j| - 1)
+    (res_const times |t^{-w}|), as (w + delta)/2 = -j + v with |v| = 1/2 and
+    |Gamma(-j + v)| = |Gamma(1 + v)| / (|v| prod_{i <= j} |v - i|) <=
+    sqrt(pi) / ((1/2) Gamma(j + 1/2) / sqrt(pi)). With t = e^u, u = x + iy,
+    |t^{-w}| <= e^{(delta + 2j) x + |x| + |y|}. Consecutive bounds have the
+    ratio pi^n e^{2x} / (j + 1/2)^n, so the tail is summed until the ratio
+    is 1/2 and closed by a geometric series.
+  - The majorant of |F(e^u)| on a region of the complex u, from the series
+    with the absolute values of the coefficients and the tail above.
+  For a ball type the tail is added to the radius of every value of F; for
+  the other types it is not used in the values.
+ */
+template <typename Tf> struct QuadHeckeKernel {
   int n;
   int delta;
-  mpfr_prec_t wprec;
-  mpfr::mpreal s;
-  mpfr::mpreal gs;
-  mpfr::mpreal g1s;
+  int r;
+  Tf gs;
+  Tf g1s;
   // q[k][j]: the coefficient of t^{delta + 2j} (log t)^k
-  std::vector<std::vector<mpfr::mpreal>> q;
+  std::vector<std::vector<Tf>> q;
+  int J() const { return static_cast<int>(q[0].size()) - 1; }
+  // the bound of the j-th residue without the factor |t^{-w}|, j > J
+  Tf res_const(int j) const {
+    Tf pi = real_pi<Tf>();
+    Tf jh = real_from_int<Tf>(2 * j + 1) / real_from_int<Tf>(2);
+    Tf base = real_from_int<Tf>(2) * pi / real_gamma(jh);
+    Tf dist = real_from_int<Tf>(1 - r + delta + 2 * j) - real_from_int<Tf>(1);
+    return real_exp(real_from_int<Tf>(n) * jh * real_log(pi)) *
+           real_pow_int(base, n) * real_from_int<Tf>(2) / dist;
+  }
+  // an upper bound of the residues j > J for Re u in [., xe], |Re u| <= xa,
+  // |Im u| <= y (+infinity when the bounds are not geometric soon enough)
+  Tf tail(double xe, double xa, double y) const {
+    Tf pi = real_pi<Tf>();
+    Tf total = real_from_int<Tf>(0);
+    Tf half = real_from_int<Tf>(1) / real_from_int<Tf>(2);
+    Tf ex2 = real_exp(real_from_int<Tf>(2) * real_from_double<Tf>(xe));
+    for (int j = J() + 1; j <= J() + 2000; j++) {
+      Tf term = res_const(j) *
+                real_exp(real_from_int<Tf>(delta + 2 * j) *
+                             real_from_double<Tf>(xe) +
+                         real_from_double<Tf>(xa) + real_from_double<Tf>(y));
+      // the ratio to the next bound
+      Tf ratio = real_pow_int(pi, n) * ex2 /
+                 real_pow_int(real_from_int<Tf>(j) + half, n);
+      if (real_certainly_le(ratio, half)) {
+        total += real_from_int<Tf>(2) * term;
+        return real_upper(total);
+      }
+      total += term;
+    }
+    // too far to the right (a large ellipse): no useful bound
+    return real_infinity<Tf>();
+  }
 };
 
-inline mpfr::mpreal QuadHeckeGamma(mpfr::mpreal const &s, int n, int delta) {
-  mpfr::mpreal u = (s + delta) / 2;
-  mpfr::mpreal g = mpfr::pow(mpfr::const_pi(s.get_prec()), -u) * mpfr::gamma(u);
-  return mpfr::pow(g, n);
-}
-
-// log2 of C_j t^{2j}, in double precision
-inline double QuadHeckeTermLog2(int n, int j, double t) {
-  return (n * j * std::log(M_PI) + n * std::log(2.0) -
-          n * std::lgamma(j + 1.0) + 2.0 * j * std::log(t)) /
-         std::log(2.0);
-}
-
-inline QuadHeckeKernel MakeQuadHeckeKernel(int n, int delta, int s_int,
-                                           double t_max, mpfr_prec_t wprec) {
-  using mpfr::mpreal;
-  mpreal::set_default_prec(wprec);
-  QuadHeckeKernel ker;
+template <typename Tf>
+QuadHeckeKernel<Tf> MakeQuadHeckeKernel(int n, int delta, int r, int J) {
+  QuadHeckeKernel<Tf> ker;
   ker.n = n;
   ker.delta = delta;
-  ker.wprec = wprec;
-  ker.s = mpreal(s_int);
-  mpreal s1 = 1 - ker.s;
-  ker.gs = QuadHeckeGamma(ker.s, n, delta);
+  ker.r = r;
+  Tf s = real_from_int<Tf>(r);
+  Tf s1 = real_from_int<Tf>(1 - r);
+  ker.gs = QuadHeckeGamma(s, n, delta);
   ker.g1s = QuadHeckeGamma(s1, n, delta);
-  // the number of terms: C_j t_max^{2j} below 2^{-wprec}, past the maximum
-  int J = 1;
-  while (J < 8 ||
-         QuadHeckeTermLog2(n, J, t_max) > -static_cast<double>(wprec) - 20 ||
-         J < 3.0 * M_PI * std::pow(t_max, 2.0 / n)) {
-    J++;
-  }
-  mpreal pi = mpfr::const_pi(wprec);
-  mpreal logpi = mpfr::log(pi);
-  mpreal euler = mpfr::const_euler(wprec);
-  std::vector<mpreal> zeta(n + 1);
+  Tf pi = real_pi<Tf>();
+  Tf logpi = real_log(pi);
+  Tf euler = real_euler<Tf>();
+  std::vector<Tf> zeta(n + 1, real_from_int<Tf>(0));
   for (int k = 2; k <= n; k++) {
-    zeta[k] = mpfr::zeta(mpreal(k));
+    zeta[k] = real_zeta<Tf>(k);
   }
-  std::vector<mpreal> H(n + 1, mpreal(0));
-  mpreal C = mpfr::pow(mpreal(2), n);
-  mpreal pin = mpfr::pow(pi, n);
-  ker.q.assign(n, std::vector<mpreal>(J + 1, mpreal(0)));
-  std::vector<mpreal> fact(n + 1);
-  fact[0] = 1;
+  std::vector<Tf> H(n + 1, real_from_int<Tf>(0));
+  Tf C = real_pow_int(real_from_int<Tf>(2), n);
+  Tf pin = real_pow_int(pi, n);
+  std::vector<Tf> fact(n + 1, real_from_int<Tf>(1));
   for (int k = 1; k <= n; k++) {
-    fact[k] = fact[k - 1] * k;
+    fact[k] = fact[k - 1] * real_from_int<Tf>(k);
   }
+  ker.q.assign(n, std::vector<Tf>(J + 1, real_from_int<Tf>(0)));
+  Tf half = real_from_int<Tf>(1) / real_from_int<Tf>(2);
   for (int j = 0; j <= J; j++) {
     if (j > 0) {
-      mpreal ij = 1 / mpreal(j);
-      mpreal pw = ij;
+      Tf ij = real_from_int<Tf>(1) / real_from_int<Tf>(j);
+      Tf pw = ij;
       for (int k = 1; k <= n; k++) {
         H[k] += pw;
         pw *= ij;
       }
       // C_j = C_{j-1} pi^n (-1/j)^n
-      C *= pin * mpfr::pow(-ij, n);
+      C *= pin * real_pow_int(-ij, n);
     }
     // A(eps) = n S_j(eps/2) - eps (n/2) log pi, up to eps^{n-1}
-    std::vector<mpreal> a(n, mpreal(0));
-    mpreal half = mpreal(1) / 2;
-    mpreal hk = half;
+    std::vector<Tf> a(n, real_from_int<Tf>(0));
+    Tf hk = half;
     for (int k = 1; k < n; k++) {
-      mpreal sk = (k == 1)
-                      ? mpreal(-euler + H[1])
-                      : mpreal(((k % 2 == 0) ? zeta[k] : -zeta[k]) + H[k]) / k;
-      a[k] = n * sk * hk;
+      Tf sk = (k == 1) ? Tf(H[1] - euler)
+                       : Tf((((k % 2 == 0) ? zeta[k] : Tf(-zeta[k])) + H[k]) /
+                            real_from_int<Tf>(k));
+      a[k] = real_from_int<Tf>(n) * sk * hk;
       hk *= half;
     }
     if (n > 1) {
-      a[1] -= logpi * n / 2;
+      a[1] -= logpi * real_from_int<Tf>(n) / real_from_int<Tf>(2);
     }
     // exp(A)
-    std::vector<mpreal> e(n, mpreal(0));
-    e[0] = 1;
+    std::vector<Tf> e(n, real_from_int<Tf>(0));
+    e[0] = real_from_int<Tf>(1);
     for (int k = 1; k < n; k++) {
-      mpreal sum = 0;
+      Tf sum = real_from_int<Tf>(0);
       for (int i = 1; i <= k; i++) {
-        sum += i * a[i] * e[k - i];
+        sum += real_from_int<Tf>(i) * a[i] * e[k - i];
       }
-      e[k] = sum / k;
+      e[k] = sum / real_from_int<Tf>(k);
     }
     // sum_k eps^k (1/(s - z)^{k+1} + 1/(1 - s - z)^{k+1})
-    mpreal z = -delta - 2 * j;
-    mpreal i1 = 1 / (ker.s - z);
-    mpreal i2 = 1 / (s1 - z);
-    std::vector<mpreal> h(n);
-    mpreal p1 = i1, p2 = i2;
+    Tf z = real_from_int<Tf>(-delta - 2 * j);
+    Tf i1 = real_from_int<Tf>(1) / (s - z);
+    Tf i2 = real_from_int<Tf>(1) / (s1 - z);
+    std::vector<Tf> h(n, real_from_int<Tf>(0));
+    Tf p1 = i1, p2 = i2;
     for (int k = 0; k < n; k++) {
       h[k] = p1 + p2;
       p1 *= i1;
@@ -719,222 +753,240 @@ inline QuadHeckeKernel MakeQuadHeckeKernel(int n, int delta, int s_int,
     }
     for (int k = 0; k < n; k++) {
       // g_{n-1-k}
-      mpreal g = 0;
+      Tf g = real_from_int<Tf>(0);
       for (int i = 0; i <= n - 1 - k; i++) {
         g += e[i] * h[n - 1 - k - i];
       }
-      mpreal sign = (k % 2 == 0) ? mpreal(1) : mpreal(-1);
+      Tf sign = real_from_int<Tf>((k % 2 == 0) ? 1 : -1);
       ker.q[k][j] = C * g * sign / fact[k];
     }
   }
   return ker;
 }
 
-// G_s(t) + G_{1-s}(t)
-inline mpfr::mpreal QuadHeckeKernelValue(QuadHeckeKernel const &ker,
-                                         mpfr::mpreal const &t) {
-  using mpfr::mpreal;
-  mpreal L = mpfr::log(t);
-  mpreal t2 = t * t;
-  mpreal res =
-      ker.gs * mpfr::pow(t, -ker.s) + ker.g1s * mpfr::pow(t, ker.s - 1);
-  mpreal corr = 0;
-  mpreal Lk = 1;
-  int J = static_cast<int>(ker.q[0].size()) - 1;
+// F(e^u) = G_s(e^u) + G_{1-s}(e^u) for a real u (ud: u as a double), the
+// tail of the series as an error for a ball type
+template <typename Tf>
+Tf QuadHeckeKernelValue(QuadHeckeKernel<Tf> const &ker, Tf const &u,
+                        double ud) {
+  Tf t2 = real_exp(real_from_int<Tf>(2) * u);
+  Tf res = ker.gs * real_exp(-real_from_int<Tf>(ker.r) * u) +
+           ker.g1s * real_exp(real_from_int<Tf>(ker.r - 1) * u);
+  Tf corr = real_from_int<Tf>(0);
+  Tf Lk = real_from_int<Tf>(1);
+  int J = ker.J();
   for (int k = 0; k < ker.n; k++) {
-    mpreal poly = ker.q[k][J];
+    Tf poly = ker.q[k][J];
     for (int j = J - 1; j >= 0; j--) {
       poly = poly * t2 + ker.q[k][j];
     }
     corr += Lk * poly;
-    Lk *= L;
+    Lk *= u;
   }
   if (ker.delta == 1) {
-    corr *= t;
+    corr *= real_exp(u);
   }
-  return res - corr;
+  res -= corr;
+  if constexpr (RealIsBall<Tf>) {
+    real_add_error(res, ker.tail(ud + 1e-9, std::abs(ud) + 1e-9, 0.0));
+  }
+  return res;
 }
 
+// An upper bound of |F(e^u)| for Re u in [xmin, xmax], |u| <= U, |Im u| <= y
+template <typename Tf>
+Tf QuadHeckeMajorant(QuadHeckeKernel<Tf> const &ker, double xmin, double xmax,
+                     double U, double y) {
+  Tf xm = real_from_double<Tf>(xmin), xM = real_from_double<Tf>(xmax);
+  Tf Ub = real_from_double<Tf>(U);
+  Tf M = real_abs(ker.gs) * real_exp(-real_from_int<Tf>(ker.r) * xm) +
+         real_abs(ker.g1s) * real_exp(real_from_int<Tf>(ker.r - 1) * xM);
+  Tf t2 = real_exp(real_from_int<Tf>(2) * xM);
+  Tf Uk = real_from_int<Tf>(1);
+  int J = ker.J();
+  for (int k = 0; k < ker.n; k++) {
+    Tf poly = real_upper(ker.q[k][J]);
+    for (int j = J - 1; j >= 0; j--) {
+      poly = poly * t2 + real_upper(ker.q[k][j]);
+    }
+    M += Uk * poly * real_exp(real_from_int<Tf>(ker.delta) * xM);
+    Uk *= Ub;
+  }
+  M += ker.tail(xmax, std::max(std::abs(xmin), std::abs(xmax)), y);
+  return real_upper(M);
+}
 
 /*
-  The kernel F(t) = G_s(t) + G_{1-s}(t) is positive (phi is), and is
-  evaluated on the terms k = 1, ..., X through a Chebyshev interpolation
-  of g(u) = log F(e^u) on segments of the variable u = log t: the series
-  above is only computed at the nodes, at the working precision, and a
-  segment is halved until the last two Chebyshev coefficients are below
-  the tolerance, which bounds the error of F by 2^{-abs_bits}. A term only
-  needs F to abs_bits + log2 F relative bits, so a segment is evaluated in
-  double precision when that is at most 45 bits, in double-double when it
-  is at most 85, and with MPFR otherwise: the terms are mostly in the
-  first two bands.
+  The kernel on the terms k = 1, ..., X is evaluated through a Chebyshev
+  interpolation p of degree D of F(e^u) on segments of the variable u =
+  log t, the series being computed in Tf at the nodes only. A segment is
+  halved until the error |F - p| is at most the tolerance:
+  - for a ball type, the error is bounded: for F analytic in the
+    Bernstein ellipse of parameter rho with |F| <= M there, |F - p_D| <= 4
+    M rho^{-D} / (rho - 1) (Trefethen, Approximation theory and
+    approximation practice, Thm 8.2), M from QuadHeckeMajorant, the best
+    rho of a list being taken;
+  - otherwise it is estimated by the last two coefficients |c_D| +
+    |c_{D-1}|.
+  Each segment keeps log2 max |F| at the nodes, from which the terms are
+  evaluated in the cheapest type that has the bits they need.
  */
-struct QuadHeckeInterp {
-  mpfr_prec_t eprec;
+template <typename Tf> struct QuadHeckeInterp {
   std::vector<double> lo;
-  std::vector<mpfr::mpreal> mid;
-  std::vector<mpfr::mpreal> half;
-  std::vector<std::vector<mpfr::mpreal>> coef;
-  // 0: MPFR, 1: double-double, 2: double
-  std::vector<int> band;
-  std::vector<double> mid_d;
-  std::vector<double> half_d;
-  std::vector<std::vector<double>> coef_d;
-  std::vector<QuadDD> mid_dd;
-  std::vector<QuadDD> half_dd;
-  std::vector<std::vector<QuadDD>> coef_dd;
+  std::vector<double> hi;
+  std::vector<double> mid;
+  std::vector<double> half;
+  std::vector<std::vector<Tf>> coef;
+  // the bound (a ball type) or the estimate of |F - p| on the segment
+  std::vector<Tf> err;
+  std::vector<double> log2_fmax;
 };
 
-inline QuadHeckeInterp MakeQuadHeckeInterp(QuadHeckeKernel const &ker,
-                                           double u0, double u1,
-                                           double abs_bits, mpfr_prec_t eprec) {
-  using mpfr::mpreal;
-  const int D = 30;
-  QuadHeckeInterp res;
-  res.eprec = eprec;
-  mpreal::set_default_prec(ker.wprec);
-  mpreal pi = mpfr::const_pi(ker.wprec);
+template <typename Tf>
+std::optional<QuadHeckeInterp<Tf>>
+MakeQuadHeckeInterp(QuadHeckeKernel<Tf> const &ker, double u0, double u1,
+                    double step, Tf const &tol, int D) {
+  QuadHeckeInterp<Tf> res;
+  Tf pi = real_pi<Tf>();
+  // cos(pi k (2i + 1) / (2 (D + 1)))
+  std::vector<std::vector<Tf>> cs(D + 1, std::vector<Tf>(D + 1));
+  for (int k = 0; k <= D; k++) {
+    for (int i = 0; i <= D; i++) {
+      cs[k][i] = real_cos(pi * real_from_int<Tf>(k * (2 * i + 1)) /
+                          real_from_int<Tf>(2 * (D + 1)));
+    }
+  }
+  std::vector<double> rhos{1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 64, 128};
+  bool ok = true;
   std::function<void(double, double, int)> build = [&](double a, double b,
                                                        int depth) -> void {
-    mpreal::set_default_prec(ker.wprec);
-    mpreal m = (mpreal(a) + mpreal(b)) / 2;
-    mpreal h = (mpreal(b) - mpreal(a)) / 2;
-    std::vector<mpreal> g(D + 1);
-    double gmax = -1e300;
-    for (int i = 0; i <= D; i++) {
-      mpreal x = mpfr::cos(pi * (2 * i + 1) / (2 * (D + 1)));
-      mpreal F = QuadHeckeKernelValue(ker, mpfr::exp(m + h * x));
-      if (F <= 0) {
-        std::cerr << "QHECKE: the kernel is not positive at u=" << m + h * x
-                  << ", F=" << F << "\n";
-        throw TerminalException{1};
-      }
-      g[i] = mpfr::log(F);
-      gmax = std::max(gmax, g[i].toDouble());
+    if (!ok) {
+      return;
     }
-    std::vector<mpreal> c(D + 1);
-    for (int k = 0; k <= D; k++) {
-      mpreal sum = 0;
-      for (int i = 0; i <= D; i++) {
-        sum += g[i] * mpfr::cos(pi * k * (2 * i + 1) / (2 * (D + 1)));
-      }
-      c[k] = sum * 2 / (D + 1);
-    }
-    c[0] /= 2;
-    // the error on g allowed: 2^{-abs_bits} / max F
-    double log2_tol = -abs_bits - gmax / std::log(2.0) - 4;
-    double log2_tail =
-        mpfr::log2(mpfr::abs(c[D]) + mpfr::abs(c[D - 1]) +
-                   mpreal(2, ker.wprec) *
-                       mpfr::pow(mpreal(2), -static_cast<long>(ker.wprec)))
-            .toDouble();
-    if (log2_tail > log2_tol) {
+    auto subdivide = [&]() -> void {
       if (depth > 40) {
-        std::cerr << "QHECKE: no convergence of the interpolation on [" << a
-                  << ", " << b << "]\n";
-        throw TerminalException{1};
+        std::cerr << "QHECKE: no interpolation on [" << a << ", " << b
+                  << "]\n";
+        ok = false;
+        return;
       }
       double mm = (a + b) / 2;
       build(a, mm, depth + 1);
       build(mm, b, depth + 1);
-      return;
-    }
-    auto at_eprec = [&](mpreal x) -> mpreal {
-      x.setPrecision(static_cast<int>(eprec), MPFR_RNDN);
-      return x;
     };
+    // slightly enlarged, for the rounding of u_k when assigning k
+    double eps = 1e-9 * (1 + std::abs(a) + std::abs(b));
+    double ae = a - eps, be = b + eps;
+    double m = (ae + be) / 2, h = (be - ae) / 2;
+    Tf err;
+    if constexpr (RealIsBall<Tf>) {
+      // the best bound over rho, before computing anything at the nodes
+      bool have = false;
+      for (double rho : rhos) {
+        double ca = (rho + 1 / rho) / 2, cb = (rho - 1 / rho) / 2;
+        Tf M = QuadHeckeMajorant(ker, m - h * ca, m + h * ca,
+                                 std::abs(m) + h * ca, h * cb);
+        Tf rb = real_from_double<Tf>(rho);
+        Tf den = real_pow_int(rb, D) * (rb - real_from_int<Tf>(1));
+        Tf e = real_upper(Tf(real_from_int<Tf>(4) * M / den));
+        if (!have || real_certainly_le(e, err)) {
+          err = e;
+          have = true;
+        }
+      }
+      if (!real_certainly_le(err, tol)) {
+        subdivide();
+        return;
+      }
+    }
+    Tf mb = real_from_double<Tf>(m), hb = real_from_double<Tf>(h);
+    std::vector<Tf> g(D + 1);
+    double log2_fmax = -1e300;
+    for (int i = 0; i <= D; i++) {
+      // the node m + h cos(pi (2i+1) / (2(D+1)))
+      Tf u = mb + hb * cs[1][i];
+      g[i] = QuadHeckeKernelValue(ker, u, real_to_double(u));
+      double gd = real_to_double(g[i]);
+      if constexpr (!RealIsBall<Tf>) {
+        if (!(gd > 0)) {
+          std::cerr << "QHECKE: the kernel is not positive at u="
+                    << real_to_double(u) << ", F=" << gd << "\n";
+          throw TerminalException{1};
+        }
+      }
+      log2_fmax = std::max(log2_fmax, std::log2(std::abs(gd) + 1e-300));
+    }
+    std::vector<Tf> c(D + 1);
+    for (int k = 0; k <= D; k++) {
+      Tf sum = real_from_int<Tf>(0);
+      for (int i = 0; i <= D; i++) {
+        sum += g[i] * cs[k][i];
+      }
+      c[k] = sum * real_from_int<Tf>(2) / real_from_int<Tf>(D + 1);
+    }
+    c[0] /= real_from_int<Tf>(2);
+    if constexpr (!RealIsBall<Tf>) {
+      err = real_abs(c[D]) + real_abs(c[D - 1]);
+      if (!real_certainly_le(err, tol)) {
+        subdivide();
+        return;
+      }
+    }
     res.lo.push_back(a);
-    res.mid.push_back(at_eprec(m));
-    res.half.push_back(at_eprec(h));
-    std::vector<mpreal> ce(D + 1);
-    for (int k = 0; k <= D; k++) {
-      ce[k] = at_eprec(c[k]);
-    }
-    res.coef.push_back(ce);
-    std::vector<double> cd(D + 1);
-    for (int k = 0; k <= D; k++) {
-      cd[k] = c[k].toDouble();
-    }
-    res.coef_d.push_back(cd);
-    res.mid_d.push_back((a + b) / 2);
-    res.half_d.push_back((b - a) / 2);
-    std::vector<QuadDD> cdd(D + 1);
-    for (int k = 0; k <= D; k++) {
-      cdd[k] = QuadDDFromMpreal(c[k]);
-    }
-    res.coef_dd.push_back(cdd);
-    res.mid_dd.push_back(QuadDDFromMpreal(m));
-    res.half_dd.push_back(QuadDDFromMpreal(h));
-    // the relative bits needed, with a margin
-    double needed = abs_bits + gmax / std::log(2.0) + 8;
-    res.band.push_back((needed <= 45) ? 2 : ((needed <= 85) ? 1 : 0));
+    res.hi.push_back(b);
+    res.mid.push_back(m);
+    res.half.push_back(h);
+    res.coef.push_back(c);
+    res.err.push_back(err);
+    res.log2_fmax.push_back(log2_fmax);
   };
-  for (double a = u0; a < u1; a += 1.0) {
-    build(a, std::min(a + 1.0, u1), 0);
+  for (double a = u0; a < u1; a += step) {
+    build(a, std::min(a + step, u1), 0);
+  }
+  if (!ok) {
+    return {};
   }
   return res;
 }
 
 // the segment of u: the last one starting at or below it
-inline size_t QuadHeckeSegment(QuadHeckeInterp const &I, double ud) {
+template <typename Tf>
+size_t QuadHeckeSegment(QuadHeckeInterp<Tf> const &I, double ud) {
   size_t i = static_cast<size_t>(
       std::upper_bound(I.lo.begin(), I.lo.end(), ud) - I.lo.begin());
   return (i == 0) ? 0 : i - 1;
 }
 
-// F(e^u) on the segment seg
-inline mpfr::mpreal QuadHeckeInterpValue(QuadHeckeInterp const &I,
-                                         mpfr::mpreal const &u, size_t seg) {
-  using mpfr::mpreal;
-  std::vector<mpreal> const &c = I.coef[seg];
-  mpreal x = (u - I.mid[seg]) / I.half[seg];
-  mpreal x2 = 2 * x;
-  mpreal b1 = 0, b2 = 0;
+// p(u) on a segment of center m and half-width h, by Clenshaw, in a type
+// Te holding the coefficients c
+template <typename Te>
+Te QuadHeckeChebyshevValue(std::vector<Te> const &c, double m, double h,
+                           Te const &u) {
+  Te x = (u - real_from_double<Te>(m)) / real_from_double<Te>(h);
+  Te x2 = real_from_int<Te>(2) * x;
+  Te b1 = real_from_int<Te>(0), b2 = real_from_int<Te>(0);
   for (int k = static_cast<int>(c.size()) - 1; k >= 1; k--) {
-    mpreal b0 = x2 * b1 - b2 + c[k];
+    Te b0 = x2 * b1 - b2 + c[k];
     b2 = b1;
     b1 = b0;
   }
-  return mpfr::exp(x * b1 - b2 + c[0]);
+  return x * b1 - b2 + c[0];
 }
 
-// the same in double-double
-inline QuadDD QuadHeckeInterpValueDD(QuadHeckeInterp const &I, QuadDD u,
-                                     size_t seg) {
-  std::vector<QuadDD> const &c = I.coef_dd[seg];
-  // x = (u - m) / h, h a power of 2 times a double
-  QuadDD diff = QuadDDAdd(u, QuadDD{-I.mid_dd[seg].hi, -I.mid_dd[seg].lo});
-  double inv = 1.0 / I.half_dd[seg].hi;
-  QuadDD x = QuadDDMul(diff, QuadDD{inv, 0.0});
-  // one Newton step for the division: x += (diff - x h) / h
-  QuadDD xh = QuadDDMul(x, I.half_dd[seg]);
-  QuadDD r = QuadDDAdd(diff, QuadDD{-xh.hi, -xh.lo});
-  x = QuadDDAdd(x, QuadDDMul(r, QuadDD{inv, 0.0}));
-  QuadDD x2{2 * x.hi, 2 * x.lo};
-  QuadDD b1{0, 0}, b2{0, 0};
-  for (int k = static_cast<int>(c.size()) - 1; k >= 1; k--) {
-    QuadDD b0 = QuadDDAdd(QuadDDAdd(QuadDDMul(x2, b1), QuadDD{-b2.hi, -b2.lo}),
-                          c[k]);
-    b2 = b1;
-    b1 = b0;
+// The coefficients of the interpolation in the type Te, at its working
+// precision
+template <typename Te, typename Tf>
+std::vector<std::vector<Te>>
+QuadHeckeInterpCoefficients(QuadHeckeInterp<Tf> const &I) {
+  std::vector<std::vector<Te>> res;
+  for (auto const &c : I.coef) {
+    std::vector<Te> ce;
+    for (auto const &x : c) {
+      ce.push_back(real_convert<Te>(x));
+    }
+    res.push_back(ce);
   }
-  QuadDD g = QuadDDAdd(QuadDDAdd(QuadDDMul(x, b1), QuadDD{-b2.hi, -b2.lo}),
-                       c[0]);
-  return QuadDDExp(g);
-}
-
-// the same in double precision
-inline double QuadHeckeInterpValueDouble(QuadHeckeInterp const &I, double u,
-                                         size_t seg) {
-  std::vector<double> const &c = I.coef_d[seg];
-  double x = (u - I.mid_d[seg]) / I.half_d[seg];
-  double x2 = 2 * x;
-  double b1 = 0, b2 = 0;
-  for (int k = static_cast<int>(c.size()) - 1; k >= 1; k--) {
-    double b0 = x2 * b1 - b2 + c[k];
-    b2 = b1;
-    b1 = b0;
-  }
-  return std::exp(x * b1 - b2 + c[0]);
+  return res;
 }
 
 // The local series prod_{P | p} 1 / (1 - chi(P) u^{f_P}) up to u^kmax
@@ -988,8 +1040,8 @@ template <typename T> struct QuadHeckeLData {
   std::vector<int64_t> a_small;
   std::map<int64_t, int> c1_bad;
   // log p for the small primes, log j for j <= S
-  std::vector<QuadDD> log_small;
-  std::vector<QuadDD> log_j;
+  std::vector<DoubleDouble> log_small;
+  std::vector<DoubleDouble> log_j;
 };
 
 template <typename T>
@@ -1082,12 +1134,12 @@ template <typename T> void QuadHeckeLExtend(QuadHeckeLData<T> &Ld, int64_t X) {
     mpfr::mpreal::set_default_prec(160);
     Ld.log_small.clear();
     for (auto const &pc : Ld.small) {
-      Ld.log_small.push_back(QuadDDFromMpreal(
+      Ld.log_small.push_back(DoubleDoubleFromMpreal(
           mpfr::log(mpfr::mpreal(static_cast<unsigned long>(pc.first)))));
     }
-    Ld.log_j.assign(S + 1, QuadDD{0, 0});
+    Ld.log_j.assign(S + 1, DoubleDouble(0.0));
     for (int64_t j = 2; j <= S; j++) {
-      Ld.log_j[j] = QuadDDFromMpreal(
+      Ld.log_j[j] = DoubleDoubleFromMpreal(
           mpfr::log(mpfr::mpreal(static_cast<unsigned long>(j))));
     }
     mpfr::mpreal::set_default_prec(old);
@@ -1097,18 +1149,18 @@ template <typename T> void QuadHeckeLExtend(QuadHeckeLData<T> &Ld, int64_t X) {
 }
 
 /*
-  f(k, a_k, log k) for the k <= X with a_k != 0, X <= Ld.X, in no
-  particular order, log k in double-double: the S-smooth k by a depth-first walk over the local series of the
-  primes p <= S (skipping the zero coefficients and what lies under them),
-  and the k = j q with a prime q > S (at most one, as S^2 >= X) and j <= X /
-  q <= S from a segmented sieve over (S, X], the primes with c_1(q) = 0
-  being skipped.
+  f(k, a_k, log k) for the k <= X with a_k != 0, X <= Ld.X, in no particular
+  order, log k in DoubleDouble: the S-smooth k by a depth-first walk over the
+  local series of the primes p <= S (skipping the zero coefficients and what
+  lies under them), and the k = j q with a prime q > S (at most one, as S^2
+  >= X) and j <= X / q <= S from a segmented sieve over (S, X], the primes
+  with c_1(q) = 0 being skipped.
  */
 template <typename T, typename F>
 void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
   int64_t S = Ld.S;
-  std::function<void(size_t, int64_t, int64_t, QuadDD)> dfs =
-      [&](size_t i0, int64_t k, int64_t ak, QuadDD lk) -> void {
+  std::function<void(size_t, int64_t, int64_t, DoubleDouble)> dfs =
+      [&](size_t i0, int64_t k, int64_t ak, DoubleDouble lk) -> void {
     for (size_t i = i0; i < Ld.small.size(); i++) {
       int64_t p = Ld.small[i].first;
       if (k > X / p) {
@@ -1116,10 +1168,10 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
       }
       std::vector<int64_t> const &c = Ld.small[i].second;
       int64_t kk = k;
-      QuadDD lkk = lk;
+      DoubleDouble lkk = lk;
       for (size_t e = 1; kk <= X / p; e++) {
         kk *= p;
-        lkk = QuadDDAdd(lkk, Ld.log_small[i]);
+        lkk += Ld.log_small[i];
         if (e < c.size() && c[e] != 0) {
           f(kk, ak * c[e], lkk);
           dfs(i + 1, kk, ak * c[e], lkk);
@@ -1127,8 +1179,8 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
       }
     }
   };
-  f(int64_t(1), int64_t(1), QuadDD{0.0, 0.0});
-  dfs(0, 1, 1, QuadDD{0.0, 0.0});
+  f(int64_t(1), int64_t(1), DoubleDouble(0.0));
+  dfs(0, 1, 1, DoubleDouble(0.0));
   // the primes q in (S, X]
   const int64_t block = int64_t(1) << 22;
   std::vector<char> is_p;
@@ -1160,11 +1212,11 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
         continue;
       }
       int64_t jmax = X / q;
-      QuadDD lq = QuadDDLogInteger(q);
+      DoubleDouble lq = DoubleDoubleLog(DoubleDouble(q));
       for (int64_t j = 1; j <= jmax; j++) {
         int64_t aj = Ld.a_small[j];
         if (aj != 0) {
-          f(j * q, aj * c, QuadDDAdd(lq, Ld.log_j[j]));
+          f(j * q, aj * c, lq + Ld.log_j[j]);
         }
       }
     }
@@ -1172,57 +1224,121 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
 }
 
 /*
-  L(1 - r, chi) to about prec_bits relative bits: Lambda(1 - r) from the
-  sum, divided by A^{1-r} gamma(1-r) (no pole there: (1 - r + delta)/2 is
-  a half-integer as r = delta + 1 mod 2). With all_double every term is
-  evaluated in double precision, whatever it needs. Nothing when the number
-  of terms exceeds the limit (10^12).
+  L(1 - r, chi) in the type Tf: Lambda(1 - r) from the sum, divided by
+  A^{1-r} gamma(1-r) (no pole there: (1 - r + delta)/2 is a half-integer
+  as r = delta + 1 mod 2). Nothing when the number of terms exceeds the
+  limit, or when the interpolation cannot be built.
+
+  - For a ball type (ArbReal) the result is certified: the number X of
+    terms comes from the bound of the terms k > X (as phi > 0, G_s(t) =
+    t^{-s} int_t^infty phi(x) x^s dx / x <= gamma(sigma) t^{-sigma} for
+    every sigma >= s, and |a_k| is at most the k-th coefficient of
+    zeta(s)^n, so that for sigma > 2
+      sum_{k > X} |a_k| F(k/A) <= 2 gamma(sigma) A^sigma X^{2-sigma}
+      zeta(2)^n,
+    sigma being optimized), and that bound, the interpolation errors and
+    the rounding of every term are in the radius. The ball has an absolute
+    radius of about 2^{-prec_bits} relative to the size of Lambda.
+  - Otherwise X is the point where the kernel n pi t^{2/n} falls below the
+    target, the terms where F < 2^{-abs_bits} being dropped, for about
+    prec_bits relative bits. Each term is evaluated in double when it needs
+    at most 45 bits, in DoubleDouble up to 85 and in Tf beyond; with
+    all_double every term is in double precision, whatever it needs.
+
+  The kernel and the interpolation are built in Tf at the working
+  precision wprec: the series reaches about exp(n pi t^{2/n}) at t =
+  t_max while F is about its inverse, hence about twice the target bits.
+  For double or DoubleDouble this is only meaningful for the smallest
+  conductors.
  */
-template <typename T>
-std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
-                                               int prec_bits, bool all_double) {
-  using mpfr::mpreal;
+template <typename Tf, typename T>
+std::optional<Tf> QuadHeckeLNegative(QuadHeckeLData<T> &Ld, int prec_bits,
+                                     bool all_double) {
+  constexpr bool is_ball = RealIsBall<Tf>;
   int r = Ld.m / 2;
   int n = Ld.n;
   int delta = Ld.delta;
-  mpfr_prec_t old_prec = mpreal::get_default_prec();
-  mpfr_prec_t p0 = 64;
-  mpreal::set_default_prec(p0);
-  mpreal A2 = mpreal_from_integer(Ld.A2, p0);
-  double logA = 0.5 * mpfr::log(A2).toDouble();
+  double logA = 0.5 * std::log(real_from_integer<double>(Ld.A2));
   // |Lambda(1 - r)| = A^r gamma(r) |L(r)|, with L(r) of size about 1
-  double log2_scale =
-      (r * logA) / std::log(2.0) +
-      mpfr::log2(mpfr::abs(QuadHeckeGamma(mpreal(r, p0), n, delta))).toDouble();
-  double target = std::max(20.0, prec_bits - log2_scale + 10);
-  // the cutoff: n pi t^{2/n} - (r + n) log t > target log 2 + log(A t)
-  double t_max = 1.0;
-  auto tail_ok = [&](double t) -> bool {
-    return n * M_PI * std::pow(t, 2.0 / n) - (r + n) * std::log(t) >=
-           (target + 40) * std::log(2.0) + logA + std::log(t) + 10;
-  };
-  while (!tail_ok(t_max)) {
-    t_max *= 1.05;
+  double log2_scale = r * logA / std::log(2.0) +
+                      std::log2(std::abs(QuadHeckeGamma(
+                          static_cast<double>(r), n, delta)));
+  double target = std::max(20.0, prec_bits - log2_scale + (is_ball ? 20 : 10));
+  double X_double = 0;
+  double X_limit = 0;
+  if constexpr (is_ball) {
+    // the bound of the terms k > X, optimized over sigma
+    double lz2 = n * std::log(M_PI * M_PI / 6);
+    auto log_tail = [&](double logX) -> double {
+      double best = 1e300;
+      for (double sigma = std::max(3.0, r + 0.0); sigma < 2000;
+           sigma *= 1.02) {
+        double lg = n * (-(sigma + delta) / 2 * std::log(M_PI) +
+                         std::lgamma((sigma + delta) / 2));
+        double v =
+            std::log(2.0) + lg + sigma * logA + (2 - sigma) * logX + lz2;
+        best = std::min(best, v);
+      }
+      return best;
+    };
+    double goal = -(target + 8) * std::log(2.0);
+    double logX = logA;
+    while (log_tail(logX) > goal) {
+      logX += 0.05;
+    }
+    X_double = std::ceil(std::exp(logX));
+    X_limit = 4.0e8;
+  } else {
+    // the cutoff: n pi t^{2/n} - (r + n) log t > target log 2 + log(A t)
+    double t_cut = 1.0;
+    auto tail_ok = [&](double t) -> bool {
+      return n * M_PI * std::pow(t, 2.0 / n) - (r + n) * std::log(t) >=
+             (target + 40) * std::log(2.0) + logA + std::log(t) + 10;
+    };
+    while (!tail_ok(t_cut)) {
+      t_cut *= 1.05;
+    }
+    X_double = std::ceil(t_cut * std::exp(logA)) + 1;
+    X_limit = 1.0e12;
   }
-  double X_double = std::ceil(t_max * std::exp(logA)) + 1;
   // each term to 2^{-abs_bits}, the X terms then add up to 2^{-target}
-  double abs_bits = target + std::log2(X_double) + 6;
-  double log2_peak = n * M_PI * std::pow(t_max, 2.0 / n) / std::log(2.0);
-  double log2_Fmax = std::max(0.0, log2_scale) + 8;
-  mpfr_prec_t wprec =
-      static_cast<mpfr_prec_t>(abs_bits + std::max(log2_peak, log2_Fmax) + 64);
-  mpfr_prec_t eprec = static_cast<mpfr_prec_t>(abs_bits + log2_Fmax + 32);
-  QuadHeckeKernel ker = MakeQuadHeckeKernel(n, delta, r, t_max, wprec);
+  double abs_bits = target + std::log2(X_double) + (is_ball ? 24 : 6);
   double u0 = -logA - 0.01;
   double u1 = std::log(X_double) - logA + 0.01;
-  {
+  // J: the residue bounds at the largest Re u of the ellipses for a ball
+  // type, at u1 otherwise; the series reaches its peak there
+  double xJ = is_ball ? u1 + 0.5 : u1;
+  int J = 1;
+  while (true) {
+    double jh = J + 0.5;
+    double lt = n * jh * std::log(M_PI) + n * std::log(2 * M_PI) -
+                n * std::lgamma(jh) + (delta + 2 * J) * xJ + std::abs(xJ);
+    double ratio = n * std::log(M_PI) + 2 * xJ - n * std::log(jh);
+    if (J > 8 && lt / std::log(2.0) < -abs_bits - 20 && ratio < -1) {
+      break;
+    }
+    J++;
+  }
+  // the peak of the series, at t = e^{xJ}
+  double log2_peak = n * M_PI * std::exp(2.0 * xJ / n) / std::log(2.0);
+  double log2_Fmax = std::max(0.0, log2_scale) + 8;
+  long wprec =
+      static_cast<long>(abs_bits + std::max(log2_peak, log2_Fmax) + 64);
+  long eprec = static_cast<long>(abs_bits + log2_Fmax + 32);
+  int D = is_ball ? std::clamp(
+                        static_cast<int>((log2_peak + abs_bits) / 3) + 10, 30,
+                        240)
+                  : 30;
+  double step = is_ball ? 0.25 : 1.0;
+  RealPrecisionGuard<Tf> g_w(wprec);
+  QuadHeckeKernel<Tf> ker = MakeQuadHeckeKernel<Tf>(n, delta, r, J);
+  Tf tol = real_pow_int(real_from_int<Tf>(2), -static_cast<long>(abs_bits));
+  if constexpr (!is_ball) {
     // F is decreasing for large t: the terms where F < 2^{-abs_bits} are
     // dropped (within the margin of abs_bits), and the series is not
     // accurate enough there to keep F positive
-    mpreal::set_default_prec(wprec);
-    mpreal thr = mpfr::pow(mpreal(2), -abs_bits);
     auto small = [&](double u) -> bool {
-      return QuadHeckeKernelValue(ker, mpfr::exp(mpreal(u))) < thr;
+      return QuadHeckeKernelValue(ker, real_from_double<Tf>(u), u) < tol;
     };
     if (small(u1)) {
       double lo = 0.0, hi = u1;
@@ -1240,82 +1356,132 @@ std::optional<mpfr::mpreal> QuadHeckeLNegative(QuadHeckeLData<T> &Ld,
       }
     }
   }
-  // beyond this the sum is out of reach: the mass is left not computed
-  const double X_limit = 1.0e12;
   if (X_double > X_limit) {
     std::cerr << "QHECKE: L(1-r) needs " << X_double
               << " terms (A^2 = " << Ld.A2 << "), beyond the limit " << X_limit
               << "\n";
-    mpreal::set_default_prec(old_prec);
     return {};
   }
   int64_t X = static_cast<int64_t>(X_double);
 #ifdef DEBUG_QHECKE
   std::chrono::steady_clock::time_point tc0 = std::chrono::steady_clock::now();
 #endif
+  std::optional<QuadHeckeInterp<Tf>> I =
+      MakeQuadHeckeInterp(ker, u0, u1, step, tol, D);
+  if (!I) {
+    return {};
+  }
   QuadHeckeLExtend(Ld, X);
-  QuadHeckeInterp I = MakeQuadHeckeInterp(ker, u0, u1, abs_bits, eprec);
 #ifdef DEBUG_QHECKE
   std::chrono::steady_clock::time_point tc1 = std::chrono::steady_clock::now();
-  std::cerr << "QHECKE: data up to " << X << " (S=" << Ld.S << ") in "
+  std::cerr << "QHECKE: data up to " << X << " (S=" << Ld.S << "), "
+            << I->lo.size() << " segments, in "
             << std::chrono::duration<double>(tc1 - tc0).count() << " s\n";
 #endif
-  mpreal::set_default_prec(eprec);
-  mpreal logAe = mpfr::log(mpreal_from_integer(Ld.A2, eprec)) / 2;
-  double logA_d = logAe.toDouble();
-  mpreal Lambda = 0;
-  QuadDD logA_dd = QuadDDFromMpreal(logAe);
-  QuadDD mlogA_dd{-logA_dd.hi, -logA_dd.lo};
-  // the double and double-double terms, summed in double-double
-  QuadDD sum_dd{0, 0};
-  int64_t n_mpfr = 0, n_dd = 0, n_dbl = 0;
-  QuadHeckeForEachTerm(Ld, X, [&](int64_t k, int64_t ak, QuadDD lk) -> void {
+  // the terms
+  RealPrecisionGuard<Tf> g_e(eprec);
+  std::vector<std::vector<Tf>> coef_e = QuadHeckeInterpCoefficients<Tf>(*I);
+  std::vector<std::vector<double>> coef_d =
+      QuadHeckeInterpCoefficients<double>(*I);
+  std::vector<std::vector<DoubleDouble>> coef_dd =
+      QuadHeckeInterpCoefficients<DoubleDouble>(*I);
+  // 0: Tf, 1: DoubleDouble, 2: double, from the relative bits needed
+  std::vector<int> band;
+  for (double l2 : I->log2_fmax) {
+    double needed = abs_bits + l2 + 8;
+    band.push_back(is_ball ? 0
+                           : (all_double || needed <= 45)
+                                 ? 2
+                                 : ((needed <= 85) ? 1 : 0));
+  }
+  Tf logAe = real_log(real_from_integer<Tf>(Ld.A2)) / real_from_int<Tf>(2);
+  double logA_d = real_to_double(logAe);
+  DoubleDouble logA_dd = real_convert<DoubleDouble>(logAe);
+  Tf Lambda = real_from_int<Tf>(0);
+  // the double and DoubleDouble terms, summed in DoubleDouble
+  DoubleDouble sum_dd(0.0);
+  std::vector<int64_t> abs_sum(I->lo.size(), 0);
+  bool inside = true;
+  int64_t n_tf = 0, n_dd = 0, n_dbl = 0;
+  QuadHeckeForEachTerm(Ld, X,
+                       [&](int64_t k, int64_t ak, DoubleDouble lk) -> void {
     double ud = lk.hi - logA_d;
-    size_t seg = QuadHeckeSegment(I, ud);
-    if (all_double || I.band[seg] == 2) {
-      double v =
-          static_cast<double>(ak) * QuadHeckeInterpValueDouble(I, ud, seg);
-      sum_dd = QuadDDAdd(sum_dd, QuadDD{v, 0.0});
+    size_t seg = QuadHeckeSegment(*I, ud);
+    if (band[seg] == 2) {
+      double v = static_cast<double>(ak) *
+                 QuadHeckeChebyshevValue(coef_d[seg], I->mid[seg],
+                                         I->half[seg], ud);
+      sum_dd += DoubleDouble(v);
       n_dbl++;
-    } else if (I.band[seg] == 1) {
-      QuadDD u = QuadDDAdd(lk, mlogA_dd);
-      QuadDD v = QuadDDMul(QuadHeckeInterpValueDD(I, u, seg),
-                           QuadDD{static_cast<double>(ak), 0.0});
-      sum_dd = QuadDDAdd(sum_dd, v);
+    } else if (band[seg] == 1) {
+      DoubleDouble u = lk - logA_dd;
+      sum_dd += DoubleDouble(static_cast<double>(ak)) *
+                QuadHeckeChebyshevValue(coef_dd[seg], I->mid[seg],
+                                        I->half[seg], u);
       n_dd++;
     } else {
-      mpreal u = mpfr::log(mpreal(static_cast<unsigned long>(k))) - logAe;
-      Lambda += ak * QuadHeckeInterpValue(I, u, seg);
-      n_mpfr++;
+      if constexpr (is_ball) {
+        if (ud < I->lo[seg] - 1e-9 || ud > I->hi[seg] + 1e-9) {
+          inside = false;
+          return;
+        }
+        abs_sum[seg] += (ak < 0) ? -ak : ak;
+      }
+      Tf u = real_log(real_from_int<Tf>(k)) - logAe;
+      Lambda += real_from_int<Tf>(ak) *
+                QuadHeckeChebyshevValue(coef_e[seg], I->mid[seg],
+                                        I->half[seg], u);
+      n_tf++;
     }
   });
-  Lambda += QuadDDToMpreal(sum_dd);
-  (void)n_mpfr;
-  (void)n_dd;
-  (void)n_dbl;
+  if (!inside) {
+    std::cerr << "QHECKE: a term outside the segments\n";
+    return {};
+  }
+  Lambda += real_convert<Tf>(sum_dd);
+  if constexpr (is_ball) {
+    // the interpolation errors
+    Tf err = real_from_int<Tf>(0);
+    for (size_t i = 0; i < abs_sum.size(); i++) {
+      err += real_from_int<Tf>(abs_sum[i]) * I->err[i];
+    }
+    // the terms k > X, with sigma optimized as above
+    double best = 1e300, sbest = 3;
+    for (double sigma = std::max(3.0, r + 0.0); sigma < 2000; sigma *= 1.02) {
+      double lg = n * (-(sigma + delta) / 2 * std::log(M_PI) +
+                       std::lgamma((sigma + delta) / 2));
+      double v = lg + sigma * logA + (2 - sigma) * std::log(X_double);
+      if (v < best) {
+        best = v;
+        sbest = sigma;
+      }
+    }
+    Tf sg = real_from_double<Tf>(sbest);
+    Tf tail = real_from_int<Tf>(2) * QuadHeckeGamma(sg, n, delta) *
+              real_exp(sg * logAe) *
+              real_exp((real_from_int<Tf>(2) - sg) *
+                       real_log(real_from_int<Tf>(X))) *
+              real_pow_int(real_zeta<Tf>(2), n);
+    err += real_upper(tail);
+    real_add_error(Lambda, real_upper(err));
+  }
+  Tf s1 = real_from_int<Tf>(1 - r);
+  Tf res = Lambda / (real_exp(logAe * s1) * QuadHeckeGamma(s1, n, delta));
 #ifdef DEBUG_QHECKE
   std::chrono::steady_clock::time_point tc2 = std::chrono::steady_clock::now();
-  std::cerr << "QHECKE: " << n_mpfr << " terms with MPFR, " << n_dd
-            << " in double-double, " << n_dbl << " in double, in "
+  std::cerr << "QHECKE: " << n_tf << " terms in Tf, " << n_dd
+            << " in DoubleDouble, " << n_dbl << " in double, in "
             << std::chrono::duration<double>(tc2 - tc1).count() << " s\n";
-#endif
-  mpreal s1 = mpreal(1 - r);
-  mpreal res = Lambda / (mpfr::exp(logAe * s1) * QuadHeckeGamma(s1, n, delta));
-#ifdef DEBUG_QHECKE
   std::cerr << "QHECKE: n=" << n << " delta=" << delta << " r=" << r
-            << " A^2=" << Ld.A2 << " t_max=" << t_max << " X=" << X
-            << " J=" << ker.q[0].size() << " segments=" << I.lo.size()
+            << " A^2=" << Ld.A2 << " X=" << X << " J=" << J << " D=" << D
             << " wprec=" << wprec << " eprec=" << eprec
-            << " L(1-r)=" << res.toString(30) << "\n";
+            << " L(1-r)=" << real_to_double(res) << "\n";
 #endif
-  mpreal::set_default_prec(old_prec);
+  (void)n_tf;
+  (void)n_dd;
+  (void)n_dbl;
   return res;
 }
-
-// The certified evaluation with Arb, when flint is there
-#ifdef ENABLE_FLINT_SUPPORT
-#include "QuadraticHeckeLArb.h"
-#endif
 
 /*
   An integer mu divisible by the order of every finite subgroup of
@@ -1392,10 +1558,10 @@ Tint MinkowskiMultiple(AbelianField const &FK, int m) {
   L-value is computed to the bits of b plus a margin and b rounded; it is
   accepted when a second computation with 16 more bits rounds to the same
   integer, both within 2^{-8} of it. With the method Arb, b is moreover
-  certified: the Arb enclosure of L(1 - r) (QuadraticHeckeLArb.h) times mu
-  num(local) sm_exact must contain b and no other integer, otherwise the
-  mass is not returned. Nothing when the character cannot be computed (a common
-  index divisor).
+  certified: the Arb enclosure of L(1 - r) (QuadHeckeLNegative<ArbReal>)
+  times mu num(local) sm_exact must contain b and no other integer,
+  otherwise the mass is not returned. Nothing when the character cannot
+  be computed (a common index divisor).
  */
 template <typename T>
 std::optional<T> QuadraticMassNonAbelianE(
@@ -1423,7 +1589,7 @@ std::optional<T> QuadraticMassNonAbelianE(
   }
   bool all_double = (method == QuadLValueMethod::Double);
   // the size of b, for which a few bits of L(1 - r) are enough
-  std::optional<mpreal> L0 = QuadHeckeLNegative(*Ld, 24, all_double);
+  std::optional<mpreal> L0 = QuadHeckeLNegative<mpreal>(*Ld, 24, all_double);
   if (!L0) {
     return {};
   }
@@ -1441,7 +1607,7 @@ std::optional<T> QuadraticMassNonAbelianE(
     bits = 42;
   }
   auto rounded = [&](int prec) -> std::optional<Tint> {
-    std::optional<mpreal> L = QuadHeckeLNegative(*Ld, prec, all_double);
+    std::optional<mpreal> L = QuadHeckeLNegative<mpreal>(*Ld, prec, all_double);
     if (!L) {
       return {};
     }
@@ -1466,7 +1632,7 @@ std::optional<T> QuadraticMassNonAbelianE(
       // the integer certified by the Arb enclosure of L(1 - r)
       bool certified = (method != QuadLValueMethod::Arb);
       for (int cb = bits; cb <= bits + 64 && !certified; cb += 32) {
-        std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, cb);
+        std::optional<ArbReal> La = QuadHeckeLNegative<ArbReal>(*Ld, cb, false);
         if (!La) {
           break;
         }
