@@ -472,9 +472,9 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
         }
       } else {
         // a common index divisor: a generator for each prime
-        std::optional<std::vector<QuadPrimeGenerator<T>>> pgs =
-            QuadPrimeGenerators(B, Omega, p,
-                                PrimeDecompositionCharacters(G, XK, p));
+        std::optional<std::vector<PrimeLocalGenerator<T>>> pgs =
+            PrimeLocalGenerators(B, Omega, p,
+                                 PrimeDecompositionCharacters(G, XK, p), false);
         if (!pgs) {
           return {};
         }

@@ -144,25 +144,29 @@ template <typename T> struct AbelianLocalGram {
   std::shared_ptr<LocalPrimeK<T>> P;
 };
 
+// basis: the vectors of X spanning eps_P X over O_{E_P}, at a common index
+// divisor (PrimeLocalGenerators); otherwise those of LocalOKGram.
 template <typename T>
-inline AbelianLocalGram<T> AbelianLocalHermitianGram(MyMatrix<T> const &B,
-                                                  LocalGenerator<T> const &lg,
-                                                  AbelianPrime const &ap,
-                                                  int64_t q) {
+inline AbelianLocalGram<T>
+AbelianLocalHermitianGram(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
+                          AbelianPrime const &ap, int64_t q,
+                          std::vector<MyVector<T>> const *basis) {
   std::shared_ptr<LocalPrimeK<T>> P =
       std::make_shared<LocalPrimeK<T>>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
   NumberField<T> K = P->K;
   PrimeValuation<T> v{q, static_cast<int>(ap.g.size()) - 1, P.get()};
-  std::vector<std::vector<ElemE<T>>> H = LocalOKGram(B, lg, q);
+  std::vector<std::vector<ElemE<T>>> H =
+      basis ? LocalOKGramFromVectors(B, lg, *basis) : LocalOKGram(B, lg, q);
   int m = static_cast<int>(H.size());
   return {K, v, m, H, P};
 }
 
 template <typename T>
 inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
-                                            LocalGenerator<T> const &lg,
-                                            AbelianPrime const &ap, int64_t q) {
-  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, q);
+                                    LocalGenerator<T> const &lg,
+                                    AbelianPrime const &ap, int64_t q,
+                                    std::vector<MyVector<T>> const *basis) {
+  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, q, basis);
   NumberField<T> const &K = alg.K;
   int m = alg.m;
   std::vector<std::vector<ElemE<T>>> const &H = alg.H;
@@ -491,9 +495,10 @@ inline bool GDIsLocallyIsometric(std::vector<GDSymbolEntry<T>> const &S1,
  */
 template <typename T>
 inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
-                                          LocalGenerator<T> const &lg,
-                                          AbelianPrime const &ap, int d) {
-  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, 2);
+                                  LocalGenerator<T> const &lg,
+                                  AbelianPrime const &ap, int d,
+                                  std::vector<MyVector<T>> const *basis) {
+  AbelianLocalGram<T> alg = AbelianLocalHermitianGram(B, lg, ap, 2, basis);
   GenericDyadic<T> C;
   C.K = alg.K;
   C.v = alg.v;
@@ -906,16 +911,41 @@ HermitianMassAbelianLattice(MyMatrix<T> const &B,
   for (int64_t q : primes) {
     std::optional<LocalGenerator<T>> lg = FindLocalGenerator(B, Omega, q);
     if (!lg) {
+      // a common index divisor
       PrimeDecompositionData dE = PrimeDecompositionCharacters(G, XE, q);
-      if (dE.e != 1) {
+      if (dE.e == 1) {
+        std::optional<T> fac =
+            UnramifiedFactorsByIdempotents(B, Omega, q, dE);
+        if (!fac) {
+          return {};
+        }
+        res *= *fac;
+        continue;
+      }
+      // the primes over q ramified in E / K, each the only one over its
+      // prime of K: a generator for each (PrimeLocalGenerators), and the local
+      // factor on eps_P X; the primes ramified over Q but not in E / K are
+      // not done
+      PrimeDecompositionData dK = PrimeDecompositionCharacters(G, XK, q);
+      if (dE.e != 2 * dK.e) {
         return {};
       }
-      std::optional<T> fac =
-          UnramifiedFactorsByIdempotents(B, Omega, q, dE);
-      if (!fac) {
+      std::optional<std::vector<PrimeLocalGenerator<T>>> pgs =
+          PrimeLocalGenerators(B, Omega, q, dE, true);
+      if (!pgs) {
         return {};
       }
-      res *= *fac;
+      for (auto const &pg : *pgs) {
+        AbelianPrime ap{pg.g, pg.e, 0, 2, static_cast<int>(dK.f)};
+        if (q == 2) {
+          int vE = DiscriminantValuationCharacters(G, XE, 2);
+          int vK = DiscriminantValuationCharacters(G, XK, 2);
+          int dexp = (vE - 2 * vK) / (static_cast<int>(dE.g) * ap.f_K);
+          res *= AbelianLocalFactorDyadic(B, pg.lg, ap, dexp, &pg.basis);
+        } else {
+          res *= AbelianLocalFactorRamified(B, pg.lg, ap, q, &pg.basis);
+        }
+      }
       continue;
     }
     int64_t eK = (F.n % q == 0) ? PrimeDecompositionCharacters(G, XK, q).e : 1;
@@ -935,9 +965,9 @@ HermitianMassAbelianLattice(MyMatrix<T> const &B,
           int vK = DiscriminantValuationCharacters(G, XK, 2);
           int g_primes = static_cast<int>(aps.size());
           int dexp = (vE - 2 * vK) / (g_primes * aps[i].f_K);
-          res *= AbelianLocalFactorDyadic(B, *lg, aps[i], dexp);
+          res *= AbelianLocalFactorDyadic<T>(B, *lg, aps[i], dexp, nullptr);
         } else {
-          res *= AbelianLocalFactorRamified(B, *lg, aps[i], q);
+          res *= AbelianLocalFactorRamified<T>(B, *lg, aps[i], q, nullptr);
         }
       } else {
         res *= HermitianLocalFactorUnramified<T>(

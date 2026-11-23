@@ -223,6 +223,11 @@ hab_case s5m19 95 4 500
 hab_case c13one2 13 1,3,9 7/24
 hab_case c13neg2 13 1,3,9 7/24
 hab_case c13neg3 13 1,3,9 111/208
+# E = K(i), K the cyclic cubic field of conductor 31: 2 splits in K and
+# its three primes ramify in E, and 2 is a common index divisor of O_E (a
+# generator for each prime over 2), masses of Hecke.jl
+hab_case c31i_one1 124 89 1/4
+hab_case c31i_one2 124 89 63/8
 # The local masses (the products of the local factors) of quadratic
 # lattices over totally real abelian fields, as given by Hecke.jl
 # (local_mass): odd primes ramified or split, the dyadic primes unramified
