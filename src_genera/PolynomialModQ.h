@@ -6,7 +6,9 @@
 #include "GeneraArithmetic.h"
 #include "ResidueArithmetic.h"
 #include <cstdint>
+#include <initializer_list>
 #include <random>
+#include <type_traits>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -18,7 +20,41 @@
   factorization modulo q by distinct and equal degrees.
  */
 
-using PolyQ = std::vector<T_residue>;
+/*
+  A polynomial modulo q: its coefficients by increasing degree. The
+  operations below return it trimmed (no zero leading coefficient, the zero
+  polynomial being empty); an element of F_q[x] / mu (FiniteField.h) may
+  carry zeros at the end.
+ */
+struct PolyQ {
+  std::vector<T_residue> c;
+
+  PolyQ() = default;
+  explicit PolyQ(size_t n) : c(n, 0) {}
+  PolyQ(size_t n, T_residue x) : c(n, x) {}
+  PolyQ(std::initializer_list<T_residue> l) : c(l) {}
+  template <typename It>
+    requires(!std::is_integral_v<It>)
+  PolyQ(It first, It last) : c(first, last) {}
+
+  size_t size() const { return c.size(); }
+  bool empty() const { return c.empty(); }
+  T_residue &operator[](size_t i) { return c[i]; }
+  T_residue const &operator[](size_t i) const { return c[i]; }
+  T_residue &back() { return c.back(); }
+  T_residue const &back() const { return c.back(); }
+  auto begin() { return c.begin(); }
+  auto end() { return c.end(); }
+  auto begin() const { return c.begin(); }
+  auto end() const { return c.end(); }
+  auto rbegin() const { return c.rbegin(); }
+  auto rend() const { return c.rend(); }
+  void push_back(T_residue x) { c.push_back(x); }
+  void pop_back() { c.pop_back(); }
+  void resize(size_t n, T_residue x = 0) { c.resize(n, x); }
+  bool operator==(PolyQ const &b) const { return c == b.c; }
+  bool operator<(PolyQ const &b) const { return c < b.c; }
+};
 
 inline void PolyTrim(PolyQ &a) {
   while (!a.empty() && a.back() == 0) {

@@ -204,6 +204,11 @@ inline MyMatrix<T> PolyOfMatrixQ(std::vector<Tcoef> const &g,
   return res;
 }
 
+template <typename T>
+inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
+  return PolyOfMatrixQ(g.c, S);
+}
+
 /*
   A prime of E over q: the factor g, its multiplicity (the ramification
   index over q), the conjugate factor, the type over K (0 split, 1 inert,
