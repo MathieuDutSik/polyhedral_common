@@ -939,7 +939,7 @@ ReducedNormsModP(std::vector<MyMatrix<T>> const &O0,
     if (disc == 0 || KroneckerResidue(disc, p) != 1) {
       continue;
     }
-    T_residue s = SqrtModPrime(disc, p);
+    T_residue s = ResSqrtPrime(disc, p).value();
     T_residue inv2 = ResInv(T_residue(2), p);
     T_residue l1 = ResMul(ResAdd(tr, s, p), inv2, p);
     T_residue l2 = ResMul(ResSub(tr, s, p), inv2, p);

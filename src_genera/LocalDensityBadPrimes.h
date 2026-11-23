@@ -662,7 +662,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
       if (t % 2 == 1) {
         mu = -mu;
       }
-      coef += I[w] * mu * GaussianBinomial<T>(w, wp, p);
+      coef += I[w] * mu * GaussianBinomial(w, wp, p_T);
     }
     if (coef == 0) {
       continue;

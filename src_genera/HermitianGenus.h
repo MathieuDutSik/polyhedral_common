@@ -245,9 +245,10 @@ inline std::vector<HermPrimeSymbols> HermitianPrimeSymbols(int64_t d, int n,
                                                            int64_t N) {
   int64_t dn = NormalizeCyclotomicIndex(d);
   std::set<int64_t> primes{2};
-  int64_t l_ram = PrimeOfPrimePower(dn);
-  if (l_ram != 0) {
-    primes.insert(l_ram);
+  // the prime ramified in Q(zeta_dn) / Q(zeta_dn)^+ when dn = l^k
+  if (std::optional<std::pair<int64_t, size_t>> pp =
+          PrimePowerDecomposition(dn)) {
+    primes.insert(pp->first);
   }
   {
     if (N > 1) {

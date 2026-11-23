@@ -3,6 +3,7 @@
 #define SRC_GENERA_GENERAARITHMETIC_H_
 
 // clang-format off
+#include "ArithmeticFunctions.h"
 #include "NumberTheory.h"
 #include "NumberTheoryModular.h"
 #include "ResidueArithmetic.h"
@@ -81,148 +82,12 @@ template <typename Tint> int ResidueModP(Tint const &x, int p) {
   return ((r_int % p) + p) % p;
 }
 
-// The odd prime factors of the positive integer N, without multiplicity.
-template <typename Tint> std::vector<int64_t> OddPrimeDivisors(Tint const &N) {
-  std::set<int64_t> primes;
-  if (N > Tint(1)) {
-    for (auto const &q : FactorsInt(N)) {
-      int64_t q_i = UniversalScalarConversion<int64_t, Tint>(q);
-      if (q_i != 2) {
-        primes.insert(q_i);
-      }
-    }
-  }
-  return std::vector<int64_t>(primes.begin(), primes.end());
-}
-
-// The prime and the exponent of the prime power q (1 counts as 2^0).
-inline std::pair<int64_t, int> PrimePowerDecomposition(int64_t q) {
-  if (q < 1) {
-    std::cerr << "GSYM: the scale " << q << " is not a positive integer\n";
-    throw TerminalException{1};
-  }
-  if (q == 1) {
-    return {2, 0};
-  }
-  int64_t p = 2;
-  while (q % p != 0) {
-    p++;
-  }
-  int k = 0;
-  while (q % p == 0) {
-    q /= p;
-    k++;
-  }
-  if (q != 1) {
-    std::cerr << "GSYM: a scale is not a prime power\n";
-    throw TerminalException{1};
-  }
-  return {p, k};
-}
-
-inline T_residue LeastNonResidue(T_small_prime p) {
-  int64_t p_s = static_cast<int64_t>(p);
-  int64_t u = 2;
-  while (kronecker_symbol<int64_t>(u, p_s) != -1) {
-    u++;
-  }
-  return static_cast<T_residue>(u);
-}
-
-inline std::vector<int64_t> SmallPrimeDivisors(int64_t x) {
-  std::vector<int64_t> res;
-  for (int64_t q = 2; q * q <= x; q++) {
-    if (x % q == 0) {
-      res.push_back(q);
-      while (x % q == 0) {
-        x /= q;
-      }
-    }
-  }
-  if (x > 1) {
-    res.push_back(x);
-  }
-  return res;
-}
-
-inline bool IsSquareFree(int64_t x) {
-  if (x < 0) {
-    x = -x;
-  }
-  for (int64_t q = 2; q * q <= x; q++) {
-    if (x % (q * q) == 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// A square root of the square a modulo the odd prime p (Tonelli-Shanks).
-inline T_residue SqrtModPrime(T_residue a, T_small_prime p) {
-  a %= p;
-  if (a == 0) {
-    return 0;
-  }
-  uint64_t q = p - 1;
-  int s = 0;
-  while (q % 2 == 0) {
-    q /= 2;
-    s++;
-  }
-  int m = s;
-  T_residue c = ResPow(LeastNonResidue(p), q, p);
-  T_residue t = ResPow(a, q, p);
-  T_residue r = ResPow(a, (q + 1) / 2, p);
-  while (t != 1) {
-    int i = 0;
-    T_residue t2 = t;
-    while (t2 != 1) {
-      t2 = ResMul(t2, t2, p);
-      i++;
-    }
-    T_residue b = c;
-    for (int j = 0; j < m - i - 1; j++) {
-      b = ResMul(b, b, p);
-    }
-    m = i;
-    c = ResMul(b, b, p);
-    t = ResMul(t, c, p);
-    r = ResMul(r, b, p);
-  }
-  return r;
-}
-
 // The integer residue of the p-integral rational x modulo M.
 template <typename T, typename Tint>
 T_residue ResidueModInt(T const &x, T_residue M) {
   Tint num = UniversalScalarConversion<Tint, T>(GetNumerator(x));
   Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
   return ResMul(ResModOf(num, M), ResInv(ResModOf(den, M), M), M);
-}
-
-inline int64_t EulerPhi(int64_t d) {
-  int64_t res = 0;
-  for (int64_t a = 1; a <= d; a++) {
-    if (std::gcd(a, d) == 1) {
-      res++;
-    }
-  }
-  return res;
-}
-
-// Whether d (normalized) is a power of a prime: E/K is ramified there.
-inline bool IsPrimePower(int64_t d) {
-  if (d < 2) {
-    return false;
-  }
-  int64_t p = 2;
-  while (d % p != 0) {
-    p++;
-  }
-  while (d % p == 0) {
-    d /= p;
-  }
-  return d == 1;
 }
 
 // The order of q modulo d'.
@@ -256,33 +121,6 @@ inline bool IsPowerModulo(int64_t t, int64_t x, int64_t m) {
   return false;
 }
 
-// The prime p when d = p^k, k >= 1, 0 otherwise.
-inline int64_t PrimeOfPrimePower(int64_t d) {
-  if (!IsPrimePower(d)) {
-    return 0;
-  }
-  int64_t p = 2;
-  while (d % p != 0) {
-    p++;
-  }
-  return p;
-}
-
-// The Moebius function.
-inline int Moebius(int64_t n) {
-  int mu = 1;
-  for (int64_t p = 2; p * p <= n; p++) {
-    if (n % p == 0) {
-      n /= p;
-      if (n % p == 0) {
-        return 0;
-      }
-      mu = -mu;
-    }
-  }
-  return (n > 1) ? -mu : mu;
-}
-
 // The Ramanujan sum c_n(j) = Tr_{Q(zeta_n) / Q}(zeta_n^j) = sum_{e | gcd(n,
 // j)} mu(n / e) e.
 inline int64_t RamanujanSum(int64_t n, int64_t j) {
@@ -307,26 +145,6 @@ inline int LegendreModQ(Tint const &a, int64_t q) {
 // (-1)^r x.
 inline int64_t SignedPower(int r, int64_t x) { return (r % 2 == 0) ? x : -x; }
 
-// The square-free part of a non-zero integer, with its sign.
-inline int64_t SquareFreePart(int64_t x) {
-  if (x == 0) {
-    std::cerr << "SSV: SquareFreePart called on zero\n";
-    throw TerminalException{1};
-  }
-  int64_t sign = (x < 0) ? -1 : 1;
-  int64_t abs_x = (x < 0) ? -x : x;
-  int64_t sqf = 1;
-  if (abs_x > 1) {
-    std::map<int64_t, size_t> fact = FactorsIntMap<int64_t>(abs_x);
-    for (auto &kv : fact) {
-      if (kv.second % 2 == 1) {
-        sqf *= kv.first;
-      }
-    }
-  }
-  return sign * sqf;
-}
-
 // The discriminant of Q(sqrt(x)) for x non-zero; 1 when x is a square.
 inline int64_t FundamentalDiscriminant(int64_t x) {
   int64_t d = SquareFreePart(x);
@@ -335,18 +153,6 @@ inline int64_t FundamentalDiscriminant(int64_t x) {
   }
   int64_t r = ((d % 4) + 4) % 4;
   return (r == 1) ? d : 4 * d;
-}
-
-template <typename T> T BinomialCoefficient(int n, int k) {
-  if (k < 0 || k > n) {
-    return T(0);
-  }
-  T res(1);
-  for (int i = 1; i <= k; i++) {
-    res *= T(n - k + i);
-    res /= T(i);
-  }
-  return res;
 }
 
 inline bool IsFundamentalDiscriminant(int64_t D) {
@@ -427,20 +233,6 @@ template <typename Tint> Tint IntegerSquareRoot(Tint const &a) {
     }
   }
   return lo;
-}
-
-// The Gaussian binomial coefficient [a b]_p.
-template <typename T> T GaussianBinomial(int a, int b, int64_t p) {
-  if (b < 0 || b > a) {
-    return T(0);
-  }
-  T p_T = ScalarFromInt64<T>(p);
-  T res(1);
-  for (int i = 0; i < b; i++) {
-    res *= MyPowSigned(p_T, a - i) - T(1);
-    res /= MyPowSigned(p_T, i + 1) - T(1);
-  }
-  return res;
 }
 
 inline int FloorDiv2(int a) { return (a >= 0) ? a / 2 : -((-a + 1) / 2); }

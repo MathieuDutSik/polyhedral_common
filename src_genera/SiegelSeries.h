@@ -400,7 +400,7 @@ std::vector<T> JordanDiagonalOdd(MyMatrix<T> S, int64_t p) {
 template <typename T, typename Tint>
 SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, T_small_prime p) {
   std::vector<T> diag = JordanDiagonalOdd<T, Tint>(B, p);
-  T_residue nonres = LeastNonResidue(p);
+  T_residue nonres = ResLeastNonResidue(p);
   std::vector<SiegelJordanBlock> res;
   size_t i = 0;
   while (i < diag.size()) {

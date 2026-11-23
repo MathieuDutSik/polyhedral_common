@@ -146,7 +146,7 @@ inline SymmetricOrbits BuildSymmetricOrbits(T_small_prime p, int k, int j) {
   so.k = k;
   so.j = j;
   so.mod = MyPow<T_residue>(p, k);
-  T_residue nonres = LeastNonResidue(p);
+  T_residue nonres = ResLeastNonResidue(p);
   // the levels of the j diagonal entries, non-decreasing, level k for 0
   std::vector<int> levels(j, 0);
   std::function<void(int, int)> rec = [&](int pos, int min_level) -> void {

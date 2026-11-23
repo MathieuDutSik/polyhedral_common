@@ -93,7 +93,7 @@ template <typename T>
 inline T RankOneHermitianMassCyclotomic(int64_t d_in) {
   int64_t d = NormalizeCyclotomicIndex(d_in);
   T res = StandardHermitianMassCyclotomic<T>(d, 1);
-  if (IsPrimePower(d)) {
+  if (PrimePowerDecomposition(d)) {
     res /= 2;
   }
   return res;

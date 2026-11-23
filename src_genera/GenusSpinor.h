@@ -149,7 +149,7 @@ std::vector<Tint> SpinorAutomorphousNumbers(GenusSymbol const &s, int64_t p) {
   if (p != 2) {
     std::vector<std::array<int, 3>> const &comps = s.sym_odd.at(p);
     MyMatrix<T> G = OddPrimeLocalGram<T>(p, comps, n);
-    Tint up(static_cast<long>(LeastNonResidue(p)));
+    Tint up(static_cast<long>(ResLeastNonResidue(p)));
     // the diagonal entries, each kept at most twice
     std::vector<Tint> I;
     for (int i = 0; i < n; i++) {

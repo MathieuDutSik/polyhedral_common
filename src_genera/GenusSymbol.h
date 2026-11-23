@@ -204,7 +204,8 @@ GenusSymbol GenusSymbolOfGram(MyMatrix<T> const &G) {
   s.sym2 = CanonicalTwoAdicReduction(raw);
   T det = DeterminantMat(G);
   Tint det_i = UniversalScalarConversion<Tint, T>(det);
-  for (int64_t p : OddPrimeDivisors<Tint>(det_i)) {
+  for (Tint const &p_T : OddPrimeDivisors(det_i)) {
+    int64_t p = UniversalScalarConversion<int64_t, Tint>(p_T);
     s.sym_odd[p] = OddPrimeSymbolOfGram<T, Tint>(G, p);
   }
   return s;
@@ -297,8 +298,18 @@ template <typename Tint> GenusSymbol ParseGenusSymbol(std::string const &input) 
     }
     pos++;
     int e = std::stoi(read_item());
-    auto [p, k] = PrimePowerDecomposition(q);
-    return {p, k, std::abs(e), (e < 0) ? -1 : 1};
+    // 1 is the scale 2^0
+    std::pair<int64_t, size_t> pk{2, 0};
+    if (q != 1) {
+      std::optional<std::pair<int64_t, size_t>> opt =
+          PrimePowerDecomposition(q);
+      if (!opt) {
+        fail("a scale that is not a prime power");
+      }
+      pk = *opt;
+    }
+    return {pk.first, static_cast<int64_t>(pk.second), std::abs(e),
+            (e < 0) ? -1 : 1};
   };
   while (pos < str.size()) {
     if (str[pos] == '[') {
@@ -500,7 +511,7 @@ MyMatrix<T> OddPrimeLocalGram(int64_t p,
       G(pos + i, pos + i) = q;
     }
     if (c[2] == -1) {
-      G(pos + c[1] - 1, pos + c[1] - 1) *= T(static_cast<long>(LeastNonResidue(p)));
+      G(pos + c[1] - 1, pos + c[1] - 1) *= T(static_cast<long>(ResLeastNonResidue(p)));
     }
     pos += c[1];
   }
@@ -730,7 +741,7 @@ std::vector<T> RationalDiagonalWithInvariants(int n, Tint const &d,
       }
       T x_T(static_cast<long>(x));
       std::vector<T> diag{x_T, d_T * x_T};
-      if (matches(diag, SmallPrimeDivisors(x))) {
+      if (matches(diag, PrimeDivisors(x))) {
         return diag;
       }
     }
@@ -743,8 +754,8 @@ std::vector<T> RationalDiagonalWithInvariants(int n, Tint const &d,
         }
         T x_T(static_cast<long>(x)), y_T(static_cast<long>(y));
         std::vector<T> three{x_T, y_T, d_T * x_T * y_T};
-        std::vector<int64_t> extra = SmallPrimeDivisors(x);
-        for (int64_t q : SmallPrimeDivisors(y)) {
+        std::vector<int64_t> extra = PrimeDivisors(x);
+        for (int64_t q : PrimeDivisors(y)) {
           extra.push_back(q);
         }
         if (matches(three, extra)) {
@@ -844,7 +855,7 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
     for (int j = i + 1; j < m; j++) {
       int64_t r = ResMulI64(p - delta[i], ResInvI64(delta[j], p), p);
       if (kronecker_symbol<int64_t>(r, p) == 1) {
-        return combine({{i, 1}, {j, SqrtModPrime(r, p)}});
+        return combine({{i, 1}, {j, ResSqrtPrime(r, p).value()}});
       }
     }
   }
@@ -855,7 +866,7 @@ IsotropicVectorFp(std::vector<std::vector<int64_t>> M, int64_t p) {
       int64_t val = ResModI64(delta[0] + ResMulI64(delta[1], ResMulI64(y, y, p), p), p);
       int64_t r = ResMulI64(p - val, inv2, p);
       if (r == 0 || kronecker_symbol<int64_t>(r, p) == 1) {
-        return combine({{0, 1}, {1, y}, {2, SqrtModPrime(r, p)}});
+        return combine({{0, 1}, {1, y}, {2, ResSqrtPrime(r, p).value()}});
       }
     }
   }
@@ -1117,7 +1128,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
         if (p != 2 && diag[i] != 0 && diag[j] != 0 && cls[i].val == cls[j].val) {
           int64_t r = ResMulI64(p - cls[i].unit, ResInvI64(cls[j].unit, p), p);
           if (kronecker_symbol<int64_t>(r, p) == 1) {
-            ls.push_back(SqrtModPrime(r, p));
+            ls.push_back(ResSqrtPrime(r, p).value());
           }
         }
         for (int64_t l : ls) {
@@ -1501,8 +1512,8 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
     T det = DeterminantMat(L.G);
     Tint det_i = UniversalScalarConversion<Tint, T>(det);
     std::vector<int64_t> primes{2};
-    for (int64_t p : OddPrimeDivisors<Tint>(det_i)) {
-      primes.push_back(p);
+    for (Tint const &p_T : OddPrimeDivisors(det_i)) {
+      primes.push_back(UniversalScalarConversion<int64_t, Tint>(p_T));
     }
     for (int64_t p : primes) {
       while (true) {
