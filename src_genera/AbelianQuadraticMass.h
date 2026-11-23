@@ -171,12 +171,12 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
 
 // The square class (1 or -1) in F_q[x] / g of a residue, q odd.
 template <typename T>
-inline int ResidueSquareClass(PolyQ const &u, LocalPrimeK<T> const &P) {
-  if (u.empty()) {
+inline int ResidueSquareClass(FqElt const &u, LocalPrimeK<T> const &P) {
+  if (u.is_zero()) {
     std::cerr << "ABQUAD: the square class of zero\n";
     throw TerminalException{1};
   }
-  return ResidueQuadraticCharacter(u, P.g, P.q);
+  return FqQuadraticCharacter(P.F, u);
 }
 
 // The local factor at an odd prime p from the Gram matrix over K.
@@ -199,35 +199,35 @@ inline T LocalFactorOddGram(std::vector<std::vector<ElemE<T>>> const &H,
 }
 
 // The matrices over a residue field F (FiniteField.h).
-using FqMat = std::vector<std::vector<PolyQ>>;
+using FqMat = std::vector<std::vector<FqElt>>;
 
 // A basis of {v : v M = 0} for M with nr rows.
 inline FqMat FqLeftKernel(FiniteField const &F, FqMat const &M, size_t nr, size_t nc) {
   // row reduce [M | I]
-  FqMat A(nr, std::vector<PolyQ>(nc + nr));
+  FqMat A(nr, std::vector<FqElt>(nc + nr));
   for (size_t i = 0; i < nr; i++) {
     for (size_t j = 0; j < nc; j++) {
       A[i][j] = M[i][j];
     }
-    A[i][nc + i] = {1};
+    A[i][nc + i] = FqOne(F);
   }
   size_t row = 0;
   for (size_t col = 0; col < nc && row < nr; col++) {
     size_t piv = row;
-    while (piv < nr && A[piv][col].empty()) {
+    while (piv < nr && A[piv][col].is_zero()) {
       piv++;
     }
     if (piv == nr) {
       continue;
     }
     std::swap(A[piv], A[row]);
-    PolyQ inv = FqInv(F, A[row][col]);
+    FqElt inv = FqInv(F, A[row][col]);
     for (auto &x : A[row]) {
       x = FqMul(F, x, inv);
     }
     for (size_t i = 0; i < nr; i++) {
-      if (i != row && !A[i][col].empty()) {
-        PolyQ c = A[i][col];
+      if (i != row && !A[i][col].is_zero()) {
+        FqElt c = A[i][col];
         for (size_t j = 0; j < nc + nr; j++) {
           A[i][j] = FqAdd(F, A[i][j], FqNeg(F, FqMul(F, c, A[row][j])));
         }
@@ -237,20 +237,20 @@ inline FqMat FqLeftKernel(FiniteField const &F, FqMat const &M, size_t nr, size_
   }
   FqMat res;
   for (size_t i = row; i < nr; i++) {
-    res.push_back(std::vector<PolyQ>(A[i].begin() + nc, A[i].end()));
+    res.push_back(std::vector<FqElt>(A[i].begin() + nc, A[i].end()));
   }
   return res;
 }
 
-inline PolyQ FqBil(FiniteField const &F, std::vector<PolyQ> const &x, FqMat const &Q,
-                   std::vector<PolyQ> const &y) {
-  PolyQ res;
+inline FqElt FqBil(FiniteField const &F, std::vector<FqElt> const &x, FqMat const &Q,
+                   std::vector<FqElt> const &y) {
+  FqElt res;
   for (size_t i = 0; i < x.size(); i++) {
-    if (x[i].empty()) {
+    if (x[i].is_zero()) {
       continue;
     }
     for (size_t j = 0; j < y.size(); j++) {
-      if (!y[j].empty() && !Q[i][j].empty()) {
+      if (!y[j].is_zero() && !Q[i][j].is_zero()) {
         res = FqAdd(F, res, FqMul(F, FqMul(F, x[i], Q[i][j]), y[j]));
       }
     }
@@ -269,7 +269,7 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
   if (n == 0) {
     return {0, 1};
   }
-  FqMat Bf(n, std::vector<PolyQ>(n));
+  FqMat Bf(n, std::vector<FqElt>(n));
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < n; j++) {
       Bf[i][j] = FqAdd(F, Q[i][j], Q[j][i]);
@@ -278,7 +278,7 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
   FqMat N = FqLeftKernel(F, Bf, n, n);
   bool qzero = true;
   for (auto const &v : N) {
-    if (!FqBil(F, v, Q, v).empty()) {
+    if (!FqBil(F, v, Q, v).is_zero()) {
       qzero = false;
     }
   }
@@ -291,8 +291,8 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
   FqMat basis = N;
   FqMat comp;
   for (size_t k = 0; k < n && basis.size() < n; k++) {
-    std::vector<PolyQ> e(n);
-    e[k] = {1};
+    std::vector<FqElt> e(n);
+    e[k] = FqOne(F);
     FqMat test = basis;
     test.push_back(e);
     // independent iff the left kernel of test (as rows) is trivial
@@ -302,19 +302,19 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
     }
   }
   // symplectic reduction on comp
-  PolyQ arf;
+  FqElt arf;
   while (!comp.empty()) {
-    std::vector<PolyQ> x = comp[0];
+    std::vector<FqElt> x = comp[0];
     size_t j = 1;
-    while (j < comp.size() && FqBil(F, x, Bf, comp[j]).empty()) {
+    while (j < comp.size() && FqBil(F, x, Bf, comp[j]).is_zero()) {
       j++;
     }
     if (j == comp.size()) {
       std::cerr << "ABQUAD: degenerate polar form\n";
       throw TerminalException{1};
     }
-    PolyQ c = FqInv(F, FqBil(F, x, Bf, comp[j]));
-    std::vector<PolyQ> y = comp[j];
+    FqElt c = FqInv(F, FqBil(F, x, Bf, comp[j]));
+    std::vector<FqElt> y = comp[j];
     for (auto &t : y) {
       t = FqMul(F, t, c);
     }
@@ -325,9 +325,9 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
       if (k == j) {
         continue;
       }
-      std::vector<PolyQ> z = comp[k];
+      std::vector<FqElt> z = comp[k];
       // z <- z + b(z, y) x + b(z, x) y (char 2)
-      PolyQ a1 = FqBil(F, z, Bf, y), a2 = FqBil(F, z, Bf, x);
+      FqElt a1 = FqBil(F, z, Bf, y), a2 = FqBil(F, z, Bf, x);
       for (size_t u = 0; u < n; u++) {
         z[u] = FqAdd(F, z[u], FqAdd(F, FqMul(F, a1, x[u]), FqMul(F, a2, y[u])));
       }
@@ -356,8 +356,8 @@ inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
     return 3;
   }
   ElemE<T> u = LocalShift(d, v, P);
-  PolyQ ur = LocalResidue(u, P);
-  PolyQ wr = FqFrobenius(F, ur, F.f - 1);
+  FqElt ur = LocalResidue(u, P);
+  FqElt wr = FqFrobenius(F, ur, F.f - 1);
   ElemE<T> w(K.deg, T(0));
   for (size_t i = 0; i < wr.size(); i++) {
     w[i] = UniversalScalarConversion<T, int64_t>(wr[i]);
@@ -372,7 +372,7 @@ inline int DyadicUnramifiedSquareClass(ElemE<T> const &d, LocalPrimeK<T> &P,
   if (vx >= 3) {
     return 0;
   }
-  PolyQ t = LocalResidue(LocalShift(x1, 2, P), P);
+  FqElt t = LocalResidue(LocalShift(x1, 2, P), P);
   return (FqTrace(F, t) == 0) ? 0 : -1;
 }
 
@@ -445,7 +445,7 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
         }
       }
     }
-    FqMat Dcol(m, std::vector<PolyQ>(1));
+    FqMat Dcol(m, std::vector<FqElt>(1));
     for (int a = 0; a < m; a++) {
       Dcol[a][0] = LocalResidue(EScal(AG[a][a], pow2(-s)), P);
     }
@@ -454,13 +454,13 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
     std::vector<std::vector<ElemE<T>>> BK(nb, std::vector<ElemE<T>>(m, ElemE<T>(K.deg, T(0))));
     for (size_t i = 0; i < nb; i++) {
       for (int a = 0; a < m; a++) {
-        PolyQ r = FqFrobenius(F, Bk[i][a], F.f - 1);
+        FqElt r = FqFrobenius(F, Bk[i][a], F.f - 1);
         for (size_t t = 0; t < r.size(); t++) {
           BK[i][a][t] = UniversalScalarConversion<T, int64_t>(r[t]);
         }
       }
     }
-    FqMat Q(nb, std::vector<PolyQ>(nb));
+    FqMat Q(nb, std::vector<FqElt>(nb));
     for (size_t i = 0; i < nb; i++) {
       for (size_t j = i; j < nb; j++) {
         ElemE<T> val(K.deg, T(0));
@@ -594,7 +594,7 @@ template <typename T> using KMat = std::vector<std::vector<ElemE<T>>>;
 constexpr int QD_INF = 1 << 28;
 
 template <typename T>
-inline ElemE<T> LiftResidue(PolyQ const &r, NumberField<T> const &K) {
+inline ElemE<T> LiftResidue(FqElt const &r, NumberField<T> const &K) {
   ElemE<T> x(K.deg, T(0));
   for (size_t i = 0; i < r.size(); i++) {
     x[i] = UniversalScalarConversion<T, int64_t>(r[i]);
@@ -639,7 +639,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
   if (w == ee) {
     ElemE<T> am1 = a;
     am1[0] -= 1;
-    PolyQ c = LocalResidue(EScal(am1, RationalFraction<T>(1, 4)), P);
+    FqElt c = LocalResidue(EScal(am1, RationalFraction<T>(1, 4)), P);
     if (FqTrace(F, c) == 0) {
       return {QD_INF, EOne(K)};
     }
@@ -1044,20 +1044,20 @@ inline bool IsLocallyIsometricDyadic(QuadKirschmerSymbol<T> const &S1,
 }
 
 // The vectors of k^m with first nonzero coordinate 1.
-inline std::vector<std::vector<PolyQ>> FqAllProjectivePoints(FiniteField const &F, int m) {
-  std::vector<PolyQ> elts;
+inline std::vector<std::vector<FqElt>> FqAllProjectivePoints(FiniteField const &F, int m) {
+  std::vector<FqElt> elts;
   FqCheckCodes(F);
   int64_t qf = static_cast<int64_t>(F.q);
   for (int64_t u = 0; u < qf; u++) {
     elts.push_back(FqDecode(F, static_cast<uint64_t>(u)));
   }
-  std::vector<std::vector<PolyQ>> res;
+  std::vector<std::vector<FqElt>> res;
   for (int lead = 0; lead < m; lead++) {
     int nfree = m - lead - 1;
     int64_t tot = MyPow<int64_t>(qf, nfree);
     for (int64_t u = 0; u < tot; u++) {
-      std::vector<PolyQ> v(m);
-      v[lead] = {1};
+      std::vector<FqElt> v(m);
+      v[lead] = FqOne(F);
       int64_t t = u;
       for (int i = lead + 1; i < m; i++) {
         v[i] = elts[t % qf];
@@ -1098,13 +1098,13 @@ inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, NumberField<T>
 
 // L + pi^{-1} y with y = sum c_i b_i
 template <typename T>
-inline KMat<T> SuperlatticeGram(KMat<T> const &G, std::vector<PolyQ> const &c,
+inline KMat<T> SuperlatticeGram(KMat<T> const &G, std::vector<FqElt> const &c,
                              LocalPrimeK<T> const &P) {
   NumberField<T> const &K = P.K;
   size_t n = G.size();
   KMat<T> Tm(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   size_t lead = 0;
-  while (c[lead].empty()) {
+  while (c[lead].is_zero()) {
     lead++;
   }
   ElemE<T> pinv = EInv(P.pi, K);
@@ -1122,13 +1122,13 @@ inline KMat<T> SuperlatticeGram(KMat<T> const &G, std::vector<PolyQ> const &c,
 
 // {x in L : sum lambda_i x_i = 0 mod p}
 template <typename T>
-inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<PolyQ> const &lambda,
+inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<FqElt> const &lambda,
                            LocalPrimeK<T> const &P) {
   NumberField<T> const &K = P.K;
   size_t n = G.size();
   KMat<T> Tm(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   size_t lead = 0;
-  while (lambda[lead].empty()) {
+  while (lambda[lead].is_zero()) {
     lead++;
   }
   for (size_t i = 0; i < n; i++) {
@@ -1401,7 +1401,7 @@ QuadLocalFactorsByIdempotents(MyMatrix<T> const &B,
         H[i][j] = ElemE<T>{Gq(i, j)};
       }
     }
-    LocalPrimeK<T> P = MakeLocalPrimeK(lgQ, PolyQ{0, 1}, 1, q);
+    LocalPrimeK<T> P = MakeLocalPrimeK(lgQ, PolyQ::X(static_cast<T_small_prime>(q)), 1, q);
     res *= (q == 2) ? LocalFactorCho(H, P) : LocalFactorOddGram(H, P);
   }
   return res;
@@ -1458,7 +1458,7 @@ QuadLocalFactorAtPrime(MyMatrix<T> const &B,
     return QuadLocalFactorsByPrimeGenerators(B, Omega, q, dK);
   }
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, q), q);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, q));
   int m = B.rows() / (static_cast<int>(lg->f.size()) - 1);
   if (m == 1) {
     return T(1);
@@ -1914,13 +1914,13 @@ std::optional<AbelianField> AbelianQuadraticExtensionFieldPrimes(
       dl = EScal(dl, T(-1));
     }
     std::vector<std::pair<PolyQ, int>> fac =
-        FactorModQWithMultiplicity(PolyReduceSigned(lg->f, l), l);
+        FactorModQWithMultiplicity(PolyReduceSigned(lg->f, l));
     LocalPrimeK<T> P = MakeLocalPrimeK(*lg, fac[0].first, 1, l);
     if (LocalVal(dl, P) != 0) {
       continue;
     }
-    PolyQ res = LocalResidue(dl, P);
-    bool split = (ResidueQuadraticCharacter(res, P.g, l) == 1);
+    FqElt res = LocalResidue(dl, P);
+    bool split = (FqQuadraticCharacter(P.F, res) == 1);
     std::vector<std::vector<int64_t>> next;
     for (auto const &Hp : cands) {
       bool in = std::binary_search(Hp.begin(), Hp.end(), l % N);
@@ -2221,7 +2221,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
   int deg = static_cast<int>(lg->f.size()) - 1;
   int r = B.rows();
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p), p);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p));
   {
     std::vector<AbelianPrime> aps = AbelianPrimesOverQ(*lg, p, 1);
     for (size_t i = 0; i < aps.size(); i++) {
@@ -2284,14 +2284,14 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         }
       }
     }
-    auto res_shift = [&](ElemE<T> const &x, int k) -> PolyQ {
+    auto res_shift = [&](ElemE<T> const &x, int k) -> FqElt {
       if (EIsZero(x)) {
         return {};
       }
       return LocalResidue(LocalShift(x, k, P), P);
     };
     // the residue of H / pi^{s0}, and e_H
-    std::vector<std::vector<PolyQ>> Hn(m, std::vector<PolyQ>(m));
+    std::vector<std::vector<FqElt>> Hn(m, std::vector<FqElt>(m));
     for (int a = 0; a < m; a++) {
       for (int b = 0; b < m; b++) {
         Hn[a][b] = res_shift(H[a][b], s0);
@@ -2348,20 +2348,18 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     int kT = e * c;
     int Kpi = std::max(kT + eH + tt, eH + 2 * tt + 1);
     // F_q-linear algebra on F_P = F_q^fr
-    auto coeffs = [&](PolyQ const &a) -> std::vector<int64_t> {
+    auto coeffs = [&](FqElt const &a) -> std::vector<int64_t> {
       std::vector<int64_t> v(fr, 0);
       for (size_t i = 0; i < a.size() && static_cast<int>(i) < fr; i++) {
         v[i] = a[i];
       }
       return v;
     };
-    auto mulmat = [&](PolyQ const &a) -> IMat {
+    auto mulmat = [&](FqElt const &a) -> IMat {
       // column t: a x^t
       IMat M(fr, std::vector<int64_t>(fr, 0));
       for (int t = 0; t < fr; t++) {
-        PolyQ xt(t + 1, 0);
-        xt[t] = 1;
-        std::vector<int64_t> v = coeffs(FqMul(F, a, xt));
+        std::vector<int64_t> v = coeffs(FqMul(F, a, FqXPower(F, t)));
         for (int u = 0; u < fr; u++) {
           M[u][t] = v[u];
         }
@@ -2398,11 +2396,10 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       }
       return std::make_pair(part, ker);
     };
-    auto from_coeffs = [&](std::vector<int64_t> const &v, size_t off) -> PolyQ {
-      PolyQ a(v.begin() + static_cast<long>(off),
-              v.begin() + static_cast<long>(off + fr));
-      PolyTrim(a);
-      return a;
+    auto from_coeffs = [&](std::vector<int64_t> const &v, size_t off) -> FqElt {
+      return FqFromCoeffs(F, std::vector<int64_t>(
+                                 v.begin() + static_cast<long>(off),
+                                 v.begin() + static_cast<long>(off + fr)));
     };
     using GMat = std::vector<std::vector<ElemE<T>>>;
     // level 1: the rows over F_P, all of them when there are not too many
@@ -2411,11 +2408,11 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     std::vector<GMat> level;
     bool level_over = false;
     auto list_level1 = [&]() -> void {
-      std::vector<std::vector<PolyQ>> ys;
+      std::vector<std::vector<FqElt>> ys;
       size_t n_node = 0;
       bool over = false;
-      auto bil = [&](std::vector<PolyQ> const &x, std::vector<PolyQ> const &y) {
-        PolyQ v;
+      auto bil = [&](std::vector<FqElt> const &x, std::vector<FqElt> const &y) {
+        FqElt v;
         for (int a = 0; a < m; a++) {
           for (int b = 0; b < m; b++) {
             v = FqAdd(F, v, FqMul(F, FqMul(F, x[a], Hn[a][b]), y[b]));
@@ -2445,16 +2442,16 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         for (int k = 0; k < i; k++) {
           // y_i Hn y_k^T = Hn_ik: coefficients w_b = (Hn y_k^T)_b
           for (int side = 0; side < 2; side++) {
-            std::vector<PolyQ> w(m);
+            std::vector<FqElt> w(m);
             for (int b = 0; b < m; b++) {
-              PolyQ v;
+              FqElt v;
               for (int d = 0; d < m; d++) {
                 v = (side == 0) ? FqAdd(F, v, FqMul(F, Hn[b][d], ys[k][d]))
                                 : FqAdd(F, v, FqMul(F, ys[k][d], Hn[d][b]));
               }
               w[b] = v;
             }
-            PolyQ rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
+            FqElt rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
             std::vector<IMat> blocks;
             for (int b = 0; b < m; b++) {
               blocks.push_back(mulmat(w[b]));
@@ -2511,7 +2508,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
               }
             }
           }
-          std::vector<PolyQ> y(m);
+          std::vector<FqElt> y(m);
           for (int b = 0; b < m; b++) {
             y[b] = from_coeffs(v, static_cast<size_t>(b * fr));
           }
@@ -2562,7 +2559,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       return Z;
     };
     // the residues of conj(pi)^j / pi^j
-    std::vector<PolyQ> ures;
+    std::vector<FqElt> ures;
     {
       ElemE<T> u1 = EMul(pibar, P.pi_inv, K);
       ElemE<T> uj = EZetaPower(0, K);
@@ -2588,15 +2585,15 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         }
       }
       GMat A1 = matmul(H, gs), A2 = matmul(gm, H);
-      PolyQ uj_res = ures[j];
+      FqElt uj_res = ures[j];
       size_t nvar = static_cast<size_t>(m * m * fr);
       IMat aug;
       for (int a = 0; a < m; a++) {
         for (int b = 0; b < m; b++) {
           std::vector<IMat> coef(static_cast<size_t>(m * m));
           std::vector<bool> has(static_cast<size_t>(m * m), false);
-          auto add = [&](int cidx, PolyQ const &cf) {
-            if (cf.empty()) {
+          auto add = [&](int cidx, FqElt const &cf) {
+            if (cf.is_zero()) {
               return;
             }
             IMat Mm = mulmat(cf);
@@ -2658,8 +2655,8 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       GMat g2 = gm;
       for (int a = 0; a < m; a++) {
         for (int b = 0; b < m; b++) {
-          PolyQ dlt = from_coeffs(v, static_cast<size_t>((a * m + b) * fr));
-          if (!dlt.empty()) {
+          FqElt dlt = from_coeffs(v, static_cast<size_t>((a * m + b) * fr));
+          if (!dlt.is_zero()) {
             g2[a][b] = EAddE(g2[a][b], EMul(LiftResidue(dlt, K), pij, K));
           }
         }
@@ -2781,7 +2778,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           return false;
         }
       }
-      using Row = std::vector<PolyQ>;
+      using Row = std::vector<FqElt>;
       auto encode_row = [&](Row const &y) -> size_t {
         size_t idx = 0;
         for (int b = m - 1; b >= 0; b--) {
@@ -2800,14 +2797,12 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             cf[u] = static_cast<int64_t>(idx % static_cast<size_t>(p));
             idx /= static_cast<size_t>(p);
           }
-          PolyQ a2(cf.begin(), cf.end());
-          PolyTrim(a2);
-          y[b] = a2;
+          y[b] = FqFromCoeffs(F, cf);
         }
         return y;
       };
-      auto bil2 = [&](Row const &x, Row const &y) -> PolyQ {
-        PolyQ v;
+      auto bil2 = [&](Row const &x, Row const &y) -> FqElt {
+        FqElt v;
         for (int a2 = 0; a2 < m; a2++) {
           for (int b2 = 0; b2 < m; b2++) {
             v = FqAdd(F, v, FqMul(F, FqMul(F, x[a2], Hn[a2][b2]), y[b2]));
@@ -2825,14 +2820,14 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           for (int side = 0; side < 2; side++) {
             Row w(m);
             for (int b2 = 0; b2 < m; b2++) {
-              PolyQ v;
+              FqElt v;
               for (int d2 = 0; d2 < m; d2++) {
                 v = (side == 0) ? FqAdd(F, v, FqMul(F, Hn[b2][d2], prefix[k][d2]))
                                 : FqAdd(F, v, FqMul(F, prefix[k][d2], Hn[d2][b2]));
               }
               w[b2] = v;
             }
-            PolyQ rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
+            FqElt rhs = (side == 0) ? Hn[i][k] : Hn[k][i];
             std::vector<IMat> blocks;
             for (int b2 = 0; b2 < m; b2++) {
               blocks.push_back(mulmat(w[b2]));
@@ -2929,8 +2924,8 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         GMat g2 = gm;
         for (int a2 = 0; a2 < m; a2++) {
           for (int b2 = 0; b2 < m; b2++) {
-            PolyQ dlt = from_coeffs(v, static_cast<size_t>((a2 * m + b2) * fr));
-            if (!dlt.empty()) {
+            FqElt dlt = from_coeffs(v, static_cast<size_t>((a2 * m + b2) * fr));
+            if (!dlt.is_zero()) {
               g2[a2][b2] = EAddE(g2[a2][b2], EMul(LiftResidue(dlt, K), pij, K));
             }
           }
@@ -2976,7 +2971,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       auto act_row = [&](Row const &y, std::vector<Row> const &g) -> Row {
         Row z(m);
         for (int b2 = 0; b2 < m; b2++) {
-          PolyQ v;
+          FqElt v;
           for (int a2 = 0; a2 < m; a2++) {
             v = FqAdd(F, v, FqMul(F, y[a2], g[a2][b2]));
           }
@@ -3012,11 +3007,11 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         std::vector<Row> prefix(i);
         for (int k = 0; k < i; k++) {
           Row ek(m);
-          ek[k] = PolyQ{1};
+          ek[k] = FqOne(F);
           prefix[k] = ek;
         }
         Row ei(m);
-        ei[i] = PolyQ{1};
+        ei[i] = FqOne(F);
         std::vector<char> in_orbit(n_pts, 0);
         size_t orbit_len = 0;
         auto close = [&]() -> void {

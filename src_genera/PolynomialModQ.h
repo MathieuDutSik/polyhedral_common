@@ -5,155 +5,194 @@
 // clang-format off
 #include "GeneraArithmetic.h"
 #include "ResidueArithmetic.h"
+#include <algorithm>
 #include <cstdint>
-#include <initializer_list>
-#include <random>
-#include <type_traits>
+#include <iostream>
 #include <utility>
 #include <vector>
 // clang-format on
 
 /*
-  Polynomials with coefficients modulo a prime q (PolyQ, the coefficients
-  in increasing degree) and with integer coefficients (PolyZ): products,
-  division, gcd and inverses modulo q, powers modulo a polynomial, and the
-  factorization modulo q by distinct and equal degrees.
+  Polynomials with coefficients modulo a prime q (PolyQ) and with integer
+  coefficients (PolyZ): the ring operations, division, gcd and inverses
+  modulo a polynomial, powers modulo a polynomial, and the factorization by
+  distinct and equal degrees. The elements of the residue fields
+  F_q[x] / (mu) are another type (FqElt, FiniteField.h).
  */
 
 /*
-  A polynomial modulo q: its coefficients by increasing degree. The
-  operations below return it trimmed (no zero leading coefficient, the zero
-  polynomial being empty); an element of F_q[x] / mu (FiniteField.h) may
-  carry zeros at the end.
+  A polynomial modulo the prime q: its coefficients in [0, q) by increasing
+  degree, trimmed (the leading coefficient is nonzero, the zero polynomial
+  has none), so that equality is that of the coefficients. The
+  constructors reduce and trim; the polynomials of an operation have the
+  same q (checked under SANITY_CHECK_POLYQ). The default one, of q = 0, is
+  only a placeholder to be assigned.
  */
 struct PolyQ {
-  std::vector<T_residue> c;
+  T_small_prime q = 0;
 
   PolyQ() = default;
-  explicit PolyQ(size_t n) : c(n, 0) {}
-  PolyQ(size_t n, T_residue x) : c(n, x) {}
-  PolyQ(std::initializer_list<T_residue> l) : c(l) {}
-  template <typename It>
-    requires(!std::is_integral_v<It>)
-  PolyQ(It first, It last) : c(first, last) {}
+  // the zero polynomial
+  explicit PolyQ(T_small_prime q_in) : q(q_in) {}
+  PolyQ(T_small_prime q_in, std::vector<T_residue> coeffs)
+      : q(q_in), c(std::move(coeffs)) {
+    for (auto &x : c) {
+      x %= q;
+    }
+    trim();
+  }
+  static PolyQ X(T_small_prime q) { return PolyQ(q, {0, 1}); }
 
+  // -1 for the zero polynomial
+  int degree() const { return static_cast<int>(c.size()) - 1; }
+  bool is_zero() const { return c.empty(); }
   size_t size() const { return c.size(); }
-  bool empty() const { return c.empty(); }
-  T_residue &operator[](size_t i) { return c[i]; }
-  T_residue const &operator[](size_t i) const { return c[i]; }
-  T_residue &back() { return c.back(); }
-  T_residue const &back() const { return c.back(); }
-  auto begin() { return c.begin(); }
-  auto end() { return c.end(); }
+  T_residue operator[](size_t i) const { return c[i]; }
+  // the coefficient of x^i, 0 beyond the degree
+  T_residue coeff(size_t i) const { return (i < c.size()) ? c[i] : 0; }
+  T_residue lead() const { return c.back(); }
+  std::vector<T_residue> const &coeffs() const { return c; }
   auto begin() const { return c.begin(); }
   auto end() const { return c.end(); }
-  auto rbegin() const { return c.rbegin(); }
-  auto rend() const { return c.rend(); }
-  void push_back(T_residue x) { c.push_back(x); }
-  void pop_back() { c.pop_back(); }
-  void resize(size_t n, T_residue x = 0) { c.resize(n, x); }
-  bool operator==(PolyQ const &b) const { return c == b.c; }
-  bool operator<(PolyQ const &b) const { return c < b.c; }
+  bool operator==(PolyQ const &b) const { return q == b.q && c == b.c; }
+
+private:
+  std::vector<T_residue> c;
+
+  void trim() {
+    while (!c.empty() && c.back() == 0) {
+      c.pop_back();
+    }
+  }
 };
 
-inline void PolyTrim(PolyQ &a) {
-  while (!a.empty() && a.back() == 0) {
-    a.pop_back();
+inline void PolyCheckSameQ([[maybe_unused]] PolyQ const &a,
+                           [[maybe_unused]] PolyQ const &b) {
+#ifdef SANITY_CHECK_POLYQ
+  if (a.q == 0 || a.q != b.q) {
+    std::cerr << "POLYQ: polynomials modulo " << a.q << " and " << b.q << "\n";
+    throw TerminalException{1};
   }
-}
-
-inline PolyQ PolyReduce(PolyQ a, T_small_prime q) {
-  for (auto &x : a) {
-    x %= q;
-  }
-  PolyTrim(a);
-  return a;
+#endif
 }
 
 // a polynomial with integer coefficients modulo q
 inline PolyQ PolyReduceSigned(std::vector<int64_t> const &a, T_small_prime q) {
-  PolyQ r(a.size());
+  std::vector<T_residue> r(a.size());
   for (size_t i = 0; i < a.size(); i++) {
     r[i] = ResModSigned(a[i], q);
   }
-  PolyTrim(r);
-  return r;
+  return PolyQ(q, std::move(r));
 }
 
-inline PolyQ PolyMulQ(PolyQ const &a, PolyQ const &b, T_small_prime q) {
-  if (a.empty() || b.empty()) {
-    return {};
+inline PolyQ operator+(PolyQ const &a, PolyQ const &b) {
+  PolyCheckSameQ(a, b);
+  T_small_prime q = a.q;
+  std::vector<T_residue> r(std::max(a.size(), b.size()));
+  for (size_t i = 0; i < r.size(); i++) {
+    r[i] = ResAdd(a.coeff(i), b.coeff(i), q);
   }
-  PolyQ c(a.size() + b.size() - 1, 0);
+  return PolyQ(q, std::move(r));
+}
+
+inline PolyQ operator-(PolyQ const &a) {
+  std::vector<T_residue> r(a.size());
+  for (size_t i = 0; i < a.size(); i++) {
+    r[i] = ResNeg(a[i], a.q);
+  }
+  return PolyQ(a.q, std::move(r));
+}
+
+inline PolyQ operator-(PolyQ const &a, PolyQ const &b) {
+  PolyCheckSameQ(a, b);
+  T_small_prime q = a.q;
+  std::vector<T_residue> r(std::max(a.size(), b.size()));
+  for (size_t i = 0; i < r.size(); i++) {
+    r[i] = ResSub(a.coeff(i), b.coeff(i), q);
+  }
+  return PolyQ(q, std::move(r));
+}
+
+inline PolyQ operator*(PolyQ const &a, PolyQ const &b) {
+  PolyCheckSameQ(a, b);
+  T_small_prime q = a.q;
+  if (a.is_zero() || b.is_zero()) {
+    return PolyQ(q);
+  }
+  std::vector<T_residue> r(a.size() + b.size() - 1, 0);
   for (size_t i = 0; i < a.size(); i++) {
     for (size_t j = 0; j < b.size(); j++) {
-      c[i + j] = ResAdd(c[i + j], ResMul(a[i], b[j], q), q);
+      r[i + j] = ResAdd(r[i + j], ResMul(a[i], b[j], q), q);
     }
   }
-  PolyTrim(c);
-  return c;
+  return PolyQ(q, std::move(r));
 }
 
-inline PolyQ PolySubQ(PolyQ a, PolyQ const &b, T_small_prime q) {
-  if (a.size() < b.size()) {
-    a.resize(b.size(), 0);
+// s a
+inline PolyQ PolyScaleQ(PolyQ const &a, T_residue s) {
+  std::vector<T_residue> r(a.size());
+  for (size_t i = 0; i < a.size(); i++) {
+    r[i] = ResMul(a[i], s, a.q);
   }
-  for (size_t i = 0; i < b.size(); i++) {
-    a[i] = ResSub(a[i], b[i], q);
-  }
-  PolyTrim(a);
-  return a;
+  return PolyQ(a.q, std::move(r));
 }
 
-// quotient and remainder modulo q, b nonzero
-inline std::pair<PolyQ, PolyQ> PolyDivModQ(PolyQ a, PolyQ const &b, T_small_prime q) {
-  PolyTrim(a);
-  if (a.size() < b.size()) {
-    return {{}, a};
+// quotient and remainder, b nonzero
+inline std::pair<PolyQ, PolyQ> PolyDivModQ(PolyQ const &a, PolyQ const &b) {
+  PolyCheckSameQ(a, b);
+  T_small_prime q = a.q;
+  if (b.is_zero()) {
+    std::cerr << "POLYQ: division by zero\n";
+    throw TerminalException{1};
   }
-  T_residue inv = ResInv(b.back(), q);
-  PolyQ quo(a.size() - b.size() + 1, 0);
-  for (size_t k = a.size() - b.size() + 1; k-- > 0;) {
-    T_residue c = ResMul(a[k + b.size() - 1], inv, q);
+  if (a.size() < b.size()) {
+    return {PolyQ(q), a};
+  }
+  std::vector<T_residue> r = a.coeffs();
+  T_residue inv = ResInv(b.lead(), q);
+  std::vector<T_residue> quo(a.size() - b.size() + 1, 0);
+  for (size_t k = quo.size(); k-- > 0;) {
+    T_residue c = ResMul(r[k + b.size() - 1], inv, q);
     quo[k] = c;
     for (size_t j = 0; j < b.size(); j++) {
-      a[k + j] = ResSub(a[k + j], ResMul(c, b[j], q), q);
+      r[k + j] = ResSub(r[k + j], ResMul(c, b[j], q), q);
     }
   }
-  PolyTrim(a);
-  PolyTrim(quo);
-  return {quo, a};
+  return {PolyQ(q, std::move(quo)), PolyQ(q, std::move(r))};
 }
 
-inline PolyQ PolyMonicQ(PolyQ a, T_small_prime q) {
-  if (a.empty()) {
+inline PolyQ operator/(PolyQ const &a, PolyQ const &b) {
+  return PolyDivModQ(a, b).first;
+}
+
+inline PolyQ operator%(PolyQ const &a, PolyQ const &b) {
+  return PolyDivModQ(a, b).second;
+}
+
+inline PolyQ PolyMonicQ(PolyQ const &a) {
+  if (a.is_zero()) {
     return a;
   }
-  T_residue inv = ResInv(a.back(), q);
-  for (auto &x : a) {
-    x = ResMul(x, inv, q);
-  }
-  return a;
+  return PolyScaleQ(a, ResInv(a.lead(), a.q));
 }
 
-inline PolyQ PolyGcdQ(PolyQ a, PolyQ b, T_small_prime q) {
-  PolyTrim(a);
-  PolyTrim(b);
-  while (!b.empty()) {
-    PolyQ r = PolyDivModQ(a, b, q).second;
+inline PolyQ PolyGcdQ(PolyQ a, PolyQ b) {
+  while (!b.is_zero()) {
+    PolyQ r = a % b;
     a = b;
     b = r;
   }
-  return PolyMonicQ(a, q);
+  return PolyMonicQ(a);
 }
 
-// u with u a = gcd modulo b (a and b coprime): the inverse of a modulo b
-inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b, T_small_prime q) {
-  PolyQ r0 = b, r1 = PolyDivModQ(a, b, q).second;
-  PolyQ s0 = {}, s1 = {1};
-  while (!r1.empty()) {
-    std::pair<PolyQ, PolyQ> qr = PolyDivModQ(r0, r1, q);
-    PolyQ s2 = PolySubQ(s0, PolyMulQ(qr.first, s1, q), q);
+// the inverse of a modulo b, a and b coprime
+inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b) {
+  T_small_prime q = b.q;
+  PolyQ r0 = b, r1 = a % b;
+  PolyQ s0(q), s1(q, {1});
+  while (!r1.is_zero()) {
+    std::pair<PolyQ, PolyQ> qr = PolyDivModQ(r0, r1);
+    PolyQ s2 = s0 - qr.first * s1;
     r0 = r1;
     r1 = qr.second;
     s0 = s1;
@@ -161,48 +200,23 @@ inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b, T_small_prime q) {
   }
   // r0 is a nonzero constant
   if (r0.size() != 1) {
-    std::cerr << "CYCLO: the polynomials are not coprime\n";
+    std::cerr << "POLYQ: the polynomials are not coprime\n";
     throw TerminalException{1};
   }
-  T_residue inv = ResInv(r0[0], q);
-  for (auto &x : s0) {
-    x = ResMul(x, inv, q);
-  }
-  return PolyDivModQ(s0, b, q).second;
+  return PolyScaleQ(s0, ResInv(r0[0], q)) % b;
 }
 
-inline PolyQ PolyPowModQ(PolyQ base, uint64_t e, PolyQ const &m, T_small_prime q) {
-  PolyQ res = {1};
-  base = PolyDivModQ(base, m, q).second;
+inline PolyQ PolyPowModQ(PolyQ base, uint64_t e, PolyQ const &m) {
+  PolyQ res = PolyQ(m.q, {1}) % m;
+  base = base % m;
   while (e > 0) {
     if (e & 1) {
-      res = PolyDivModQ(PolyMulQ(res, base, q), m, q).second;
+      res = (res * base) % m;
     }
-    base = PolyDivModQ(PolyMulQ(base, base, q), m, q).second;
+    base = (base * base) % m;
     e >>= 1;
   }
   return res;
-}
-
-/*
-  The quadratic character of u != 0 in F_q[x] / g, q odd: that of its norm
-  to F_q, the product of its conjugates u^{q^i}, i < deg g (the norm is
-  onto and takes the squares to the squares), with no exponent beyond q.
- */
-inline int ResidueQuadraticCharacter(PolyQ const &u, PolyQ const &g, T_small_prime q) {
-  int f = static_cast<int>(g.size()) - 1;
-  PolyQ prod = {1};
-  PolyQ conj = PolyDivModQ(u, g, q).second;
-  for (int i = 0; i < f; i++) {
-    prod = PolyDivModQ(PolyMulQ(prod, conj, q), g, q).second;
-    conj = PolyPowModQ(conj, q, g, q);
-  }
-  PolyTrim(prod);
-  if (prod.size() != 1) {
-    std::cerr << "CYCLO: the norm is not in F_q\n";
-    throw TerminalException{1};
-  }
-  return KroneckerResidue(prod[0], q);
 }
 
 /*
@@ -211,56 +225,57 @@ inline int ResidueQuadraticCharacter(PolyQ const &u, PolyQ const &g, T_small_pri
   or by the trace map (q = 2). The random polynomials are replaced by a
   deterministic sequence, which splits as well.
  */
-inline std::vector<PolyQ> EqualDegreeFactorization(PolyQ const &g, int f,
-                                                   T_small_prime q) {
-  int deg = static_cast<int>(g.size()) - 1;
+inline std::vector<PolyQ> EqualDegreeFactorization(PolyQ const &g, int f) {
+  T_small_prime q = g.q;
+  int deg = g.degree();
   if (deg == f) {
-    return {PolyMonicQ(g, q)};
+    return {PolyMonicQ(g)};
   }
+  PolyQ one(q, {1});
   for (uint64_t c = 1;; c++) {
     // r = x^{1 + c mod deg} + c, a varied family of polynomials
-    PolyQ r(2 + static_cast<size_t>(c % deg), 0);
-    r.back() = 1;
-    r[0] = c % q;
-    r = PolyReduce(r, q);
-    PolyQ h;
+    std::vector<T_residue> rc(2 + static_cast<size_t>(c % deg), 0);
+    rc.back() = 1;
+    rc[0] = c % q;
+    PolyQ r(q, std::move(rc));
+    PolyQ h(q);
     if (q == 2) {
-      PolyQ t = PolyDivModQ(r, g, q).second;
+      PolyQ t = r % g;
       h = t;
       for (int i = 1; i < f; i++) {
-        t = PolyDivModQ(PolyMulQ(t, t, q), g, q).second;
-        h = PolySubQ(h, PolySubQ({}, t, q), q);
+        t = (t * t) % g;
+        h = h + t;
       }
     } else {
       // r^{(q^f - 1)/2} = prod_{i < f} (r^{(q-1)/2})^{q^i}, which keeps the
       // exponents within 64 bits
-      PolyQ t = PolyPowModQ(r, (q - 1) / 2, g, q);
-      h = {1};
+      PolyQ t = PolyPowModQ(r, (q - 1) / 2, g);
+      h = one;
       for (int i = 0; i < f; i++) {
-        h = PolyDivModQ(PolyMulQ(h, t, q), g, q).second;
-        t = PolyPowModQ(t, q, g, q);
+        h = (h * t) % g;
+        t = PolyPowModQ(t, q, g);
       }
-      h = PolySubQ(h, {1}, q);
+      h = h - one;
     }
-    PolyQ dgc = PolyGcdQ(g, h, q);
-    int dd = static_cast<int>(dgc.size()) - 1;
+    PolyQ dgc = PolyGcdQ(g, h);
+    int dd = dgc.degree();
     if (dd > 0 && dd < deg) {
-      std::vector<PolyQ> res = EqualDegreeFactorization(dgc, f, q);
-      std::vector<PolyQ> res2 =
-          EqualDegreeFactorization(PolyDivModQ(g, dgc, q).first, f, q);
+      std::vector<PolyQ> res = EqualDegreeFactorization(dgc, f);
+      std::vector<PolyQ> res2 = EqualDegreeFactorization(g / dgc, f);
       res.insert(res.end(), res2.begin(), res2.end());
       return res;
     }
     if (c > 100000) {
-      std::cerr << "CYCLO: the equal degree splitting failed\n";
+      std::cerr << "POLYQ: the equal degree splitting failed\n";
       throw TerminalException{1};
     }
   }
 }
 
-inline PolyQ ReciprocalPolyQ(PolyQ const &g, T_small_prime q) {
-  PolyQ r(g.rbegin(), g.rend());
-  return PolyMonicQ(PolyReduce(r, q), q);
+// x^{deg g} g(1/x), made monic
+inline PolyQ ReciprocalPolyQ(PolyQ const &g) {
+  std::vector<T_residue> r(g.coeffs().rbegin(), g.coeffs().rend());
+  return PolyMonicQ(PolyQ(g.q, std::move(r)));
 }
 
 /*
@@ -312,32 +327,30 @@ inline PolyZ<Tint> PolyZMul(PolyZ<Tint> const &a, PolyZ<Tint> const &b) {
 }
 
 // The distinct irreducible factors of f modulo q with their multiplicities.
-inline std::vector<std::pair<PolyQ, int>> FactorModQWithMultiplicity(PolyQ f,
-                                                                      T_small_prime q) {
-  f = PolyMonicQ(PolyReduce(f, q), q);
+inline std::vector<std::pair<PolyQ, int>>
+FactorModQWithMultiplicity(PolyQ const &f_in) {
+  T_small_prime q = f_in.q;
+  PolyQ f = PolyMonicQ(f_in);
   std::vector<std::pair<PolyQ, int>> res;
   PolyQ rem = f;
-  int deg = static_cast<int>(f.size()) - 1;
-  PolyQ xpol{0, 1};
-  for (int k = 1; k <= deg && rem.size() > 1; k++) {
+  int deg = f.degree();
+  PolyQ xpol = PolyQ::X(q);
+  for (int k = 1; k <= deg && rem.degree() > 0; k++) {
     // x^{q^k} - x modulo rem: the product of the irreducible factors of
     // degree dividing k, the smaller ones being already removed
     PolyQ y = xpol;
     for (int i = 0; i < k; i++) {
-      y = PolyPowModQ(y, q, rem, q);
+      y = PolyPowModQ(y, q, rem);
     }
-    PolyQ g = PolyGcdQ(PolySubQ(y, xpol, q), rem, q);
-    PolyTrim(g);
-    if (g.size() <= 1) {
+    PolyQ g = PolyGcdQ(y - xpol, rem);
+    if (g.degree() <= 0) {
       continue;
     }
-    for (auto const &fac : EqualDegreeFactorization(PolyMonicQ(g, q), k, q)) {
+    for (auto const &fac : EqualDegreeFactorization(g, k)) {
       int mult = 0;
       while (true) {
-        std::pair<PolyQ, PolyQ> qr = PolyDivModQ(rem, fac, q);
-        PolyQ r = qr.second;
-        PolyTrim(r);
-        if (!r.empty()) {
+        std::pair<PolyQ, PolyQ> qr = PolyDivModQ(rem, fac);
+        if (!qr.second.is_zero()) {
           break;
         }
         rem = qr.first;
@@ -348,33 +361,28 @@ inline std::vector<std::pair<PolyQ, int>> FactorModQWithMultiplicity(PolyQ f,
   }
   return res;
 }
+
 // Rabin's test of irreducibility over F_p.
-inline bool IsIrreducibleModP(PolyQ const &f, T_small_prime p) {
-  int d = static_cast<int>(f.size()) - 1;
+inline bool IsIrreducibleModP(PolyQ const &f) {
+  T_small_prime p = f.q;
+  int d = f.degree();
   if (d <= 0) {
     return false;
   }
   if (d == 1) {
     return true;
   }
-  PolyQ x{0, 1};
+  PolyQ x = PolyQ::X(p);
   auto frob_power = [&](int e) -> PolyQ {
     PolyQ y = x;
     for (int i = 0; i < e; i++) {
-      y = PolyPowModQ(y, p, f, p);
+      y = PolyPowModQ(y, p, f);
     }
     return y;
   };
   // f divides x^{p^d} - x
-  PolyQ y = PolySubQ(frob_power(d), x, p);
-  PolyTrim(y);
-  if (!y.empty() && !(y.size() == 1 && y[0] == 0)) {
-    std::pair<PolyQ, PolyQ> qr = PolyDivModQ(y, f, p);
-    PolyQ rem = qr.second;
-    PolyTrim(rem);
-    if (!rem.empty() && !(rem.size() == 1 && rem[0] == 0)) {
-      return false;
-    }
+  if (!((frob_power(d) - x) % f).is_zero()) {
+    return false;
   }
   // gcd(x^{p^{d/r}} - x, f) = 1 for the primes r dividing d
   for (int r = 2; r <= d; r++) {
@@ -390,10 +398,7 @@ inline bool IsIrreducibleModP(PolyQ const &f, T_small_prime p) {
     if (!is_prime) {
       continue;
     }
-    PolyQ z = PolySubQ(frob_power(d / r), x, p);
-    PolyQ g = PolyGcdQ(z, f, p);
-    PolyTrim(g);
-    if (g.size() > 1) {
+    if (PolyGcdQ(frob_power(d / r) - x, f).degree() > 0) {
       return false;
     }
   }

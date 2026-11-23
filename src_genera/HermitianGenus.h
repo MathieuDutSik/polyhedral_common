@@ -324,7 +324,7 @@ inline std::vector<PolyQ> HermCyclotomicFactorsModL(int64_t m, int64_t l) {
   T_small_prime q = static_cast<T_small_prime>(l);
   return EqualDegreeFactorization(
       PolyReduceSigned(CyclotomicPolynomial(static_cast<int>(m)), q),
-      MultiplicativeOrder(l, m), q);
+      MultiplicativeOrder(l, m));
 }
 
 // clang-format off

@@ -18,11 +18,11 @@
   F_q (linear algebra, projective spaces, forms) are in the headers that
   use them.
 
-  An element is a polynomial of degree < f in x (a PolyQ, coefficients in
-  [0, p) by increasing degree), kept trimmed, so that 0 is the empty
-  vector and equality is that of the vectors. The operations accept any
-  PolyQ (for instance a vector of length f with zeros at the end) and
-  return the trimmed one.
+  An element (FqElt) is a polynomial of degree < f in x, its coefficients
+  in [0, p) by increasing degree, trimmed, so that 0 has no coefficient
+  and equality is that of the coefficients. It does not carry the field:
+  it is made and operated on through the FiniteField F (FqFromPoly,
+  FqFromCoeffs, FqAdd, ...), which reduces modulo p and mu.
 
   The codes: an element a_0 + a_1 x + ... is coded by the integer a_0 + a_1
   p + ... in [0, q), when q <= kMaxResidueModulus (q = 0 otherwise, and
@@ -38,17 +38,35 @@ struct FiniteField {
   uint64_t q;
 };
 
-using FqElt = PolyQ;
+struct FqElt {
+  FqElt() = default;
+
+  bool is_zero() const { return c.empty(); }
+  size_t size() const { return c.size(); }
+  T_residue operator[](size_t i) const { return c[i]; }
+  // the coefficient of x^i, 0 beyond the degree
+  T_residue coeff(size_t i) const { return (i < c.size()) ? c[i] : 0; }
+  auto begin() const { return c.begin(); }
+  auto end() const { return c.end(); }
+  bool operator==(FqElt const &b) const { return c == b.c; }
+
+private:
+  std::vector<T_residue> c;
+
+  friend FqElt FqFromPoly(FiniteField const &F, PolyQ const &a);
+};
 
 inline FiniteField MakeFiniteField(T_small_prime p, PolyQ const &mu_in) {
-  PolyQ mu = PolyReduce(mu_in, p);
-  PolyTrim(mu);
-  if (mu.size() < 2) {
+  if (mu_in.q != p) {
+    std::cerr << "FQ: the modulus is not a polynomial modulo " << p << "\n";
+    throw TerminalException{1};
+  }
+  if (mu_in.degree() < 1) {
     std::cerr << "FQ: the modulus has degree < 1\n";
     throw TerminalException{1};
   }
-  mu = PolyMonicQ(mu, p);
-  int f = static_cast<int>(mu.size()) - 1;
+  PolyQ mu = PolyMonicQ(mu_in);
+  int f = mu.degree();
   uint64_t q = 1;
   for (int i = 0; i < f && q != 0; i++) {
     q = (q > kMaxResidueModulus / p) ? 0 : q * p;
@@ -58,60 +76,75 @@ inline FiniteField MakeFiniteField(T_small_prime p, PolyQ const &mu_in) {
 
 // F_p as F_p[x] / (x)
 inline FiniteField MakePrimeField(T_small_prime p) {
-  return MakeFiniteField(p, PolyQ{0, 1});
+  return MakeFiniteField(p, PolyQ::X(p));
 }
 
-inline FqElt FqNormalize(FiniteField const &F, FqElt a) {
-  a = PolyReduce(a, F.p);
-  PolyTrim(a);
-  if (static_cast<int>(a.size()) > F.f) {
-    a = PolyDivModQ(a, F.mu, F.p).second;
-    PolyTrim(a);
+// the class of a modulo mu
+inline FqElt FqFromPoly(FiniteField const &F, PolyQ const &a) {
+  if (a.q != F.p) {
+    std::cerr << "FQ: a polynomial modulo " << a.q << " in F_" << F.p
+              << "^" << F.f << "\n";
+    throw TerminalException{1};
   }
-  return a;
+  PolyQ r = a;
+  if (r.degree() >= F.f) {
+    r = r % F.mu;
+  }
+  FqElt res;
+  res.c = r.coeffs();
+  return res;
 }
 
-inline bool FqIsZero(FqElt const &a) {
-  return std::all_of(a.begin(), a.end(), [](T_residue x) { return x == 0; });
+// the class of sum_i a_i x^i, the a_i taken modulo p
+template <typename Tcoef>
+inline FqElt FqFromCoeffs(FiniteField const &F, std::vector<Tcoef> const &a) {
+  std::vector<T_residue> r(a.size());
+  for (size_t i = 0; i < a.size(); i++) {
+    r[i] = ResModSigned(static_cast<int64_t>(a[i]), F.p);
+  }
+  return FqFromPoly(F, PolyQ(F.p, std::move(r)));
 }
 
-inline FqElt FqOne() { return FqElt{1}; }
+// the polynomial of degree < f of a
+inline PolyQ FqToPoly(FiniteField const &F, FqElt const &a) {
+  return PolyQ(F.p, std::vector<T_residue>(a.begin(), a.end()));
+}
+
+inline FqElt FqOne(FiniteField const &F) {
+  return FqFromPoly(F, PolyQ(F.p, {1}));
+}
+
+// x^k
+inline FqElt FqXPower(FiniteField const &F, int k) {
+  std::vector<T_residue> r(k + 1, 0);
+  r[k] = 1;
+  return FqFromPoly(F, PolyQ(F.p, std::move(r)));
+}
 
 inline FqElt FqAdd(FiniteField const &F, FqElt const &a, FqElt const &b) {
-  FqElt r(std::max(a.size(), b.size()), 0);
-  for (size_t i = 0; i < r.size(); i++) {
-    T_residue x = (i < a.size()) ? a[i] % F.p : 0;
-    T_residue y = (i < b.size()) ? b[i] % F.p : 0;
-    r[i] = ResAdd(x, y, F.p);
-  }
-  return FqNormalize(F, r);
+  return FqFromPoly(F, FqToPoly(F, a) + FqToPoly(F, b));
 }
 
 inline FqElt FqNeg(FiniteField const &F, FqElt const &a) {
-  FqElt r(a.size());
-  for (size_t i = 0; i < a.size(); i++) {
-    r[i] = ResNeg(a[i] % F.p, F.p);
-  }
-  return FqNormalize(F, r);
+  return FqFromPoly(F, -FqToPoly(F, a));
 }
 
 inline FqElt FqSub(FiniteField const &F, FqElt const &a, FqElt const &b) {
-  return FqAdd(F, a, FqNeg(F, b));
+  return FqFromPoly(F, FqToPoly(F, a) - FqToPoly(F, b));
 }
 
 inline FqElt FqMul(FiniteField const &F, FqElt const &a, FqElt const &b) {
-  return FqNormalize(F, PolyMulQ(FqNormalize(F, a), FqNormalize(F, b), F.p));
+  return FqFromPoly(F, FqToPoly(F, a) * FqToPoly(F, b));
 }
 
 inline FqElt FqInv(FiniteField const &F, FqElt const &a) {
-  FqElt a2 = FqNormalize(F, a);
-  if (a2.empty()) {
+  if (a.is_zero()) {
     std::cerr << "FQ: the inverse of 0\n";
     throw TerminalException{1};
   }
-  FqElt res = FqNormalize(F, PolyInverseModQ(a2, F.mu, F.p));
+  FqElt res = FqFromPoly(F, PolyInverseModQ(FqToPoly(F, a), F.mu));
 #ifdef SANITY_CHECK_FINITE_FIELD
-  if (FqMul(F, a2, res) != FqOne()) {
+  if (FqMul(F, a, res) != FqOne(F)) {
     std::cerr << "FQ: the inverse is wrong\n";
     throw TerminalException{1};
   }
@@ -120,12 +153,11 @@ inline FqElt FqInv(FiniteField const &F, FqElt const &a) {
 }
 
 inline FqElt FqPow(FiniteField const &F, FqElt const &a, uint64_t e) {
-  return FqNormalize(F, PolyPowModQ(FqNormalize(F, a), e, F.mu, F.p));
+  return FqFromPoly(F, PolyPowModQ(FqToPoly(F, a), e, F.mu));
 }
 
 // a^(p^k)
 inline FqElt FqFrobenius(FiniteField const &F, FqElt a, int k) {
-  a = FqNormalize(F, a);
   for (int i = 0; i < k; i++) {
     a = FqPow(F, a, F.p);
   }
@@ -135,7 +167,7 @@ inline FqElt FqFrobenius(FiniteField const &F, FqElt a, int k) {
 // The trace to F_p, the sum of the f conjugates.
 inline T_residue FqTrace(FiniteField const &F, FqElt const &a) {
   FqElt t;
-  FqElt x = FqNormalize(F, a);
+  FqElt x = a;
   for (int i = 0; i < F.f; i++) {
     t = FqAdd(F, t, x);
     x = FqFrobenius(F, x, 1);
@@ -144,7 +176,30 @@ inline T_residue FqTrace(FiniteField const &F, FqElt const &a) {
     std::cerr << "FQ: the trace is not in the prime field\n";
     throw TerminalException{1};
   }
-  return t.empty() ? 0 : t[0];
+  return t.coeff(0);
+}
+
+/*
+  The quadratic character of u != 0, p odd: that of its norm to F_p, the
+  product of its conjugates u^{p^i}, i < f (the norm is onto and takes the
+  squares to the squares), with no exponent beyond p.
+ */
+inline int FqQuadraticCharacter(FiniteField const &F, FqElt const &u) {
+  if (u.is_zero()) {
+    std::cerr << "FQ: the quadratic character of 0\n";
+    throw TerminalException{1};
+  }
+  FqElt prod = FqOne(F);
+  FqElt conj = u;
+  for (int i = 0; i < F.f; i++) {
+    prod = FqMul(F, prod, conj);
+    conj = FqFrobenius(F, conj, 1);
+  }
+  if (prod.size() != 1) {
+    std::cerr << "FQ: the norm is not in F_p\n";
+    throw TerminalException{1};
+  }
+  return KroneckerResidue(prod[0], F.p);
 }
 
 inline void FqCheckCodes(FiniteField const &F) {
@@ -155,9 +210,8 @@ inline void FqCheckCodes(FiniteField const &F) {
   }
 }
 
-inline uint64_t FqEncode(FiniteField const &F, FqElt const &a_in) {
+inline uint64_t FqEncode(FiniteField const &F, FqElt const &a) {
   FqCheckCodes(F);
-  FqElt a = FqNormalize(F, a_in);
   uint64_t c = 0;
   for (size_t i = a.size(); i-- > 0;) {
     c = c * F.p + a[i];
@@ -167,13 +221,12 @@ inline uint64_t FqEncode(FiniteField const &F, FqElt const &a_in) {
 
 inline FqElt FqDecode(FiniteField const &F, uint64_t c) {
   FqCheckCodes(F);
-  FqElt a(F.f);
+  std::vector<T_residue> a(F.f);
   for (int i = 0; i < F.f; i++) {
     a[i] = c % F.p;
     c /= F.p;
   }
-  PolyTrim(a);
-  return a;
+  return FqFromPoly(F, PolyQ(F.p, std::move(a)));
 }
 
 // The operations on the codes, without allocation for f <= 2 (mu = x^2 +
@@ -198,9 +251,9 @@ inline uint64_t FqCodeMulFast(FiniteField const &F, uint64_t x, uint64_t y) {
     T_residue p = F.p;
     T_residue a1 = x % p, b1 = x / p, a2 = y % p, b2 = y / p;
     T_residue bb = ResMul(b1, b2, p);
-    T_residue a = ResSub(ResMul(a1, a2, p), ResMul(F.mu[0], bb, p), p);
+    T_residue a = ResSub(ResMul(a1, a2, p), ResMul(F.mu.coeff(0), bb, p), p);
     T_residue b = ResSub(ResAdd(ResMul(a1, b2, p), ResMul(a2, b1, p), p),
-                         ResMul(F.mu[1], bb, p), p);
+                         ResMul(F.mu.coeff(1), bb, p), p);
     return a + p * b;
   }
   return FqEncode(F, FqMul(F, FqDecode(F, x), FqDecode(F, y)));
@@ -219,10 +272,10 @@ inline uint64_t FqCodeInvFast(FiniteField const &F, uint64_t x) {
     T_residue p = F.p;
     T_residue a = x % p, b = x / p;
     T_residue norm =
-        ResAdd(ResSub(ResMul(a, a, p), ResMul(F.mu[1], ResMul(a, b, p), p), p),
-               ResMul(F.mu[0], ResMul(b, b, p), p), p);
+        ResAdd(ResSub(ResMul(a, a, p), ResMul(F.mu.coeff(1), ResMul(a, b, p), p), p),
+               ResMul(F.mu.coeff(0), ResMul(b, b, p), p), p);
     T_residue ni = ResInv(norm, p);
-    T_residue ca = ResMul(ResSub(a, ResMul(F.mu[1], b, p), p), ni, p);
+    T_residue ca = ResMul(ResSub(a, ResMul(F.mu.coeff(1), b, p), p), ni, p);
     T_residue cb = ResMul(ResNeg(b, p), ni, p);
     return ca + p * cb;
   }

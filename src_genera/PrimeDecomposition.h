@@ -3,6 +3,7 @@
 #define SRC_GENERA_PRIMEDECOMPOSITION_H_
 
 // clang-format off
+#include "FiniteField.h"
 #include "NumberField.h"
 #include "PolynomialModQ.h"
 #include "MAT_MatrixModPrime.h"
@@ -206,7 +207,7 @@ inline MyMatrix<T> PolyOfMatrixQ(std::vector<Tcoef> const &g,
 
 template <typename T>
 inline MyMatrix<T> PolyOfMatrixQ(PolyQ const &g, MyMatrix<T> const &S) {
-  return PolyOfMatrixQ(g.c, S);
+  return PolyOfMatrixQ(g.coeffs(), S);
 }
 
 /*
@@ -228,26 +229,21 @@ inline std::vector<AbelianPrime>
 AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   std::vector<std::pair<PolyQ, int>> fac =
-      FactorModQWithMultiplicity(PolyReduceSigned(lg.f, q), q);
+      FactorModQWithMultiplicity(PolyReduceSigned(lg.f, q));
   // the conjugate of the prime of g: the factor dividing g(conj(x))
+  T_small_prime q_u = static_cast<T_small_prime>(q);
   auto compose_conj = [&](PolyQ const &g) -> PolyQ {
-    // g(c(x)) modulo f and q, c the conjugate of theta (q-integral)
-    PolyQ c;
+    // g(c(x)) modulo f and q, c the conjugate of theta (q-integral), by
+    // Horner
+    std::vector<T_residue> cc;
     for (auto const &x : lg.conj) {
-      c.push_back(ResidueModInt<T, Tint>(x, static_cast<T_residue>(q)));
+      cc.push_back(ResidueModInt<T, Tint>(x, q_u));
     }
+    PolyQ c(q_u, std::move(cc));
     PolyQ fq = PolyReduceSigned(lg.f, q);
-    PolyQ res = {0};
+    PolyQ res(q_u);
     for (size_t i = g.size(); i-- > 0;) {
-      res = PolyDivModQ(PolyMulQ(res, c, q), fq, q).second;
-      if (res.empty()) {
-        res = {0};
-      }
-      res[0] = (res[0] + g[i]) % q;
-      PolyTrim(res);
-      if (res.empty()) {
-        res = {0};
-      }
+      res = (res * c) % fq + PolyQ(q_u, {g[i]});
     }
     return res;
   };
@@ -256,9 +252,7 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
     PolyQ gc = compose_conj(fac[i].first);
     size_t j = i;
     for (size_t u = 0; u < fac.size(); u++) {
-      PolyQ rr = PolyDivModQ(gc, fac[u].first, q).second;
-      PolyTrim(rr);
-      if (rr.empty()) {
+      if ((gc % fac[u].first).is_zero()) {
         j = u;
         break;
       }
@@ -267,7 +261,7 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
     ap.g = fac[i].first;
     ap.e = fac[i].second;
     ap.conj_index = j;
-    int deg_g = static_cast<int>(fac[i].first.size()) - 1;
+    int deg_g = fac[i].first.degree();
     if (j != i) {
       ap.type = 0;
       ap.f_K = deg_g;
@@ -294,12 +288,12 @@ inline PolyZ<Tint> AbelianPrimeIdempotentPoly(std::vector<int64_t> const &f,
                                         int N) {
   Tint Q = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), N);
   PolyQ fq = PolyReduceSigned(f, q);
-  PolyQ P = {1};
+  PolyQ P(g.q, {1});
   for (int i = 0; i < e; i++) {
-    P = PolyMulQ(P, g, q);
+    P = P * g;
   }
-  PolyQ Qp = PolyDivModQ(fq, P, q).first;
-  PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
+  PolyQ Qp = fq / P;
+  PolyQ e0 = Qp * PolyInverseModQ(Qp, P);
   PolyZ<Tint> ez = PolyZOfPolyQ<Tint>(e0);
   ez = PolyZReduce(ez, f, Q);
   for (int it = 0; it < 64; it++) {
@@ -351,6 +345,8 @@ template <typename T> struct LocalPrimeK {
   PolyQ g;
   int e;
   int f_res;
+  // the residue field F_q[x] / g
+  FiniteField F;
   // the order of the residue field, an abstract size
   Tint qf;
   ElemE<T> pi;
@@ -371,7 +367,8 @@ inline LocalPrimeK<T> MakeLocalPrimeK(LocalGenerator<T> const &lg, PolyQ const &
   P.q = q;
   P.g = g;
   P.e = e;
-  P.f_res = static_cast<int>(g.size()) - 1;
+  P.f_res = g.degree();
+  P.F = MakeFiniteField(static_cast<T_small_prime>(q), g);
   P.qf = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(q), P.f_res);
   if (e == 1) {
     P.pi = ElemE<T>(deg, T(0));
@@ -445,7 +442,7 @@ inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
 
 // The residue in F_q[x] / g of x with v_p(x) >= 0.
 template <typename T>
-inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
+inline FqElt LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   auto [y, d] = ClearDenominators(x);
   int k = IntegerValuation(d, P.q);
@@ -454,7 +451,7 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   PolyZ<Tint> z = PolyZReduce(PolyZMul(LocalEps(P, k + 1), y), P.K.Phi, Q);
   T_small_prime q_u = static_cast<T_small_prime>(P.q);
   T_residue inv = ResInv(ResModOf(QuoInt(d, qk), q_u), q_u);
-  PolyQ res;
+  std::vector<T_residue> res;
   for (auto const &c : z) {
     if (ResInt(c, qk) != 0) {
       std::cerr << "ABQUAD: the residue of a non integral element\n";
@@ -462,13 +459,7 @@ inline PolyQ LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
     }
     res.push_back(ResMul(ResModOf(QuoInt(c, qk), q_u), inv, q_u));
   }
-  PolyTrim(res);
-  if (res.empty()) {
-    return {};
-  }
-  PolyQ r = PolyDivModQ(res, P.g, P.q).second;
-  PolyTrim(r);
-  return r;
+  return FqFromPoly(P.F, PolyQ(q_u, std::move(res)));
 }
 
 // x pi^{-k}
@@ -532,7 +523,7 @@ inline bool DedekindRegularAt(std::vector<int64_t> const &f,
     }
   }
   Tint qz = UniversalScalarConversion<Tint, int64_t>(q);
-  PolyQ Fq;
+  std::vector<T_residue> Fc;
   for (size_t k = 0; k < f.size(); k++) {
     Tint c = UniversalScalarConversion<Tint, int64_t>(f[k]);
     if (k < prod.size()) {
@@ -544,15 +535,14 @@ inline bool DedekindRegularAt(std::vector<int64_t> const &f,
     if (r < 0) {
       r += qz;
     }
-    Fq.push_back(UniversalScalarConversion<int64_t, Tint>(r));
+    Fc.push_back(
+        static_cast<T_residue>(UniversalScalarConversion<int64_t, Tint>(r)));
   }
-  PolyTrim(Fq);
-  if (Fq.empty()) {
+  PolyQ Fq(g.q, std::move(Fc));
+  if (Fq.is_zero()) {
     return false;
   }
-  PolyQ rem = PolyDivModQ(Fq, g, q).second;
-  PolyTrim(rem);
-  return !rem.empty();
+  return !(Fq % g).is_zero();
 }
 
 /*
@@ -649,7 +639,7 @@ PrimeLocalGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega
     }
     LocalGenerator<T> lg{S, f, conj};
     std::vector<std::pair<PolyQ, int>> fac =
-        FactorModQWithMultiplicity(PolyReduceSigned(f, q), q);
+        FactorModQWithMultiplicity(PolyReduceSigned(f, q));
     for (auto const &[g, mult] : fac) {
       if (mult != e_ram || static_cast<int>(g.size()) - 1 != f_res ||
           !DedekindRegularAt<Tint>(f, fac, g, mult, q)) {

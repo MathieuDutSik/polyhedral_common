@@ -226,7 +226,7 @@ inline FiniteField OrderResidueField(int64_t ell, int f, int64_t s,
   if (f == 1) {
     return MakePrimeField(p);
   }
-  return MakeFiniteField(p, PolyQ{res(n), res(-s), 1});
+  return MakeFiniteField(p, PolyQ(p, {res(n), res(-s), 1}));
 }
 
 // The rank mod ell of the rows of M.

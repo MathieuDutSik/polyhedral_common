@@ -396,7 +396,7 @@ ProjectivePointFqOfIndex(FiniteField const &F, int m, size_t idx) {
     idx -= block[i];
   }
   std::vector<FqElt> x(m);
-  x[lead] = FqOne();
+  x[lead] = FqOne(F);
   for (int j = m - 1; j > lead; j--) {
     x[j] = FqDecode(F, idx % q);
     idx /= q;
@@ -408,7 +408,7 @@ inline size_t IndexOfProjectivePointFq(FiniteField const &F, int m,
                                        std::vector<FqElt> x) {
   size_t q = static_cast<size_t>(F.q);
   int lead = 0;
-  while (lead < m && FqIsZero(x[lead])) {
+  while (lead < m && x[lead].is_zero()) {
     lead++;
   }
   FqElt inv = FqInv(F, x[lead]);

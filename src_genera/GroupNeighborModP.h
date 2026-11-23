@@ -159,12 +159,12 @@ inline PolyQ ModMinimalPolynomial(ModMatrix const &X, T_small_prime p) {
       std::optional<ModVector> sol = SolveRowsModP(flat, v, p);
       if (sol) {
         // X^d = sum_i sol_i X^i
-        PolyQ mu(d + 1, 0);
+        std::vector<T_residue> mu(d + 1, 0);
         for (int i = 0; i < d; i++) {
           mu[i] = ResNeg((*sol)[i], p);
         }
         mu[d] = 1;
-        return mu;
+        return PolyQ(p, std::move(mu));
       }
     }
     AppendModRow(flat, v);
@@ -233,7 +233,7 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
     size_t d = End.size();
     int k = S.basis.rows();
     if (d == 1) {
-      return {sm, {ModMatrixIdentity(k), PolyQ{p - 1, 1}}};
+      return {sm, {ModMatrixIdentity(k), PolyQ(p, {p - 1, 1})}};
     }
     // a random element of End_G(S)
     ModMatrix x = ZeroMatrix<T_residue>(k, k);
@@ -246,7 +246,7 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
       }
     }
     PolyQ mu = ModMinimalPolynomial(x, p);
-    bool irr = IsIrreducibleModP(mu, p);
+    bool irr = IsIrreducibleModP(mu);
     if (irr && mu.size() - 1 == d) {
       return {sm, {x, mu}};
     }
@@ -255,39 +255,36 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
       continue;
     }
     // a proper factor h of mu: ker h(x) is a proper G-submodule
-    PolyQ xpol{0, 1};
-    PolyQ h;
+    PolyQ xpol = PolyQ::X(p);
+    PolyQ h(p);
     for (size_t e = 1; e <= mu.size() - 1; e++) {
       PolyQ y = xpol;
       for (size_t i = 0; i < e; i++) {
-        y = PolyPowModQ(y, p, mu, p);
+        y = PolyPowModQ(y, p, mu);
       }
-      PolyQ g = PolyGcdQ(PolySubQ(y, xpol, p), mu, p);
-      PolyTrim(g);
+      PolyQ g = PolyGcdQ(y - xpol, mu);
       if (g.size() > 1 && g.size() < mu.size()) {
-        h = PolyMonicQ(g, p);
+        h = PolyMonicQ(g);
         break;
       }
     }
-    if (h.empty()) {
+    if (h.is_zero()) {
       // mu squarefree with all its factors of one degree e, or mu = g^e:
       // the equal degree splitting of gcd(x^{p^e} - x, mu)
-      for (size_t e = 1; e < mu.size() && h.empty(); e++) {
+      for (size_t e = 1; e < mu.size() && h.is_zero(); e++) {
         PolyQ y = xpol;
         for (size_t i = 0; i < e; i++) {
-          y = PolyPowModQ(y, p, mu, p);
+          y = PolyPowModQ(y, p, mu);
         }
-        PolyQ g = PolyGcdQ(PolySubQ(y, xpol, p), mu, p);
-        PolyTrim(g);
+        PolyQ g = PolyGcdQ(y - xpol, mu);
         if (g.size() > 1) {
           std::vector<PolyQ> fac =
-              EqualDegreeFactorization(PolyMonicQ(g, p), static_cast<int>(e),
-                                       p);
+              EqualDegreeFactorization(PolyMonicQ(g), static_cast<int>(e));
           h = fac[0];
         }
       }
     }
-    if (h.empty()) {
+    if (h.is_zero()) {
       continue;
     }
     ModMatrix hx = PolyOfMatrix(h, x, p);
@@ -481,6 +478,7 @@ ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
                    FlattenModMatrix(ModMatrixProduct(theta_pow[a], tp.Phi[j], p)));
     }
   }
+  FiniteField F = MakeFiniteField(p, tp.mu);
   std::vector<std::vector<FqElt>> c(m, std::vector<FqElt>(m));
   for (size_t i = 0; i < m; i++) {
     std::optional<ModVector> sol = SolveRowsModP(
@@ -490,9 +488,11 @@ ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
       throw TerminalException{1};
     }
     for (size_t j = 0; j < m; j++) {
-      // the trimmed element of F_q (FiniteField.h)
-      c[i][j] = FqElt(sol->begin() + j * tp.f, sol->begin() + (j + 1) * tp.f);
-      PolyTrim(c[i][j]);
+      std::vector<T_residue> cf(tp.f);
+      for (int a = 0; a < tp.f; a++) {
+        cf[a] = (*sol)[j * tp.f + a];
+      }
+      c[i][j] = FqFromCoeffs(F, cf);
     }
   }
   return c;
@@ -505,7 +505,7 @@ ApplyActionOnHom(FiniteField const &F,
   size_t m = alpha.size();
   std::vector<FqElt> beta(m);
   for (size_t i = 0; i < m; i++) {
-    if (!FqIsZero(alpha[i])) {
+    if (!alpha[i].is_zero()) {
       for (size_t j = 0; j < m; j++) {
         beta[j] = FqAdd(F, beta[j], FqMul(F, alpha[i], c[i][j]));
       }

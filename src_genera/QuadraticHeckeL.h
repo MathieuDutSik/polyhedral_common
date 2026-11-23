@@ -426,16 +426,17 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
     if (bad.count(p) == 0 && p > 2 * n) {
       lp = GP.local(p);
     } else if (bad.count(p) == 0) {
-      PolyQ fq = PolyReduceSigned(K.Phi, p);
-      PolyQ dq;
+      T_small_prime p_u = static_cast<T_small_prime>(p);
+      PolyQ fq = PolyReduceSigned(K.Phi, p_u);
+      std::vector<int64_t> dc;
       for (auto const &c : dint) {
         Tint r = ResInt(c, UniversalScalarConversion<Tint, int64_t>(p));
-        dq.push_back(UniversalScalarConversion<int64_t, Tint>(r));
+        dc.push_back(UniversalScalarConversion<int64_t, Tint>(r));
       }
-      for (auto const &[g, e] : FactorModQWithMultiplicity(fq, p)) {
-        PolyQ r = PolyDivModQ(PolyReduce(dq, p), g, p).second;
-        PolyTrim(r);
-        int chi = ResidueQuadraticCharacter(r, g, p);
+      PolyQ dq = PolyReduceSigned(dc, p_u);
+      for (auto const &[g, e] : FactorModQWithMultiplicity(fq)) {
+        FiniteField F = MakeFiniteField(p_u, g);
+        int chi = FqQuadraticCharacter(F, FqFromPoly(F, dq));
         lp.push_back({static_cast<int>(g.size()) - 1, chi, 0});
         (void)e;
       }
@@ -467,7 +468,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
       if (lg) {
         ElemE<T> dp = disc_of(*lg, LocalOKGram(B, *lg, p));
         for (auto const &[g, e] :
-             FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p), p)) {
+             FactorModQWithMultiplicity(PolyReduceSigned(lg->f, p))) {
           bps.push_back({*lg, g, e, dp});
         }
       } else {
@@ -499,10 +500,10 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
             hp.chi = 0;
             hp.cond_exp = 1;
           } else {
-            hp.chi = ResidueQuadraticCharacter(LocalResidue(u, P), g, p);
+            hp.chi = FqQuadraticCharacter(P.F, LocalResidue(u, P));
           }
         } else {
-          FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
+          FiniteField const &F = P.F;
           if (v % 2 != 0) {
             hp.chi = 0;
             hp.cond_exp = 2 * e + 1;

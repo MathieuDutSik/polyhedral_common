@@ -185,11 +185,11 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
   ElemE<T> pinv = EInv(pipibar, K);
   // the square class of a P-unit in the residue field F_q[x] / g
   auto is_square = [&](ElemE<T> const &u) -> int {
-    PolyQ ur = LocalResidue(u, *alg.P);
-    if (ur.empty()) {
+    FqElt ur = LocalResidue(u, *alg.P);
+    if (ur.is_zero()) {
       return 0;
     }
-    return ResidueQuadraticCharacter(ur, ap.g, q);
+    return FqQuadraticCharacter(alg.P->F, ur);
   };
   for (auto &kv : blocks) {
     int s = kv.first;
@@ -752,19 +752,19 @@ PrimeIdempotentsByRefinement(MyMatrix<T> const &B,
         continue;
       }
       PolyQ fq = PolyReduceSigned(f, q);
-      std::vector<std::pair<PolyQ, int>> fac = FactorModQWithMultiplicity(fq, q);
+      std::vector<std::pair<PolyQ, int>> fac = FactorModQWithMultiplicity(fq);
       if (fac.size() <= 1) {
         continue;
       }
       std::vector<MyMatrix<T>> next;
       for (auto const &eps : idem) {
         for (auto const &[g, mult] : fac) {
-          PolyQ P = {1};
+          PolyQ P(g.q, {1});
           for (int k = 0; k < mult; k++) {
-            P = PolyMulQ(P, g, q);
+            P = P * g;
           }
-          PolyQ Qp = PolyDivModQ(fq, P, q).first;
-          PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
+          PolyQ Qp = fq / P;
+          PolyQ e0 = Qp * PolyInverseModQ(Qp, P);
           MyMatrix<T> Eg = lift_idempotent(
               reduce_mod(PolyOfMatrixQ(e0, S), Q));
           MyMatrix<T> prod = reduce_mod(MyMatrix<T>(eps * Eg), Q);

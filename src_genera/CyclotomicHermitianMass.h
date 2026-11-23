@@ -265,8 +265,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
   std::vector<int64_t> PhiDp = CyclotomicPolynomial(static_cast<int>(dp));
   PolyQ phid_q = PolyReduceSigned(PhiD, q);
   std::vector<PolyQ> gs =
-      EqualDegreeFactorization(PolyReduceSigned(PhiDp, q),
-                               f, q);
+      EqualDegreeFactorization(PolyReduceSigned(PhiDp, q), f);
   // the precision: beyond the exponent of the discriminant group at q
   int vdet = RationalValuation(DeterminantMat(B), q);
   int N = vdet + 4;
@@ -285,13 +284,13 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     Pi = Id - Sd;
   }
   auto idempotent_matrix = [&](PolyQ const &g) -> MyMatrix<T> {
-    PolyQ P = {1};
+    PolyQ P(g.q, {1});
     for (int64_t i = 0; i < e_ram; i++) {
-      P = PolyMulQ(P, g, q);
+      P = P * g;
     }
-    PolyQ Qp = PolyDivModQ(phid_q, P, q).first;
+    PolyQ Qp = phid_q / P;
     // e = Qp * (Qp^{-1} mod P): 1 modulo P, 0 modulo Qp
-    PolyQ e0 = PolyMulQ(Qp, PolyInverseModQ(Qp, P, q), q);
+    PolyQ e0 = Qp * PolyInverseModQ(Qp, P);
     PolyZ<Tint> ez = PolyZOfPolyQ<Tint>(e0);
     ez = PolyZReduce(ez, PhiD, Q);
     for (int it = 0; it < 64; it++) {
@@ -321,7 +320,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     if (done[i]) {
       continue;
     }
-    PolyQ gr = ReciprocalPolyQ(gs[i], q);
+    PolyQ gr = ReciprocalPolyQ(gs[i]);
     size_t j = i;
     for (size_t u = 0; u < gs.size(); u++) {
       if (gs[u] == gr) {
