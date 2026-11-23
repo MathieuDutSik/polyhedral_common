@@ -7,6 +7,7 @@
 #include "NumberField.h"
 #include "AbelianField.h"
 #include "PrimeDecomposition.h"
+#include "LocalJordan.h"
 #include "ClassicalGroupOrders.h"
 #include "PolynomialModQ.h"
 #include "GeneraArithmetic.h"
@@ -539,97 +540,6 @@ ComputeHermitianLocalGram(MyMatrix<T> const &B,
 }
 
 /*
-  The Jordan splitting of a Hermitian form over E at the ramified prime P
-  over q: a block of rank one when an entry of minimal valuation is on the
-  diagonal, of rank two otherwise, the elimination coefficients being
-  integral at P. Returns the blocks by scale (their v_P).
- */
-template <typename T> using SmallGram = std::vector<std::vector<ElemE<T>>>;
-
-template <typename T>
-inline ElemE<T> HermitianSmallDet(SmallGram<T> const &G, NumberField<T> const &K) {
-  if (G.size() == 1) {
-    return G[0][0];
-  }
-  return ESub(EMul(G[0][0], G[1][1], K), EMul(G[0][1], G[1][0], K));
-}
-
-template <typename T>
-inline std::map<int, std::vector<SmallGram<T>>>
-HermitianJordanSplit(std::vector<std::vector<ElemE<T>>> H,
-                     NumberField<T> const &K, PrimeValuation<T> const &vP) {
-  std::map<int, std::vector<SmallGram<T>>> blocks;
-  while (!H.empty()) {
-    int n = static_cast<int>(H.size());
-    int vmin = 1 << 28, bi = -1, bj = -1;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        int v = PrimeVal(H[i][j], K, vP);
-        if (v < vmin || (v == vmin && i == j && bi != bj)) {
-          vmin = v;
-          bi = i;
-          bj = j;
-        }
-      }
-    }
-    if (bi == bj) {
-      ElemE<T> hinv = EInv(H[bi][bi], K);
-      for (int k = 0; k < n; k++) {
-        if (k == bi) {
-          continue;
-        }
-        ElemE<T> c = EMul(H[k][bi], hinv, K);
-        ElemE<T> cc = EConj(c, K);
-        for (int l = 0; l < n; l++) {
-          H[k][l] = ESub(H[k][l], EMul(c, H[bi][l], K));
-        }
-        for (int l = 0; l < n; l++) {
-          H[l][k] = ESub(H[l][k], EMul(H[l][bi], cc, K));
-        }
-      }
-      blocks[vmin].push_back({{H[bi][bi]}});
-      H.erase(H.begin() + bi);
-      for (auto &row : H) {
-        row.erase(row.begin() + bi);
-      }
-    } else {
-      int i0 = bi, j0 = bj;
-      ElemE<T> a11 = H[i0][i0], a12 = H[i0][j0], a21 = H[j0][i0], a22 = H[j0][j0];
-      ElemE<T> det2 = ESub(EMul(a11, a22, K), EMul(a12, a21, K));
-      ElemE<T> dinv = EInv(det2, K);
-      // the inverse of the 2x2 block: [[a22, -a12], [-a21, a11]] / det2
-      for (int k = 0; k < n; k++) {
-        if (k == i0 || k == j0) {
-          continue;
-        }
-        // (c1, c2) = (H[k][i0], H[k][j0]) * block^{-1}
-        ElemE<T> x1 = H[k][i0], x2 = H[k][j0];
-        ElemE<T> c1 = EMul(ESub(EMul(x1, a22, K), EMul(x2, a21, K)), dinv, K);
-        ElemE<T> c2 = EMul(ESub(EMul(x2, a11, K), EMul(x1, a12, K)), dinv, K);
-        ElemE<T> cc1 = EConj(c1, K), cc2 = EConj(c2, K);
-        for (int l = 0; l < n; l++) {
-          H[k][l] = ESub(ESub(H[k][l], EMul(c1, H[i0][l], K)),
-                         EMul(c2, H[j0][l], K));
-        }
-        for (int l = 0; l < n; l++) {
-          H[l][k] = ESub(ESub(H[l][k], EMul(H[l][i0], cc1, K)),
-                         EMul(H[l][j0], cc2, K));
-        }
-      }
-      blocks[vmin].push_back({{a11, a12}, {a21, a22}});
-      int hi = std::max(i0, j0), lo = std::min(i0, j0);
-      H.erase(H.begin() + hi);
-      H.erase(H.begin() + lo);
-      for (auto &row : H) {
-        row.erase(row.begin() + hi);
-        row.erase(row.begin() + lo);
-      }
-    }
-  }
-  return blocks;
-}
-
-/*
   The dyadic ramified prime, d = 2^a with a >= 2, following the local
   factor of Hecke.jl there (QuadForm/Herm/Mass.jl): the factor of a maximal
   lattice when L is maximal integral at P, and otherwise the generic
@@ -849,21 +759,22 @@ template <typename T> struct KirschmerSymbolEntry {
 template <typename T>
 inline std::vector<KirschmerSymbolEntry<T>>
 KirschmerSymbol(std::vector<std::vector<ElemE<T>>> const &H, DyadicContext<T> const &C) {
-  std::map<int, std::vector<SmallGram<T>>> blocks = HermitianJordanSplit(H, C.K, C.v);
+  std::vector<LocalJordanComponent<T>> comps =
+      LocalJordanSplit(H, C.K, C.v, JordanForm::Hermitian, nullptr);
   std::vector<int> scales;
   std::vector<int> nvals;
   std::vector<int> ranks;
   std::vector<ElemE<T>> dets;
-  for (auto &kv : blocks) {
+  for (auto const &comp : comps) {
     int nv = 1 << 28;
     int rk = 0;
     ElemE<T> det = C.one;
-    for (auto &G : kv.second) {
+    for (auto &G : comp.pieces) {
       nv = std::min(nv, DyadicNormVal(G, C));
       rk += static_cast<int>(G.size());
-      det = EMul(det, HermitianSmallDet(G, C.K), C.K);
+      det = EMul(det, JordanPieceDet(G, C.K), C.K);
     }
-    scales.push_back(kv.first);
+    scales.push_back(comp.s);
     nvals.push_back(nv);
     ranks.push_back(rk);
     dets.push_back(det);
@@ -1045,14 +956,9 @@ HermitianLocalFactorRamified(MyMatrix<T> const &B,
   // the prime of E over q is alone (1 - zeta for q | d), its valuation
   // counted in the norm
   PrimeValuation<T> vP{q, 1, nullptr};
-  for (auto &kv : HermitianJordanSplit(H, K, vP)) {
-    int rk = 0;
-    ElemE<T> det = EZetaPower(0, K);
-    for (auto &G : kv.second) {
-      rk += static_cast<int>(G.size());
-      det = EMul(det, HermitianSmallDet(G, K), K);
-    }
-    blocks[kv.first] = {rk, det};
+  for (auto const &comp :
+       LocalJordanSplit(H, K, vP, JordanForm::Hermitian, nullptr)) {
+    blocks[comp.s] = {comp.rank(), LocalComponentDet(comp, K)};
   }
   // the local factor of Hecke.jl at a ramified non-dyadic prime
   T qT = UniversalScalarConversion<T, int64_t>(q);

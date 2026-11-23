@@ -7,6 +7,7 @@
 #include "NumberField.h"
 #include "AbelianField.h"
 #include "LocalGramOverOK.h"
+#include "LocalJordan.h"
 #include "FiniteField.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
@@ -168,151 +169,6 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
   return (N >= 0) ? T(qpow * f) : T(f / qpow);
 }
 
-/*
-  The Jordan decomposition of Hecke (jordan_decomposition of Lattices.jl)
-  on a Gram matrix over K at p: pieces of rank one, or of rank two at a
-  dyadic prime when an off-diagonal entry has a smaller valuation than the
-  diagonal ones (normalized to pi^v); consecutive pieces of the same scale
-  make a component. The components keep their pieces, along which their
-  Gram matrices are block diagonal.
- */
-template <typename T> struct LocalJordanComponent {
-  int s;
-  std::vector<std::vector<std::vector<ElemE<T>>>> pieces;
-  int rank() const {
-    int r = 0;
-    for (auto const &G : pieces) {
-      r += static_cast<int>(G.size());
-    }
-    return r;
-  }
-};
-
-template <typename T>
-inline std::vector<LocalJordanComponent<T>>
-LocalJordanDecomposition(std::vector<std::vector<ElemE<T>>> G, LocalPrimeK<T> &P) {
-  NumberField<T> const &K = P.K;
-  bool even = (P.q == 2);
-  int n = static_cast<int>(G.size());
-  auto swap_idx = [&](int a, int b) {
-    if (a == b) {
-      return;
-    }
-    std::swap(G[a], G[b]);
-    for (auto &row : G) {
-      std::swap(row[a], row[b]);
-    }
-  };
-  // x_l <- x_l + c x_k
-  auto add_mult = [&](int l, int k, ElemE<T> const &c) {
-    for (int u = 0; u < n; u++) {
-      G[l][u] = EAddE(G[l][u], EMul(c, G[k][u], K));
-    }
-    for (int u = 0; u < n; u++) {
-      G[u][l] = EAddE(G[u][l], EMul(G[u][k], c, K));
-    }
-  };
-  auto scale_idx = [&](int k, ElemE<T> const &c) {
-    for (int u = 0; u < n; u++) {
-      G[k][u] = EMul(c, G[k][u], K);
-    }
-    for (int u = 0; u < n; u++) {
-      G[u][k] = EMul(G[u][k], c, K);
-    }
-  };
-  std::vector<LocalJordanComponent<T>> res;
-  int oldval = 1 << 29;
-  int k = 0;
-  while (k < n) {
-    int mval = 1 << 28, p1 = -1, p2 = -1;
-    for (int i = k; i < n; i++) {
-      int v = LocalVal(G[i][i], P);
-      if (v < mval) {
-        mval = v;
-        p1 = i;
-        p2 = i;
-      }
-    }
-    for (int i = k; i < n; i++) {
-      for (int j = i + 1; j < n; j++) {
-        int v = LocalVal(G[i][j], P);
-        if (v < mval) {
-          mval = v;
-          p1 = i;
-          p2 = j;
-        }
-      }
-    }
-    if (p1 < 0) {
-      std::cerr << "ABQUAD: degenerate Gram matrix\n";
-      throw TerminalException{1};
-    }
-    if (mval != oldval) {
-      res.push_back({mval, {}});
-      oldval = mval;
-    }
-    if (even && p1 != p2) {
-      swap_idx(p1, k);
-      swap_idx(p2 == k ? p1 : p2, k + 1);
-      // x_k <- pi^v / T12 x_k
-      ElemE<T> T12 = G[k][k + 1];
-      int v12 = LocalVal(T12, P);
-      ElemE<T> c = EInv(T12, K);
-      for (int i = 0; i < v12; i++) {
-        c = EMul(c, P.pi, K);
-      }
-      ElemE<T> pinv = EInv(P.pi, K);
-      for (int i = 0; i < -v12; i++) {
-        c = EMul(c, pinv, K);
-      }
-      scale_idx(k, c);
-      ElemE<T> T11 = G[k][k], T22 = G[k + 1][k + 1];
-      T12 = G[k][k + 1];
-      ElemE<T> d = ESub(EMul(T11, T22, K), EMul(T12, T12, K));
-      ElemE<T> dinv = EInv(d, K);
-      for (int l = k + 2; l < n; l++) {
-        ElemE<T> tl = ESub(EMul(T12, G[k + 1][l], K), EMul(T22, G[k][l], K));
-        ElemE<T> ul = ESub(EMul(T12, G[k][l], K), EMul(T11, G[k + 1][l], K));
-        ElemE<T> c1 = EMul(tl, dinv, K), c2 = EMul(ul, dinv, K);
-        add_mult(l, k, c1);
-        add_mult(l, k + 1, c2);
-      }
-      res.back().pieces.push_back(
-          {{G[k][k], G[k][k + 1]}, {G[k + 1][k], G[k + 1][k + 1]}});
-      k += 2;
-    } else {
-      if (p1 != p2) {
-        add_mult(p1, p2, EZetaPower(0, K));
-      }
-      swap_idx(p1, k);
-      ElemE<T> nrm = G[k][k];
-      ElemE<T> ninv = EInv(nrm, K);
-      for (int l = k + 1; l < n; l++) {
-        ElemE<T> c = EScal(EMul(G[k][l], ninv, K), T(-1));
-        add_mult(l, k, c);
-      }
-      res.back().pieces.push_back({{G[k][k]}});
-      k += 1;
-    }
-  }
-  return res;
-}
-
-template <typename T>
-inline ElemE<T> LocalComponentDet(LocalJordanComponent<T> const &C,
-                               NumberField<T> const &K) {
-  ElemE<T> det = EZetaPower(0, K);
-  for (auto const &G : C.pieces) {
-    if (G.size() == 1) {
-      det = EMul(det, G[0][0], K);
-    } else {
-      det = EMul(det, ESub(EMul(G[0][0], G[1][1], K), EMul(G[0][1], G[1][0], K)),
-                 K);
-    }
-  }
-  return det;
-}
-
 // The square class (1 or -1) in F_q[x] / g of a residue, q odd.
 template <typename T>
 inline int ResidueSquareClass(PolyQ const &u, LocalPrimeK<T> const &P) {
@@ -328,7 +184,8 @@ template <typename T>
 inline T LocalFactorOddGram(std::vector<std::vector<ElemE<T>>> const &H,
                                     LocalPrimeK<T> &P) {
   std::vector<QuadJordanBlock> blocks;
-  for (auto const &C : LocalJordanDecomposition(H, P)) {
+  for (auto const &C : LocalJordanSplit(H, P.K, PrimeValuation<T>{P.q, 1, &P},
+                                     JordanForm::Quadratic, &P.pi)) {
     int mi = C.rank();
     int chi = 1;
     if ((C.s * mi) % 2 == 0) {
@@ -535,7 +392,8 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
   NumberField<T> const &K = P.K;
   FiniteField F = MakeFiniteField(static_cast<T_small_prime>(P.q), P.g);
   T q = UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf);
-  std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(H, P);
+  std::vector<LocalJordanComponent<T>> comps = LocalJordanSplit(H, P.K, PrimeValuation<T>{P.q, 1, &P},
+                                     JordanForm::Quadratic, &P.pi);
   int m = static_cast<int>(H.size());
   size_t nc = comps.size();
   std::vector<int> S(nc), M(nc);
@@ -1053,7 +911,8 @@ template <typename T>
 inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
                                              FiniteField const &F) {
   NumberField<T> const &K = P.K;
-  std::vector<LocalJordanComponent<T>> comps = LocalJordanDecomposition(G, P);
+  std::vector<LocalJordanComponent<T>> comps = LocalJordanSplit(G, P.K, PrimeValuation<T>{P.q, 1, &P},
+                                     JordanForm::Quadratic, &P.pi);
   QuadKirschmerSymbol<T> S;
   int t = static_cast<int>(comps.size());
   int e = P.e;

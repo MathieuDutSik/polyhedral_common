@@ -484,7 +484,8 @@ inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
 template <typename T> struct PrimeValuation {
   int64_t q;
   int div = 1;
-  std::shared_ptr<LocalPrimeK<T>> local;
+  // not owned, kept alive by the caller
+  LocalPrimeK<T> *local = nullptr;
 };
 
 template <typename T>

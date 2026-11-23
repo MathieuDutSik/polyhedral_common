@@ -163,7 +163,7 @@ inline AbelianLocalGram<T> AbelianLocalHermitianGram(MyMatrix<T> const &B,
   std::shared_ptr<LocalPrimeK<T>> P =
       std::make_shared<LocalPrimeK<T>>(MakeLocalPrimeK(lg, ap.g, ap.e, q));
   NumberField<T> K = P->K;
-  PrimeValuation<T> v{q, static_cast<int>(ap.g.size()) - 1, P};
+  PrimeValuation<T> v{q, static_cast<int>(ap.g.size()) - 1, P.get()};
   std::vector<std::vector<ElemE<T>>> H = LocalOKGram(B, lg, q);
   int m = static_cast<int>(H.size());
   return {K, v, m, H, P};
@@ -178,14 +178,9 @@ inline T AbelianLocalFactorRamified(MyMatrix<T> const &B,
   int m = alg.m;
   std::vector<std::vector<ElemE<T>>> const &H = alg.H;
   std::map<int, std::pair<int, ElemE<T>>> blocks;
-  for (auto &kv : HermitianJordanSplit(H, K, alg.v)) {
-    int rk = 0;
-    ElemE<T> det = EZetaPower(0, K);
-    for (auto &G : kv.second) {
-      rk += static_cast<int>(G.size());
-      det = EMul(det, HermitianSmallDet(G, K), K);
-    }
-    blocks[kv.first] = {rk, det};
+  for (auto const &comp :
+       LocalJordanSplit(H, K, alg.v, JordanForm::Hermitian, nullptr)) {
+    blocks[comp.s] = {comp.rank(), LocalComponentDet(comp, K)};
   }
   T qK = MyPow<T>(UniversalScalarConversion<T, int64_t>(q), ap.f_K);
   T fac = HeckeGroupOrderSp<T>(2 * (m / 2), qK);
@@ -434,19 +429,20 @@ template <typename T>
 inline std::vector<GDSymbolEntry<T>>
 GDKirschmerSymbol(std::vector<std::vector<ElemE<T>>> const &H,
                   GenericDyadic<T> const &C) {
-  std::map<int, std::vector<SmallGram<T>>> blocks = HermitianJordanSplit(H, C.K, C.v);
+  std::vector<LocalJordanComponent<T>> comps =
+      LocalJordanSplit(H, C.K, C.v, JordanForm::Hermitian, nullptr);
   std::vector<int> scales, nvals, ranks;
   std::vector<ElemE<T>> dets;
-  for (auto &kv : blocks) {
+  for (auto const &comp : comps) {
     int nv = 1 << 28;
     int rk = 0;
     ElemE<T> det = C.one;
-    for (auto &G : kv.second) {
+    for (auto &G : comp.pieces) {
       nv = std::min(nv, GDNormVal(G, C));
       rk += static_cast<int>(G.size());
-      det = EMul(det, HermitianSmallDet(G, C.K), C.K);
+      det = EMul(det, JordanPieceDet(G, C.K), C.K);
     }
-    scales.push_back(kv.first);
+    scales.push_back(comp.s);
     nvals.push_back(nv);
     ranks.push_back(rk);
     dets.push_back(det);
