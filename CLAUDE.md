@@ -193,6 +193,33 @@ The repo has accumulated a substantial library of helpers across `basic_common_c
 
 If a near-fit exists but isn't quite right, prefer extending or templatizing it over duplicating its body. Two copies of the same logic in different files is a bug — when the original is updated, the copy rots silently.
 
+## Tests live in the CI and in the code, not in `Test_` programs
+
+There are no test programs (`Test_*.cpp`) next to the library code. A test
+is one of three things:
+
+1. **A check inside the code**, under `#ifdef SANITY_CHECK_<CONTEXT>` (or
+   `SANITY_CHECK_<CONTEXT>_EXTENSIVE` when it is costly, such as computing
+   the same object by a second method and comparing), following the rules
+   of that section: silent while the invariant holds, a message and a
+   `TerminalException` when it does not. A unit test of a function becomes
+   such a check in the function itself, run on the inputs the real
+   programs give it.
+2. **A mode of a regular program** for a computation that only tests need
+   (counting the genera of a range of determinants to compare with
+   SageMath, a mass computed in several arithmetics, a comparison with
+   files of another system). The mode must be general: it takes its cases
+   from its input, never from a list written in the code.
+3. **The CI**, which is the place of the tests: the cases and the expected
+   values are input files of the CI directory (`CI_tests/15B_GenusEnumeration`
+   for `src_genera`), and the workflow runs the regular programs on them,
+   including a build with the `SANITY_CHECK_` macros of the area defined so
+   that the checks of item 1 run.
+
+Nothing specific to a test case is written in the code: no hard-coded list
+of polynomials, lattices, primes or expected values in a `.cpp` or a header.
+Such data goes into the CI inputs.
+
 ## CI is calendar-scheduled, one workflow per day
 
 `.github/workflows/` follows a deliberately peculiar scheme that avoids saturating CI runners and keeps long-running test matrices spread out across the month. The rules:

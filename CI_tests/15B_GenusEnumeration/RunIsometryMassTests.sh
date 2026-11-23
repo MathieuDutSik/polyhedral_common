@@ -17,12 +17,18 @@
 # 1/6 or 1/4 (isom_herm_rank1.txt), glued to orthogonal ones.
 set -e
 BIN=../../src_genera/GENUS_IsometryMass
-# the Howell normal form of the orbits of the multiplicity factors, against
-# brute force on random subgroups
-../../src_genera/Test_HowellForm
-# the certified image generators against an independent listing of the
-# image, on random small lattices and on Q8 acting on D4 and on 2 Z^4
-../../src_genera/Test_LocalImage
+
+# The maximal orders (MaximalOrders.h) of the orders Z[x] / (f): the
+# discriminant of the field
+grep -v '^#' maximal_order_tests.txt | while read -r f disc; do
+    [ -z "$f" ] && continue
+    out=$($BIN maximalorder $f 2>/dev/null)
+    if [ "${out##* }" != "$disc" ]; then
+        echo "ERROR: the maximal order of Z[x] / ($f) gave '$out', expected $disc" >&2
+        exit 1
+    fi
+done
+echo "--- the maximal orders of $(grep -vc '^#' maximal_order_tests.txt) orders have the discriminants of their fields ---"
 
 mass_case() {
     lat=$1
@@ -327,26 +333,6 @@ quadmass_method_case double s13nabm2 13 4 99/4
 quadmass_method_case double z15pnabm2 15 1 1/2
 quadmass_method_case arb s13nabm2 13 4 99/4
 quadmass_method_case arb z15pnabm2 15 1 1/2
-# The Hermitian and quadratic masses over abelian fields are generic in the
-# rational type: the same masses with mpq_class, boost mpq_rational and,
-# when built with flint, fmpq_class.
-types_case() {
-    mode=$1
-    tag=$2
-    n=$3
-    H=$4
-    out=$(../../src_genera/Test_MassTypes $mode ${tag}_gram.txt ${tag}_omega.txt $n $H 2>/dev/null)
-    echo "--- the mass of $tag over the rational types: $(echo $out | tr '\n' ' ') ---"
-    if ! echo "$out" | grep -q "^agree$"; then
-        echo "ERROR: the rational types disagree on $tag" >&2
-        exit 1
-    fi
-}
-types_case herm hab_q7r3 7 1,2,4
-types_case herm hab_s17m2 136 9,19
-types_case quad quadm_z7pm2 7 1
-types_case quad quad_s2m4 8 7
-types_case quad quad_s17s41m3 697 2,21
 herm_case 47 1 mass 695/94
 herm_case 19 1 mass 1/38
 herm_case 16 1 mass 1/16

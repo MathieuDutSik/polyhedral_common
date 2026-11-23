@@ -60,6 +60,31 @@ template <typename T> std::vector<T> CyclotomicPolynomialCoeffs(int d) {
   for (int64_t c : CyclotomicPolynomial(d)) {
     res.push_back(UniversalScalarConversion<T, int64_t>(c));
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
+  // of degree phi(d), and prod_{e | d} Phi_e = x^d - 1
+  if (static_cast<int64_t>(res.size()) - 1 != EulerPhi(d)) {
+    std::cerr << "ISOM_FACTORS: Phi_" << d << " is not of degree phi(d)\n";
+    throw TerminalException{1};
+  }
+  std::vector<T> prod{T(1)};
+  for (int e = 1; e <= d; e++) {
+    if (d % e == 0) {
+      std::vector<T> phi_e;
+      for (int64_t c : CyclotomicPolynomial(e)) {
+        phi_e.push_back(UniversalScalarConversion<T, int64_t>(c));
+      }
+      prod = PolyProductCoeffs(prod, phi_e);
+    }
+  }
+  std::vector<T> target(d + 1, T(0));
+  target[0] = -1;
+  target[d] = 1;
+  if (prod != target) {
+    std::cerr << "ISOM_FACTORS: the Phi_e, e | " << d
+              << ", do not multiply to x^d - 1\n";
+    throw TerminalException{1};
+  }
+#endif
   return res;
 }
 
@@ -76,7 +101,36 @@ std::vector<Tint> SublatticeDeterminants(Tint const &d, Tint const &S) {
       dets.insert(s * e);
     }
   }
-  return std::vector<Tint>(dets.begin(), dets.end());
+  std::vector<Tint> res(dets.begin(), dets.end());
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS_EXTENSIVE
+  // against the definition, the D with s | D and D | d s for some s | S, by
+  // a search over D <= d S when it is small
+  if (d * S <= Tint(100000)) {
+    std::cerr << "ISOM_FACTORS: SANITY_CHECK_ISOMETRY_GLUE_FACTORS_EXTENSIVE, "
+                 "the determinants of the sublattices, d="
+              << d << " S=" << S << "\n";
+    std::vector<Tint> brute;
+    for (Tint D = 1; D <= d * S; D++) {
+      bool ok = false;
+      for (Tint s = 1; s <= S && !ok; s++) {
+        if (S % s == 0 && D % s == 0 && (d * s) % D == 0) {
+          ok = true;
+        }
+      }
+      if (ok) {
+        brute.push_back(D);
+      }
+    }
+    if (brute != res) {
+      std::cerr << "ISOM_FACTORS: the determinants of the sublattices differ "
+                   "from their definition\n";
+      throw TerminalException{1};
+    }
+    std::cerr << "ISOM_FACTORS: SANITY_CHECK_ISOMETRY_GLUE_FACTORS_EXTENSIVE, "
+                 "done\n";
+  }
+#endif
+  return res;
 }
 
 /*
@@ -1168,6 +1222,19 @@ template <typename T> MyMatrix<T> EvenSublatticeBasis(MyMatrix<T> const &A) {
       B(j, i0) = T(1);
     }
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
+  // of index 2, with even norms
+  MyMatrix<T> A0 = B * A * B.transpose();
+  bool even = (T_abs(DeterminantMat(B)) == 2);
+  for (int i = 0; even && i < n; i++) {
+    even = IsInteger(A0(i, i) / T(2));
+  }
+  if (!even) {
+    std::cerr << "ISOM_FACTORS: the even sublattice is not of index 2 with "
+                 "even norms\n";
+    throw TerminalException{1};
+  }
+#endif
   return B;
 }
 

@@ -123,7 +123,7 @@ herm_case A2x4 3 4 0 19/31104
 
 # The genera of even lattices of rank n and determinant d against
 # SageMath, for n <= 8 and d <= 64
-TSE=../../src_genera/Test_GenusSymbolEnumeration
+TSE=../../src_genera/GENUS_GenusSymbols
 ours=$(for n in 1 2 3 4 5 6 7 8; do $TSE count $n 1 64; done)
 if [ "$ours" != "$(grep -v '^#' genus_symbol_counts_sage.txt)" ]; then
     echo "ERROR: the numbers of genera differ from those of SageMath" >&2
@@ -139,8 +139,8 @@ echo "--- the numbers of odd genera of 512 (rank, determinant) agree with SageMa
 
 # The genera of hermitian lattices over Q(zeta_d) / Q(zeta_d)^+ against
 # hermitian_genera of Hecke.jl (HermitianGenusCounts.jl), d not a power of 2
-THG=../../src_genera/Test_HermitianGenus
-ours=$(grep -v '^#' hermitian_genus_counts_hecke.txt | while read -r d b N c; do $THG count $d $b $N; done)
+THP=../../src_genera/GENUS_HermitianPieces
+ours=$(grep -v '^#' hermitian_genus_counts_hecke.txt | while read -r d b N c; do $THP genera $d $b $N 2>/dev/null; done)
 theirs=$(grep -v '^#' hermitian_genus_counts_hecke.txt | awk '{print $1, $2, $3, $4}')
 if [ "$ours" != "$theirs" ]; then
     echo "ERROR: the numbers of hermitian genera differ from those of Hecke" >&2
@@ -148,16 +148,16 @@ if [ "$ours" != "$theirs" ]; then
 fi
 echo "--- the numbers of hermitian genera of $(echo "$theirs" | wc -l | tr -d ' ') cases agree with Hecke ---"
 # The primes of Q(zeta_d)^+ and their type in Q(zeta_d), from the Dirichlet
-# characters (AbelianField.h), against the explicit formulas
-if ! r=$($THG decomposition 2>&1 | tail -1) || [ "${r##*errors=}" != "0" ]; then
-    echo "ERROR: the prime decompositions differ: $r" >&2
+# characters (AbelianField.h), against the table of the explicit formulas
+if [ "$($THP primes 150 100 2>/dev/null)" != "$(grep -v '^#' hermitian_primes_150_100.txt)" ]; then
+    echo "ERROR: the prime decompositions differ from hermitian_primes_150_100.txt" >&2
     exit 1
 fi
-echo "--- the prime decompositions agree with the formulas ($r) ---"
+echo "--- the prime decompositions of $(grep -vc '^#' hermitian_primes_150_100.txt) cases agree with the formulas ---"
 
 # The pieces of GENUS_HermitianPieces (HermitianLattice.h, without Hecke)
 # against those of Hecke.jl: every genus of each file must be found
-THL=../../src_genera/Test_HermitianLattice
+THL=../../src_genera/GENUS_HermitianPieces
 n_cmp=0
 while read -r d b N f; do
     case "$d" in ''|'#'*) continue ;; esac

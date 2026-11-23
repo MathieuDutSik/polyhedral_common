@@ -109,7 +109,14 @@ inline FqElt FqInv(FiniteField const &F, FqElt const &a) {
     std::cerr << "FQ: the inverse of 0\n";
     throw TerminalException{1};
   }
-  return FqNormalize(F, PolyInverseModQ(a2, F.mu, F.p));
+  FqElt res = FqNormalize(F, PolyInverseModQ(a2, F.mu, F.p));
+#ifdef SANITY_CHECK_FINITE_FIELD
+  if (FqMul(F, a2, res) != FqOne()) {
+    std::cerr << "FQ: the inverse is wrong\n";
+    throw TerminalException{1};
+  }
+#endif
+  return res;
 }
 
 inline FqElt FqPow(FiniteField const &F, FqElt const &a, uint64_t e) {
@@ -171,7 +178,7 @@ inline FqElt FqDecode(FiniteField const &F, uint64_t c) {
 
 // The operations on the codes, without allocation for f <= 2 (mu = x^2 +
 // c_1 x + c_0, x^2 = -c_1 x - c_0).
-inline uint64_t FqCodeAdd(FiniteField const &F, uint64_t x, uint64_t y) {
+inline uint64_t FqCodeAddFast(FiniteField const &F, uint64_t x, uint64_t y) {
   if (F.f == 1) {
     return ResAdd(x, y, F.p);
   }
@@ -183,7 +190,7 @@ inline uint64_t FqCodeAdd(FiniteField const &F, uint64_t x, uint64_t y) {
   return FqEncode(F, FqAdd(F, FqDecode(F, x), FqDecode(F, y)));
 }
 
-inline uint64_t FqCodeMul(FiniteField const &F, uint64_t x, uint64_t y) {
+inline uint64_t FqCodeMulFast(FiniteField const &F, uint64_t x, uint64_t y) {
   if (F.f == 1) {
     return ResMul(x, y, F.p);
   }
@@ -199,7 +206,7 @@ inline uint64_t FqCodeMul(FiniteField const &F, uint64_t x, uint64_t y) {
   return FqEncode(F, FqMul(F, FqDecode(F, x), FqDecode(F, y)));
 }
 
-inline uint64_t FqCodeInv(FiniteField const &F, uint64_t x) {
+inline uint64_t FqCodeInvFast(FiniteField const &F, uint64_t x) {
   if (x == 0) {
     std::cerr << "FQ: the inverse of 0\n";
     throw TerminalException{1};
@@ -220,6 +227,43 @@ inline uint64_t FqCodeInv(FiniteField const &F, uint64_t x) {
     return ca + p * cb;
   }
   return FqEncode(F, FqInv(F, FqDecode(F, x)));
+}
+
+/*
+  The operations on the codes, checked against the operations on the
+  elements under SANITY_CHECK_FINITE_FIELD (the formulas of f <= 2).
+ */
+inline uint64_t FqCodeAdd(FiniteField const &F, uint64_t x, uint64_t y) {
+  uint64_t z = FqCodeAddFast(F, x, y);
+#ifdef SANITY_CHECK_FINITE_FIELD
+  if (z != FqEncode(F, FqAdd(F, FqDecode(F, x), FqDecode(F, y)))) {
+    std::cerr << "FQ: the sum of the codes is wrong\n";
+    throw TerminalException{1};
+  }
+#endif
+  return z;
+}
+
+inline uint64_t FqCodeMul(FiniteField const &F, uint64_t x, uint64_t y) {
+  uint64_t z = FqCodeMulFast(F, x, y);
+#ifdef SANITY_CHECK_FINITE_FIELD
+  if (z != FqEncode(F, FqMul(F, FqDecode(F, x), FqDecode(F, y)))) {
+    std::cerr << "FQ: the product of the codes is wrong\n";
+    throw TerminalException{1};
+  }
+#endif
+  return z;
+}
+
+inline uint64_t FqCodeInv(FiniteField const &F, uint64_t x) {
+  uint64_t z = FqCodeInvFast(F, x);
+#ifdef SANITY_CHECK_FINITE_FIELD
+  if (z != FqEncode(F, FqInv(F, FqDecode(F, x)))) {
+    std::cerr << "FQ: the inverse of the code is wrong\n";
+    throw TerminalException{1};
+  }
+#endif
+  return z;
 }
 
 /*

@@ -1,0 +1,18 @@
+# LAT sig mass: cases for the build with the SANITY_CHECK macros (RunSanityChecks.sh),
+# reaching the residue fields F_q (Phi_8^2, Phi_10^2, Phi_12^2), the hermitian pieces and
+# the glue (E8), the odd lattices (I4, A2I2) and the groups (S3, D8, Q8, SL(2,3))
+E8 10p2 1/600
+E8 12p2 1/288
+E8 15p1 1/30
+E8 1p1_2p1_3p1_8p1 1/48
+A2x4 8p2 5/96
+I4 1p1_2p1_3p1 1/12
+I4 1p1_2p3 1/24
+A2I2 1p2_2p2 13/48
+E8 gS3_0_2_3 1/72
+D4 gQ8_0_0_0_0_2 1/24
+D4 gSL23_0_0_0_2_0_0_0 1/24
+E6 gSL23_0_1_1_2_0_0_0 1/48
+E8 gD8_0_0_0_4_2 1/1536
+E8 gS3_1_1_3 1/12
+E8 gS3_1_3_2 1/36

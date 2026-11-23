@@ -258,12 +258,139 @@ void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
   WriteCheckGroups(os, groups, ScalarFromInt64<T>(n_cent));
 }
 
+// The integers of a comma separated list.
+inline std::vector<int64_t> ParseIntList(std::string const &lst) {
+  std::vector<int64_t> res;
+  std::stringstream ss(lst);
+  std::string tok;
+  while (std::getline(ss, tok, ',')) {
+    if (!tok.empty()) {
+      res.push_back(std::stoll(tok));
+    }
+  }
+  return res;
+}
+
+/*
+  The quadratic Hecke character chi_{E/K} of a quadratic lattice over a
+  totally real abelian field (QuadraticHeckeL.h): the field K, the
+  discriminant d, |D_K|, the norm of the conductor and the Dirichlet
+  coefficients a_1, ..., a_X of L(s, chi), and with prec_bits > 0 the
+  value L(1 - r, chi) for m = 2r (MPFR, and Arb when built with flint),
+  for a comparison with PARI.
+ */
+template <typename T>
+void PrintQuadHeckeL(std::string const &FileGram, std::string const &FileOmega,
+                     int64_t n, std::vector<int64_t> const &gens, int64_t X,
+                     int prec_bits) {
+  MyMatrix<T> B = ReadMatrixFile<T>(FileGram);
+  std::vector<MyMatrix<T>> Omega = ReadListMatrixFile<T>(FileOmega);
+  int m = B.rows() / static_cast<int>(Omega.size());
+  AbelianField FK = MakeAbelianRealField(n, gens);
+  std::optional<std::pair<NumberField<T>, ElemE<T>>> Kd =
+      QuadDiscriminantK(B, Omega);
+  if (!Kd) {
+    std::cout << "fail\n";
+    return;
+  }
+  auto f_none = [](int64_t, std::vector<QuadHeckePrime> const &) -> void {};
+  std::optional<QuadHeckeCharacter<T>> C = ComputeQuadHeckeCharacter(
+      B, Omega, FK, Kd->second, Kd->first, m, X, true, f_none);
+  if (!C) {
+    std::cout << "fail\n";
+    return;
+  }
+  std::cout << "f:";
+  for (auto const &c : Kd->first.Phi) {
+    std::cout << " " << c;
+  }
+  std::cout << "\nd:";
+  for (auto const &c : Kd->second) {
+    std::cout << " " << c;
+  }
+  std::cout << "\nDK: " << C->D_K << "\nNf: " << C->norm_conductor
+            << "\ndelta: " << C->delta << "\na:";
+  for (auto const &x : QuadHeckeCoefficients(*C, X)) {
+    std::cout << " " << x;
+  }
+  std::cout << "\n";
+  if (prec_bits > 0) {
+    std::optional<QuadHeckeLData<T>> Ld =
+        MakeQuadHeckeLData(B, Omega, FK, Kd->second, Kd->first, m);
+    std::optional<mpfr::mpreal> L = QuadHeckeLNegative(*Ld, prec_bits, false);
+    if (L) {
+      std::cout << "L: "
+                << L->toString(static_cast<int>(prec_bits * 0.30103) + 5)
+                << "\n";
+    } else {
+      std::cout << "L: fail\n";
+    }
+#ifdef ENABLE_FLINT_SUPPORT
+    std::optional<ArbReal> La = QuadHeckeLNegativeArb(*Ld, prec_bits);
+    if (La) {
+      std::cout << "Larb: "
+                << La->str(static_cast<slong>(prec_bits * 0.30103) + 5) << "\n";
+    } else {
+      std::cout << "Larb: fail\n";
+    }
+#endif
+  }
+}
+
 /*
   The modes, for the arithmetic T, Tint chosen by arithmetic= (see main).
  */
+/*
+  The order Z[x] / (f) of a monic irreducible f = c_0 + c_1 x + ... + x^n,
+  as the powers of its companion matrix, and its maximal order
+  (CommutativeMaximalOrder): "disc_order disc_maximal_order", the
+  discriminants of their trace forms.
+ */
+template <typename T, typename Tint>
+void PrintMaximalOrder(std::vector<int64_t> const &f) {
+  int n = static_cast<int>(f.size()) - 1;
+  MyMatrix<T> A = ZeroMatrix<T>(n, n);
+  for (int i = 0; i + 1 < n; i++) {
+    A(i + 1, i) = 1;
+  }
+  for (int i = 0; i < n; i++) {
+    A(i, n - 1) = ScalarFromInt64<T>(-f[i]);
+  }
+  std::vector<MyMatrix<T>> O{IdentityMat<T>(n)};
+  for (int i = 1; i < n; i++) {
+    O.push_back(O.back() * A);
+  }
+  auto disc_of = [&](std::vector<MyMatrix<T>> const &Ob) -> T {
+    MyMatrix<T> G(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        MyMatrix<T> P = Ob[i] * Ob[j];
+        T tr(0);
+        for (int u = 0; u < n; u++) {
+          tr += P(u, u);
+        }
+        G(i, j) = tr;
+      }
+    }
+    return T_abs(DeterminantMat(G));
+  };
+  std::cout << disc_of(O) << " "
+            << disc_of(CommutativeMaximalOrder<T, Tint>(O, n)) << "\n";
+}
+
 template <typename T, typename Tint, typename Tgroup>
 void RunIsometryMass(int argc, char *argv[], QuadLValueMethod lvalue) {
   std::string mode = argv[1];
+  if (mode == "maximalorder") {
+    PrintMaximalOrder<T, Tint>(ParseIntList(argv[2]));
+    return;
+  }
+  if (mode == "hecke") {
+    PrintQuadHeckeL<T>(argv[2], argv[3], std::stoll(argv[4]),
+                       ParseIntList(argv[5]), std::stoll(argv[6]),
+                       std::stoi(argv[7]));
+    return;
+  }
   if (mode == "quadab") {
     // the standard mass of a quadratic lattice of rank m over the real
     // subfield of Q(zeta_n) fixed by <H, -1>; for m even, "square" or
@@ -472,7 +599,9 @@ int main(int argc, char *argv[]) {
         dispatch, [&]<typename T, typename Tint>() -> void {
           RunIsometryMass<T, Tint, Tgroup>(argc, argv, lvalue);
         });
-    if (argc != 4 && argc != 5 && argc != 6) {
+    bool hecke = (argc == 8 && std::string(argv[1]) == "hecke");
+    bool maxorder = (argc == 3 && std::string(argv[1]) == "maximalorder");
+    if (argc != 4 && argc != 5 && argc != 6 && !hecke && !maxorder) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "GENUS_IsometryMass mass [Gram] [Isometry] [HermMass] "
@@ -484,6 +613,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "GENUS_IsometryMass hermitian [d] [m]\n";
       std::cerr << "    or\n";
       std::cerr << "GENUS_IsometryMass hermitianab [n] [h1,h2,...] [m]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_IsometryMass hecke [Gram] [Omega] [n] [h1,h2,...] "
+                   "[X] [prec_bits]\n";
+      std::cerr << "    or\n";
+      std::cerr << "GENUS_IsometryMass maximalorder [c0,c1,...,cn]\n";
       std::cerr << "    or\n";
       std::cerr << "GENUS_IsometryMass group [Gram] [ListIsometry] [OutFile]\n";
       std::cerr << "    or\n";

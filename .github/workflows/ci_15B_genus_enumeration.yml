@@ -106,9 +106,6 @@ jobs:
       - name: Test the genera of pairs by characteristic polynomial
         run: |
           cd CI_tests/15B_GenusEnumeration
-          ../../src_genera/Test_FiniteField
-          ../../src_genera/Test_MaximalOrders
-          ../../src_genera/Test_IsometryGlueFactors
           rm -f CI_CONCLUSION
           ./RunCharPolyTests.sh
           if [ ! -f "CI_CONCLUSION" ]; then
@@ -146,6 +143,20 @@ jobs:
           ../../gap.sh < TestLocalDensity.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The local density test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
+      # the checks in the code (SANITY_CHECK_*), on cases that reach them;
+      # it rebuilds the programs it runs
+      - name: Test with the SANITY_CHECK macros
+        run: |
+          make -C src_genera -B GENUS_IsometryMass GENUS_GlueIsometry GENUS_HermitianPieces CDEFS="-DGMP_POOL -DSANITY_CHECK_FINITE_FIELD -DSANITY_CHECK_MAXIMAL_ORDERS_EXTENSIVE -DSANITY_CHECK_HOWELL_FORM_EXTENSIVE -DSANITY_CHECK_LOCAL_IMAGE_EXTENSIVE -DSANITY_CHECK_ISOMETRY_GLUE_FACTORS -DSANITY_CHECK_ISOMETRY_GLUE_FACTORS_EXTENSIVE -DSANITY_CHECK_HERMITIAN_GENUS"
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ./RunSanityChecks.sh
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The sanity checks have not created the expected file" >&2
             exit 1
           fi
           cd ../..

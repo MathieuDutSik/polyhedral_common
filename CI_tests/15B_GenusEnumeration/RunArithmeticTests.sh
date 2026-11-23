@@ -17,6 +17,23 @@ A6A6 A6A6_F21 group
 A4A4A4 A4A4A4_D5 group
 qD4x2 qD4x2_Q8 group
 "
+
+# the masses of AbelianHermitianMass.h and AbelianQuadraticMass.h, generic
+# in the rational type: mode (hermitianablattice or quadablocal), the
+# files tag_gram.txt and tag_omega.txt, n and the generators of H
+ABMASS_CASES="
+hermitianablattice hab_q7r3 7 1,2,4
+hermitianablattice hab_s17m2 136 9,19
+quadablocal quadm_z7pm2 7 1
+quadablocal quad_s2m4 8 7
+quadablocal quad_s17s41m3 697 2,21
+"
+
+abmass_of() {
+    arith=$1; mode=$2; tag=$3; n=$4; H=$5
+    $MASS $mode ${tag}_gram.txt ${tag}_omega.txt $n $H arithmetic=$arith \
+          2>/dev/null | sed -n 's/^return rec(mass:=\([^,)]*\).*/\1/p'
+}
 # lattice, isometries, expected classes
 ENUM_CASES="
 d25 refl8 4
@@ -57,6 +74,16 @@ for arith in gmp flint gmp_boost multi_boost; do
         echo "mass ($lat, $isom): $val"
         if [ -z "$ref" ] || [ "$val" != "$ref" ]; then
             echo "ERROR: ($lat, $isom) with $arith gave '$val', gmp '$ref'" >&2
+            exit 1
+        fi
+    done
+    echo "$ABMASS_CASES" | while read mode tag n H; do
+        [ -z "$mode" ] && continue
+        ref=$(abmass_of gmp $mode $tag $n $H)
+        val=$(abmass_of $arith $mode $tag $n $H)
+        echo "mass ($tag): $val"
+        if [ -z "$ref" ] || [ "$val" != "$ref" ]; then
+            echo "ERROR: $tag with $arith gave '$val', gmp '$ref'" >&2
             exit 1
         fi
     done

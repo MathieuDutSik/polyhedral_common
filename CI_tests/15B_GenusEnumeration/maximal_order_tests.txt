@@ -1,0 +1,18 @@
+# c_0,c_1,...,c_n disc: f = c_0 + c_1 x + ... + x^n monic irreducible, and
+# |disc O_K| of K = Q[x] / (f), from the maximal order of Z[x] / (f)
+# Z[sqrt 5], index 2
+-5,0,1 5
+# Z[sqrt -3], index 2
+3,0,1 3
+# Z[4 i], index 4
+16,0,1 4
+# Z[2^(1/3)], maximal
+-2,0,0,1 108
+# Dedekind's cubic field, 2 a common index divisor
+8,-2,1,1 503
+# Phi_9, maximal
+1,0,0,1,0,0,1 19683
+# Z[sqrt 2 + sqrt 3] in Q(sqrt 2, sqrt 3)
+1,0,-10,0,1 2304
+# Z[2 zeta_5], of index a power of 2
+16,8,4,2,1 125

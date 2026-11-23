@@ -243,8 +243,9 @@ Tests: built with -DSANITY_CHECK_MULT, every image computed by generators
 is compared with the listed image where the list fits (equality of the
 generated group element by element; for the K-linear generators,
 membership and equal order), and the Howell orbit with the orbit on
-element lists; `Test_HowellForm` checks the form against brute force on
-random subgroups, and runs in the 15B mass tests.
+element lists; under `SANITY_CHECK_HOWELL_FORM_EXTENSIVE` the form is
+checked against brute force (its span, its order, and the form of the
+form) on the small subgroups, in the sanity step of the 15B CI.
 
 A split prime of a CM center goes to the K-linear chain over Z_p: C4 x S5
 on E8 (x) Z[i] (center Q(i), 5 split, multiplicity 2) has the factor 6 at
@@ -324,8 +325,9 @@ zero coordinates on the lower columns, B(y, y) known modulo p^{l + 1}
 level l modulo p^{l + 1} (between different levels only modulo p: the
 image differs from its representative by p X^(l - 1), not p X^(l)). The
 basis has entries modulo p^W, so products are reduced as they go (an
-unreduced triple product overflowed 128 bits). Test_LocalImage checks the
-whole search against an independent listing. The maximal order: first the left and right orders
+unreduced triple product overflowed 128 bits). Under
+`SANITY_CHECK_LOCAL_IMAGE_EXTENSIVE` the whole search is checked against an
+independent listing, in the sanity step of the 15B CI. The maximal order: first the left and right orders
 of O cap p O^#, then the candidates y / p, restricted when O contains O_K
 to the y with a y in p O (a the radical of p in O_K, the kernel of a
 Frobenius) and filtered by Tr trd(y^2) = 0 mod p^2 and y^2 = 0 mod p O in
@@ -432,7 +434,7 @@ split completely. Each term needs F(k / A) to abs_bits + log2 F relative
 bits: double precision, double-double or MPFR according to the segment.
 A cubic field with A^2 about 5 10^11 takes 0.6 s, a quartic one with A^2
 about 4 10^17 about 20 minutes (X about 10^10).
-`Test_QuadHeckeL` prints the character data, the coefficients and
+`GENUS_IsometryMass hecke` prints the character data, the coefficients and
 L(1 - r) of a lattice.
 The method is a choice, `QuadLValueMethod { Double, Mpfr, Arb }` (an
 argument of `QuadraticMassAbelianLattice`, the field `lvalue` of

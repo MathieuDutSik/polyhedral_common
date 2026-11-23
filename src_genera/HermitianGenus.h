@@ -72,7 +72,10 @@ inline int64_t HermPrimePowerPart(int64_t d, int64_t l) {
 }
 
 // The primes of K_0 over l and their type in E, from the decomposition of
-// l in Q(zeta_d) and its real subfield (AbelianField.h).
+// l in Q(zeta_d) and its real subfield (AbelianField.h); checked against
+// the explicit formulas under SANITY_CHECK_HERMITIAN_GENUS: d = l^a m,
+// e_E = phi(l^a), f = ord(l mod m), the primes ramified over K_0 when d =
+// l^a, inert when -1 is a power of l modulo m, split otherwise.
 inline HermPrimeData HermPrimesAbove(int64_t d_in, int64_t l) {
   int64_t d = NormalizeCyclotomicIndex(d_in);
   CMPrimeDecomposition dec = DecomposePrimeCM(AbelianField{d, {1}}, l);
@@ -82,6 +85,30 @@ inline HermPrimeData HermPrimesAbove(int64_t d_in, int64_t l) {
   res.kind = dec.type;
   res.n_prime = dec.K.g;
   res.e0 = dec.K.e;
+#ifdef SANITY_CHECK_HERMITIAN_GENUS
+  {
+    int64_t la = HermPrimePowerPart(d, l);
+    int64_t m = d / la;
+    int64_t e_E = EulerPhi(la);
+    int64_t f = MultiplicativeOrder(l, m);
+    int64_t g_E = EulerPhi(m) / f;
+    int kind = 0;
+    int64_t n_prime = g_E / 2, e0 = e_E;
+    if (la > 1 && m == 1) {
+      kind = 2;
+      n_prime = g_E;
+      e0 = e_E / 2;
+    } else if (IsPowerModulo(-1, l, m)) {
+      kind = 1;
+      n_prime = g_E;
+    }
+    if (kind != res.kind || n_prime != res.n_prime || e0 != res.e0) {
+      std::cerr << "HERM_GENUS: the decomposition of " << l << " in Q(zeta_"
+                << d << ") differs from the formulas\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   return res;
 }
 
