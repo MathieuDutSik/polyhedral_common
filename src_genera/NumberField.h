@@ -6,6 +6,9 @@
 #include "PolynomialModQ.h"
 #include "GeneraArithmetic.h"
 #include "MAT_Matrix.h"
+#include "MAT_MatrixSolutionMat.h"
+#include <initializer_list>
+#include <optional>
 #include <cstdint>
 #include <vector>
 // clang-format on
@@ -20,7 +23,75 @@
   AbelianField.h.
  */
 
-template <typename T> using ElemE = std::vector<T>;
+/*
+  An element of E: its deg coordinates on the basis of the powers of theta
+  (zeta). The ring operations needing E (EMul, EInv, EConj, ...) take the
+  field; the sum, the difference and the product by a rational are
+  operators.
+ */
+template <typename T> struct ElemE {
+  std::vector<T> c;
+
+  ElemE() = default;
+  ElemE(size_t n, T const &x) : c(n, x) {}
+  explicit ElemE(size_t n) : c(n, T(0)) {}
+  ElemE(std::initializer_list<T> l) : c(l) {}
+  explicit ElemE(std::vector<T> v) : c(std::move(v)) {}
+
+  size_t size() const { return c.size(); }
+  T &operator[](size_t i) { return c[i]; }
+  T const &operator[](size_t i) const { return c[i]; }
+  auto begin() { return c.begin(); }
+  auto end() { return c.end(); }
+  auto begin() const { return c.begin(); }
+  auto end() const { return c.end(); }
+  bool is_zero() const {
+    for (auto const &x : c) {
+      if (x != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  ElemE &operator+=(ElemE const &b) {
+    for (size_t i = 0; i < c.size(); i++) {
+      c[i] += b.c[i];
+    }
+    return *this;
+  }
+  ElemE &operator-=(ElemE const &b) {
+    for (size_t i = 0; i < c.size(); i++) {
+      c[i] -= b.c[i];
+    }
+    return *this;
+  }
+  ElemE &operator*=(T const &x) {
+    for (auto &y : c) {
+      y *= x;
+    }
+    return *this;
+  }
+  bool operator==(ElemE const &b) const { return c == b.c; }
+};
+
+template <typename T> ElemE<T> operator+(ElemE<T> a, ElemE<T> const &b) {
+  return a += b;
+}
+template <typename T> ElemE<T> operator-(ElemE<T> a, ElemE<T> const &b) {
+  return a -= b;
+}
+template <typename T> ElemE<T> operator-(ElemE<T> a) {
+  for (auto &x : a) {
+    x = -x;
+  }
+  return a;
+}
+template <typename T> ElemE<T> operator*(ElemE<T> a, T const &x) {
+  return a *= x;
+}
+template <typename T> ElemE<T> operator*(T const &x, ElemE<T> a) {
+  return a *= x;
+}
 
 template <typename T> struct NumberField {
   // d > 0: Q(zeta_d) on the powers of zeta; d = 0: a field Q(theta) on the
@@ -29,7 +100,7 @@ template <typename T> struct NumberField {
   int64_t d;
   int deg;
   std::vector<int64_t> Phi;
-  std::vector<T> conj;
+  ElemE<T> conj;
 };
 
 template <typename T>
@@ -44,7 +115,7 @@ inline ElemE<T> EReduce(std::vector<T> a, NumberField<T> const &K) {
     }
   }
   a.resize(deg, T(0));
-  return a;
+  return ElemE<T>(std::move(a));
 }
 
 template <typename T>
@@ -58,14 +129,6 @@ inline ElemE<T> EMul(ElemE<T> const &a, ElemE<T> const &b, NumberField<T> const 
     }
   }
   return EReduce(c, K);
-}
-
-template <typename T>
-inline ElemE<T> ESub(ElemE<T> a, ElemE<T> const &b) {
-  for (size_t i = 0; i < a.size(); i++) {
-    a[i] -= b[i];
-  }
-  return a;
 }
 
 template <typename T>
@@ -116,23 +179,18 @@ inline MyMatrix<T> EMulMatrix(ElemE<T> const &a, NumberField<T> const &K) {
 }
 
 template <typename T>
-inline bool EIsZero(ElemE<T> const &a) {
-  for (auto &x : a) {
-    if (x != 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-template <typename T>
 inline ElemE<T> EInv(ElemE<T> const &a, NumberField<T> const &K) {
   // x a = 1: x M_a = e_0 with the rows of M_a the a zeta^j
-  MyMatrix<T> M = EMulMatrix(a, K);
-  MyMatrix<T> Minv = Inverse(M);
+  MyVector<T> e0 = ZeroVector<T>(K.deg);
+  e0(0) = 1;
+  std::optional<MyVector<T>> sol = SolutionMat(EMulMatrix(a, K), e0);
+  if (!sol) {
+    std::cerr << "NUMBERFIELD: the inverse of zero\n";
+    throw TerminalException{1};
+  }
   ElemE<T> x(K.deg);
   for (int i = 0; i < K.deg; i++) {
-    x[i] = Minv(0, i);
+    x[i] = (*sol)(i);
   }
   return x;
 }
@@ -142,7 +200,7 @@ inline ElemE<T> EInv(ElemE<T> const &a, NumberField<T> const &K) {
 template <typename T>
 inline int ENormValuation(ElemE<T> const &a, NumberField<T> const &K,
                           int64_t q) {
-  if (EIsZero(a)) {
+  if (a.is_zero()) {
     return 1 << 28;
   }
   return RationalValuation(DeterminantMat(EMulMatrix(a, K)), q);
@@ -166,26 +224,10 @@ inline typename underlying_z_ring<T>::ring_type EResidue(ElemE<T> const &a,
 }
 
 template <typename T>
-inline ElemE<T> EAddE(ElemE<T> a, ElemE<T> const &b) {
-  for (size_t i = 0; i < a.size(); i++) {
-    a[i] += b[i];
-  }
-  return a;
-}
-
-template <typename T>
-inline ElemE<T> EScal(ElemE<T> a, T const &c) {
-  for (auto &x : a) {
-    x *= c;
-  }
-  return a;
-}
-
-template <typename T>
 inline bool EIsOne(ElemE<T> const &a) {
   ElemE<T> b = a;
   b[0] -= 1;
-  return EIsZero(b);
+  return b.is_zero();
 }
 
 template <typename T>

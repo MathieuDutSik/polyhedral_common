@@ -59,7 +59,7 @@ inline ElemE<T> JordanPieceDet(SmallGram<T> const &G, NumberField<T> const &K) {
   if (G.size() == 1) {
     return G[0][0];
   }
-  return ESub(EMul(G[0][0], G[1][1], K), EMul(G[0][1], G[1][0], K));
+  return EMul(G[0][0], G[1][1], K) - EMul(G[0][1], G[1][0], K);
 }
 
 // The determinant of a component, the product over its pieces.
@@ -99,10 +99,10 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
     int n = static_cast<int>(G.size());
     ElemE<T> cc = inv(c);
     for (int u = 0; u < n; u++) {
-      G[l][u] = EAddE(G[l][u], EMul(c, G[k][u], K));
+      G[l][u] += EMul(c, G[k][u], K);
     }
     for (int u = 0; u < n; u++) {
-      G[u][l] = EAddE(G[u][l], EMul(G[u][k], cc, K));
+      G[u][l] += EMul(G[u][k], cc, K);
     }
   };
   auto scale_idx = [&](int k, ElemE<T> const &c) {
@@ -146,7 +146,7 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
       for (int l = k; l < n; l++) {
         if (l != i0) {
           // c = -G[l][i0] / G[i0][i0]
-          add_mult(l, i0, EScal(EMul(G[l][i0], ninv, K), T(-1)));
+          add_mult(l, i0, -EMul(G[l][i0], ninv, K));
         }
       }
       return;
@@ -154,17 +154,17 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
     int i0 = idx[0], j0 = idx[1];
     ElemE<T> a11 = G[i0][i0], a12 = G[i0][j0], a21 = G[j0][i0],
              a22 = G[j0][j0];
-    ElemE<T> dinv = EInv(ESub(EMul(a11, a22, K), EMul(a12, a21, K)), K);
+    ElemE<T> dinv = EInv(EMul(a11, a22, K) - EMul(a12, a21, K), K);
     for (int l = k; l < n; l++) {
       if (l == i0 || l == j0) {
         continue;
       }
       // (c_1, c_2) = (G[l][i0], G[l][j0]) times the inverse of the block
       ElemE<T> x1 = G[l][i0], x2 = G[l][j0];
-      ElemE<T> c1 = EMul(ESub(EMul(x1, a22, K), EMul(x2, a21, K)), dinv, K);
-      ElemE<T> c2 = EMul(ESub(EMul(x2, a11, K), EMul(x1, a12, K)), dinv, K);
-      add_mult(l, i0, EScal(c1, T(-1)));
-      add_mult(l, j0, EScal(c2, T(-1)));
+      ElemE<T> c1 = EMul(EMul(x1, a22, K) - EMul(x2, a21, K), dinv, K);
+      ElemE<T> c2 = EMul(EMul(x2, a11, K) - EMul(x1, a12, K), dinv, K);
+      add_mult(l, i0, -c1);
+      add_mult(l, j0, -c2);
     }
   };
   while (k < static_cast<int>(G.size())) {

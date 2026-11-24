@@ -105,7 +105,7 @@ AbelianJordanAtPrime(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     if (len.back() == 0 || len.size() > static_cast<size_t>(4 * (vdet + vdiscf) + 8)) {
       break;
     }
-    Mk = Mk * Pi;
+    Mk *= Pi;
   }
   std::vector<int> c;
   for (size_t k = 0; k + 1 < len.size(); k++) {
@@ -321,7 +321,7 @@ inline bool GDIsLocalNorm(ElemE<T> x, GenericDyadic<T> const &C) {
         y[u] += t[u];
       }
     }
-    if (GDVal(ESub(x, EMul(y, EConj(y, K), K)), C) >= 2 * C.d) {
+    if (GDVal(x - EMul(y, EConj(y, K), K), C) >= 2 * C.d) {
       return true;
     }
     int i = 0;
@@ -403,7 +403,7 @@ GDSublattice(std::vector<std::vector<ElemE<T>>> const &H,
     } else {
       U[i][i] = C.one;
       if (a[i] != 0) {
-        U[i][j] = ESub(zero, C.reps[a[i]]);
+        U[i][j] = zero - C.reps[a[i]];
       }
     }
   }
@@ -535,7 +535,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
     for (int c = 0; c < m; c++) {
       int piv = -1;
       for (int i = c; i < m; i++) {
-        if (!EIsZero(G[i][c])) {
+        if (!G[i][c].is_zero()) {
           piv = i;
           break;
         }
@@ -555,7 +555,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
       for (int i = c + 1; i < m; i++) {
         ElemE<T> t = EMul(G[i][c], inv, K);
         for (int j = c; j < m; j++) {
-          G[i][j] = ESub(G[i][j], EMul(t, G[c][j], K));
+          G[i][j] -= EMul(t, G[c][j], K);
         }
       }
     }
@@ -656,7 +656,7 @@ JordanFromIdempotent(MyMatrix<T> const &B, MyMatrix<T> const &E,
     if (len.back() == 0 || len.size() > static_cast<size_t>(bound)) {
       break;
     }
-    Mk = Mk * Pi;
+    Mk *= Pi;
   }
   std::vector<int> c;
   for (size_t k = 0; k + 1 < len.size(); k++) {

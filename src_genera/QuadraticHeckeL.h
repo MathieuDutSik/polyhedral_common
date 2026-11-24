@@ -459,7 +459,7 @@ std::optional<QuadHeckeCharacter<T>> ComputeQuadHeckeCharacter(
         Kp.conj = lg.conj;
         ElemE<T> dp = DetK(H, Kp);
         if ((m * (m - 1) / 2) % 2 == 1) {
-          dp = EScal(dp, T(-1));
+          dp = -dp;
         }
         return dp;
       };

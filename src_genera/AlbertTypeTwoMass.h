@@ -233,7 +233,7 @@ std::optional<T> RankOneHermitianMassOverK(MyMatrix<T> const &BM,
         if (Dq >= 0) {
           continue;
         }
-        if (!SqrtInK(EScal(d, UniversalScalarConversion<T, int64_t>(Dq)), K)) {
+        if (!SqrtInK(d * UniversalScalarConversion<T, int64_t>(Dq), K)) {
           continue;
         }
         int64_t N = std::lcm(FK.n, std::abs(Dq));

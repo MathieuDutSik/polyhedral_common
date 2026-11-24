@@ -80,7 +80,7 @@ inline KrylovData<T> KrylovMinimalPolynomial(MyMatrix<T> const &S) {
   form B, on the rows, and v S* in the Krylov basis of v.
  */
 template <typename T>
-inline std::vector<T> ConjugateOfGenerator(MyMatrix<T> const &B,
+inline ElemE<T> ConjugateOfGenerator(MyMatrix<T> const &B,
                                            MyMatrix<T> const &S,
                                            KrylovData<T> const &kd) {
   MyMatrix<T> Sstar = (Inverse(B) * S * B).transpose();
@@ -93,7 +93,7 @@ inline std::vector<T> ConjugateOfGenerator(MyMatrix<T> const &B,
     throw TerminalException{1};
   }
   int deg = kd.basis.rows();
-  std::vector<T> conj(deg);
+  ElemE<T> conj(deg);
   for (int i = 0; i < deg; i++) {
     conj[i] = (*sol)(i);
   }
@@ -108,7 +108,7 @@ inline std::vector<T> ConjugateOfGenerator(MyMatrix<T> const &B,
 template <typename T> struct LocalGenerator {
   MyMatrix<T> S;
   std::vector<int64_t> f;
-  std::vector<T> conj;
+  ElemE<T> conj;
 };
 
 template <typename T>
@@ -196,7 +196,7 @@ inline MyMatrix<T> PolyOfMatrixQ(std::vector<Tcoef> const &g,
   int r = S.rows();
   MyMatrix<T> res = ZeroMatrix<T>(r, r);
   for (size_t i = g.size(); i-- > 0;) {
-    res = res * S;
+    res *= S;
     T g_i = UniversalScalarConversion<T, Tcoef>(g[i]);
     for (int j = 0; j < r; j++) {
       res(j, j) += g_i;
@@ -323,7 +323,7 @@ inline MyMatrix<T> AbelianPrimeIdempotent(LocalGenerator<T> const &lg,
   MyMatrix<T> pw = IdentityMat<T>(r);
   for (size_t k = 0; k < ez.size(); k++) {
     E += pw * T(ez[k]);
-    pw = pw * lg.S;
+    pw *= lg.S;
   }
   return E;
 }
@@ -411,7 +411,7 @@ ClearDenominators(ElemE<T> const &x) {
 template <typename T>
 inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
   using Tint = typename underlying_z_ring<T>::ring_type;
-  if (EIsZero(x)) {
+  if (x.is_zero()) {
     return 1 << 28;
   }
   auto [y, d] = ClearDenominators(x);
@@ -426,9 +426,9 @@ inline int LocalVal(ElemE<T> const &x, LocalPrimeK<T> &P) {
     }
     w[0] += 1;
     w = PolyZReduce(w, P.K.Phi, Q);
-    ElemE<T> we;
-    for (auto const &c : w) {
-      we.push_back(T(c));
+    ElemE<T> we(w.size());
+    for (size_t i = 0; i < w.size(); i++) {
+      we[i] = T(w[i]);
     }
     T det = DeterminantMat(EMulMatrix(we, P.K));
     Tint dn = GetNumerator_z(det);
@@ -466,7 +466,7 @@ inline FqElt LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
 template <typename T>
 inline ElemE<T> LocalShift(ElemE<T> x, int k, LocalPrimeK<T> const &P) {
   if (k > 0) {
-    ElemE<T> pinv = P.pi_inv.empty() ? EInv(P.pi, P.K) : P.pi_inv;
+    ElemE<T> pinv = (P.pi_inv.size() == 0) ? EInv(P.pi, P.K) : P.pi_inv;
     for (int i = 0; i < k; i++) {
       x = EMul(x, pinv, P.K);
     }
@@ -493,7 +493,7 @@ template <typename T> struct PrimeValuation {
 template <typename T>
 inline int PrimeVal(ElemE<T> const &a, NumberField<T> const &K,
                     PrimeValuation<T> const &v) {
-  if (EIsZero(a)) {
+  if (a.is_zero()) {
     return 1 << 28;
   }
   if (v.local) {
@@ -631,7 +631,7 @@ PrimeLocalGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega
       continue;
     }
     // the conjugate of theta: theta itself for a totally real field
-    std::vector<T> conj(deg, T(0));
+    ElemE<T> conj(deg, T(0));
     if (cm) {
       conj = ConjugateOfGenerator(B, S, kd);
     } else if (deg > 1) {

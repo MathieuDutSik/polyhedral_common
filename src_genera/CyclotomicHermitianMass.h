@@ -279,7 +279,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
   } else {
     MyMatrix<T> Sd = Id;
     for (int64_t i = 0; i < dp; i++) {
-      Sd = Sd * S;
+      Sd *= S;
     }
     Pi = Id - Sd;
   }
@@ -310,7 +310,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
     MyMatrix<T> pw = Id;
     for (size_t i = 0; i < ez.size(); i++) {
       E += pw * T(ez[i]);
-      pw = pw * S;
+      pw *= S;
     }
     return E;
   };
@@ -352,7 +352,7 @@ HermitianJordanAtPrime(MyMatrix<T> const &B, MyMatrix<T> const &S,
       if (len.back() == 0 || len.size() > static_cast<size_t>(4 * vdet + 8)) {
         break;
       }
-      Mk = Mk * Pi;
+      Mk *= Pi;
     }
     // c[k] = #{invariants t > k} = dim_{F_q}(pi^k X / pi^{k+1} X) / f
     std::vector<int> c;
@@ -589,7 +589,7 @@ inline DyadicContext<T> MakeDyadicContext(NumberField<T> const &K) {
   DyadicContext<T> C;
   C.K = K;
   C.one = EZetaPower(0, K);
-  C.pi = ESub(C.one, EZetaPower(1, K));
+  C.pi = C.one - EZetaPower(1, K);
   C.pi_inv = EInv(C.pi, K);
   C.pipibar = EMul(C.pi, EConj(C.pi, K), K);
   C.pipibar_inv = EInv(C.pipibar, K);
@@ -651,7 +651,7 @@ inline bool DyadicIsLocalNorm(ElemE<T> x, DyadicContext<T> const &C) {
         }
       }
     }
-    if (DyadicVal(ESub(x, EMul(y, EConj(y, K), K)), C) >= 4) {
+    if (DyadicVal(x - EMul(y, EConj(y, K), K), C) >= 4) {
       return true;
     }
   }
@@ -670,7 +670,7 @@ HermitianCongruence(std::vector<std::vector<ElemE<T>>> const &H,
     for (int k = 0; k < m; k++) {
       ElemE<T> sum(K.deg, T(0));
       for (int i = 0; i < m; i++) {
-        if (!EIsZero(U[a][i])) {
+        if (!U[a][i].is_zero()) {
           ElemE<T> t = EMul(U[a][i], H[i][k], K);
           for (int u = 0; u < K.deg; u++) {
             sum[u] += t[u];
@@ -685,7 +685,7 @@ HermitianCongruence(std::vector<std::vector<ElemE<T>>> const &H,
     for (int b = 0; b < m; b++) {
       ElemE<T> sum(K.deg, T(0));
       for (int k = 0; k < m; k++) {
-        if (!EIsZero(U[b][k])) {
+        if (!U[b][k].is_zero()) {
           ElemE<T> t = EMul(UH[a][k], EConj(U[b][k], K), K);
           for (int u = 0; u < K.deg; u++) {
             sum[u] += t[u];
@@ -740,7 +740,7 @@ DyadicSublattice(std::vector<std::vector<ElemE<T>>> const &H, int64_t mask,
     } else {
       U[i][i] = C.one;
       if (mask & (int64_t(1) << i)) {
-        U[i][j] = ESub(zero, C.one);
+        U[i][j] = zero - C.one;
       }
     }
   }
@@ -848,7 +848,7 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
     for (int c = 0; c < m; c++) {
       int piv = -1;
       for (int i = c; i < m; i++) {
-        if (!EIsZero(G[i][c])) {
+        if (!G[i][c].is_zero()) {
           piv = i;
           break;
         }
@@ -868,7 +868,7 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
       for (int i = c + 1; i < m; i++) {
         ElemE<T> t = EMul(G[i][c], inv, K);
         for (int j = c; j < m; j++) {
-          G[i][j] = ESub(G[i][j], EMul(t, G[c][j], K));
+          G[i][j] -= EMul(t, G[c][j], K);
         }
       }
     }
@@ -964,8 +964,9 @@ HermitianLocalFactorRamified(MyMatrix<T> const &B,
   T f = HeckeGroupOrderSp<T>(2 * (m / 2), qT);
   int64_t N = 0;
   int after_total = m;
-  ElemE<T> pipibar = ESub(ESub(EZetaPower(0, K), EZetaPower(1, K)),
-                       ESub(EZetaPower(-1, K), EZetaPower(0, K)));
+  // (1 - zeta)(1 - zeta^{-1}) = 2 - zeta - zeta^{-1}
+  ElemE<T> one = EZetaPower(0, K);
+  ElemE<T> pipibar = one + one - EZetaPower(1, K) - EZetaPower(-1, K);
   for (auto &kv : blocks) {
     int s = kv.first;
     int mi = kv.second.first;

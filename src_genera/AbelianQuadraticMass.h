@@ -441,13 +441,13 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
       for (int b = 0; b < m; b++) {
         int Sj = S[comp_of[a]];
         if (Sj < s) {
-          AG[a][b] = EScal(AG[a][b], pow2(2 * (s - Sj)));
+          AG[a][b] *= pow2(2 * (s - Sj));
         }
       }
     }
     FqMat Dcol(m, std::vector<FqElt>(1));
     for (int a = 0; a < m; a++) {
-      Dcol[a][0] = LocalResidue(EScal(AG[a][a], pow2(-s)), P);
+      Dcol[a][0] = LocalResidue(AG[a][a] * pow2(-s), P);
     }
     FqMat Bk = FqLeftKernel(F, Dcol, m, 1);
     size_t nb = Bk.size();
@@ -465,19 +465,19 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
       for (size_t j = i; j < nb; j++) {
         ElemE<T> val(K.deg, T(0));
         for (int a = 0; a < m; a++) {
-          if (EIsZero(BK[i][a])) {
+          if (BK[i][a].is_zero()) {
             continue;
           }
           for (int b = 0; b < m; b++) {
-            if (EIsZero(BK[j][b]) || EIsZero(AG[a][b])) {
+            if (BK[j][b].is_zero() || AG[a][b].is_zero()) {
               continue;
             }
-            val = EAddE(val, EMul(EMul(BK[i][a], AG[a][b], K), BK[j][b], K));
+            val += EMul(EMul(BK[i][a], AG[a][b], K), BK[j][b], K);
           }
         }
-        val = EScal(val, pow2(-(s + 1)));
+        val *= pow2(-(s + 1));
         if (i < j) {
-          val = EScal(val, T(2));
+          val *= T(2);
         }
         Q[i][j] = LocalResidue(val, P);
       }
@@ -558,7 +558,7 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
       d = EMul(d, LocalComponentDet(C, K), K);
     }
     if ((m * (m - 1) / 2) % 2 == 1) {
-      d = EScal(d, T(-1));
+      d = -d;
     }
     int sc = DyadicUnramifiedSquareClass(d, P, F);
     if (sc == 0) {
@@ -616,7 +616,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
   auto val1 = [&](ElemE<T> const &x) -> int {
     ElemE<T> y = x;
     y[0] -= 1;
-    return EIsZero(y) ? QD_INF : LocalVal(y, P);
+    return y.is_zero() ? QD_INF : LocalVal(y, P);
   };
   int w = val1(a);
   int ee = 2 * P.e;
@@ -629,7 +629,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
     for (int i = 0; i < w / 2; i++) {
       pw = EMul(pw, P.pi, K);
     }
-    c = EAddE(c, EMul(t, pw, K));
+    c += EMul(t, pw, K);
     a = EMul(a, EInv(EMul(c, c, K), K), K);
     w = val1(a);
   }
@@ -639,7 +639,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
   if (w == ee) {
     ElemE<T> am1 = a;
     am1[0] -= 1;
-    FqElt c = LocalResidue(EScal(am1, RationalFraction<T>(1, 4)), P);
+    FqElt c = LocalResidue(am1 * RationalFraction<T>(1, 4), P);
     if (FqTrace(F, c) == 0) {
       return {QD_INF, EOne(K)};
     }
@@ -649,7 +649,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
 
 template <typename T>
 inline int QuadDefect(ElemE<T> const &a, LocalPrimeK<T> &P, FiniteField const &F) {
-  if (EIsZero(a)) {
+  if (a.is_zero()) {
     return QD_INF;
   }
   int v = LocalVal(a, P);
@@ -672,8 +672,8 @@ inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
       std::swap(a, b);
       std::swap(v, w);
     } else {
-      a = EScal(EMul(a, b, K), T(-1));
-      v = v + w;
+      a = -EMul(a, b, K);
+      v += w;
     }
   }
   a = LocalShift(a, v, P);
@@ -681,9 +681,9 @@ inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
   a = a2;
   int wf = (w >= 0) ? w / 2 : -((-w + 1) / 2);
   b = LocalShift(b, 2 * wf, P);
-  w = w - 2 * wf;
+  w -= 2 * wf;
   if (vd != QD_INF && vd % 2 != 0 && w == 0) {
-    ElemE<T> oma = EScal(a, T(-1));
+    ElemE<T> oma = -a;
     oma[0] += 1;
     b = LocalShift(EMul(oma, b, K), vd - 1, P);
     w = 1;
@@ -697,7 +697,7 @@ inline int HilbertSymbolDyadic(ElemE<T> a, ElemE<T> b, LocalPrimeK<T> &P,
     am1[0] -= 1;
     ElemE<T> sq = LiftResidue(
         FqFrobenius(F, LocalResidue(EMul(am1, EInv(t, K), K), P), F.f - 1), K);
-    ElemE<T> fac = EScal(EMul(EMul(sq, sq, K), t, K), T(-1));
+    ElemE<T> fac = -EMul(EMul(sq, sq, K), t, K);
     fac[0] += 1;
     a = EMul(a, fac, K);
     auto pr = QuadDefectUnit(a, P, F);
@@ -713,10 +713,10 @@ inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, NumberField<T> const &K) {
   int n = static_cast<int>(F.size());
   std::vector<ElemE<T>> res;
   for (int i = 0; i < n; i++) {
-    if (EIsZero(F[i][i])) {
+    if (F[i][i].is_zero()) {
       int j = -1;
       for (int t = i + 1; t < n; t++) {
-        if (!EIsZero(F[t][t])) {
+        if (!F[t][t].is_zero()) {
           j = t;
           break;
         }
@@ -728,7 +728,7 @@ inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, NumberField<T> const &K) {
         }
       } else {
         for (int t = i + 1; t < n; t++) {
-          if (!EIsZero(F[i][t])) {
+          if (!F[i][t].is_zero()) {
             j = t;
             break;
           }
@@ -738,23 +738,23 @@ inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, NumberField<T> const &K) {
           throw TerminalException{1};
         }
         // x_i <- x_i + c x_j, c = 1 / (2 F_ij)
-        ElemE<T> c = EInv(EScal(F[i][j], T(2)), K);
+        ElemE<T> c = EInv(F[i][j] * T(2), K);
         for (int u = 0; u < n; u++) {
-          F[i][u] = EAddE(F[i][u], EMul(c, F[j][u], K));
+          F[i][u] += EMul(c, F[j][u], K);
         }
         for (int u = 0; u < n; u++) {
-          F[u][i] = EAddE(F[u][i], EMul(F[u][j], c, K));
+          F[u][i] += EMul(F[u][j], c, K);
         }
       }
     }
     ElemE<T> dinv = EInv(F[i][i], K);
     for (int t = i + 1; t < n; t++) {
-      ElemE<T> c = EScal(EMul(F[t][i], dinv, K), T(-1));
+      ElemE<T> c = -EMul(F[t][i], dinv, K);
       for (int u = 0; u < n; u++) {
-        F[t][u] = EAddE(F[t][u], EMul(c, F[i][u], K));
+        F[t][u] += EMul(c, F[i][u], K);
       }
       for (int u = 0; u < n; u++) {
-        F[u][t] = EAddE(F[u][t], EMul(F[u][i], c, K));
+        F[u][t] += EMul(F[u][i], c, K);
       }
     }
     res.push_back(F[i][i]);
@@ -797,13 +797,13 @@ inline int WittInvariantDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
   int n = static_cast<int>(D.size()) % 8;
   ElemE<T> c = EOne(K);
   if (n == 3 || n == 4) {
-    c = EScal(d, T(-1));
+    c = -d;
   } else if (n == 5 || n == 6) {
-    c = EScal(EOne(K), T(-1));
+    c = -EOne(K);
   } else if (n == 7 || n == 0) {
     c = d;
   }
-  return h * HilbertSymbolDyadic(EScal(EOne(K), T(-1)), c, P, F);
+  return h * HilbertSymbolDyadic(-EOne(K), c, P, F);
 }
 
 template <typename T>
@@ -866,7 +866,7 @@ inline T LocalFactorMaximalDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
   int w = WittInvariantDyadic(G, P, F);
   ElemE<T> d = DetK(G, K);
   if ((m * (m - 1) / 2) % 2 == 1) {
-    d = EScal(d, T(-1));
+    d = -d;
   }
   T q = UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf);
   int vd = LocalVal(d, P);
@@ -946,7 +946,7 @@ inline QuadKirschmerSymbol<T> KirschmerSymbolDyadic(KMat<T> const &G, LocalPrime
     }
     int mv = QD_INF, pos = -1;
     for (size_t k = 0; k < D.size(); k++) {
-      int v = EIsZero(D[k]) ? QD_INF : LocalVal(D[k], P);
+      int v = D[k].is_zero() ? QD_INF : LocalVal(D[k], P);
       if (v < mv) {
         mv = v;
         pos = static_cast<int>(k);
@@ -1075,11 +1075,11 @@ inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, NumberField<T>
   KMat<T> TG(n, std::vector<ElemE<T>>(n, ElemE<T>(K.deg, T(0))));
   for (size_t i = 0; i < n; i++) {
     for (size_t k = 0; k < n; k++) {
-      if (EIsZero(Tm[i][k])) {
+      if (Tm[i][k].is_zero()) {
         continue;
       }
       for (size_t j = 0; j < n; j++) {
-        TG[i][j] = EAddE(TG[i][j], EMul(Tm[i][k], G[k][j], K));
+        TG[i][j] += EMul(Tm[i][k], G[k][j], K);
       }
     }
   }
@@ -1087,8 +1087,8 @@ inline KMat<T> TransformKMat(KMat<T> const &Tm, KMat<T> const &G, NumberField<T>
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < n; j++) {
       for (size_t k = 0; k < n; k++) {
-        if (!EIsZero(Tm[j][k])) {
-          res[i][j] = EAddE(res[i][j], EMul(TG[i][k], Tm[j][k], K));
+        if (!Tm[j][k].is_zero()) {
+          res[i][j] += EMul(TG[i][k], Tm[j][k], K);
         }
       }
     }
@@ -1136,7 +1136,7 @@ inline KMat<T> SublatticeGram(KMat<T> const &G, std::vector<FqElt> const &lambda
       Tm[i][i] = P.pi;
     } else {
       Tm[i][i] = EOne(K);
-      Tm[i][lead] = EScal(LiftResidue(lambda[i], K), T(-1));
+      Tm[i][lead] = -LiftResidue(lambda[i], K);
     }
   }
   return TransformKMat(Tm, G, K);
@@ -1160,21 +1160,21 @@ inline std::optional<KMat<T>> IntegralOverlattice(KMat<T> const &G, LocalPrimeK<
     for (size_t j = 0; j < n && ok; j++) {
       ElemE<T> bj(K.deg, T(0));
       for (size_t i = 0; i < n; i++) {
-        if (!EIsZero(cl[i])) {
-          bj = EAddE(bj, EMul(cl[i], G[i][j], K));
+        if (!cl[i].is_zero()) {
+          bj += EMul(cl[i], G[i][j], K);
         }
       }
-      if (!EIsZero(bj) && LocalVal(bj, P) < 1 - P.e) {
+      if (!bj.is_zero() && LocalVal(bj, P) < 1 - P.e) {
         ok = false;
       }
-      if (!EIsZero(cl[j])) {
-        Qy = EAddE(Qy, EMul(bj, cl[j], K));
+      if (!cl[j].is_zero()) {
+        Qy += EMul(bj, cl[j], K);
       }
     }
     if (!ok) {
       continue;
     }
-    if (!EIsZero(Qy) && LocalVal(Qy, P) < 2) {
+    if (!Qy.is_zero() && LocalVal(Qy, P) < 2) {
       continue;
     }
     return SuperlatticeGram(G, c, P);
@@ -1211,7 +1211,7 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
     int r = d / 2;
     ElemE<T> disc = S.dets[0];
     if (r % 2 == 1) {
-      disc = EScal(disc, T(-1));
+      disc = -disc;
     }
     int c = QuadDefect(disc, P, F);
     T rh = T(r) - RationalFraction<T>(1, 2);
@@ -1290,7 +1290,7 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
            QPowRat(q, (r + 1) * (e - b - 1));
     }
   }
-  ElemE<T> two = EScal(EOne(K), T(2));
+  ElemE<T> two = EOne(K) * T(2);
   return LocalFactorMaximalDyadic(ScaleKMat(G, two, K), P, F) * lf;
 }
 
@@ -1552,7 +1552,7 @@ template <typename T>
 inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, NumberField<T> const &K) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int n = K.deg;
-  if (EIsZero(d)) {
+  if (d.is_zero()) {
     return d;
   }
   auto [dz, den] = ClearDenominators(d);
@@ -1630,7 +1630,7 @@ inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, NumberField<T> const &
     }
     if (EMul(y, y, K) == dd) {
       T inv_den = T(1) / UniversalScalarConversion<T, Tint>(den);
-      return EScal(y, inv_den);
+      return y * inv_den;
     }
   }
   return {};
@@ -1692,7 +1692,7 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(NumberField<T> const &K) {
       v = EMul(v, g, K);
       v[0] += UniversalScalarConversion<T, int64_t>(K.Phi[i]);
     }
-    return EIsZero(v);
+    return v.is_zero();
   };
   std::vector<T> poly = UniversalStdVectorScalarConversion<T, int64_t>(K.Phi);
   for (size_t prec : {256, 512, 1024, 2048, 4096}) {
@@ -1911,7 +1911,7 @@ std::optional<AbelianField> AbelianQuadraticExtensionFieldPrimes(
     Kl.conj = lg->conj;
     ElemE<T> dl = DetK(LocalOKGram(B, *lg, l), Kl);
     if ((m * (m - 1) / 2) % 2 == 1) {
-      dl = EScal(dl, T(-1));
+      dl = -dl;
     }
     std::vector<std::pair<PolyQ, int>> fac =
         FactorModQWithMultiplicity(PolyReduceSigned(lg->f, l));
@@ -2039,7 +2039,7 @@ QuadDiscriminantK(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega) {
   K.conj = lg->conj;
   ElemE<T> d = DetK(LocalOKGram(B, *lg, q0), K);
   if ((m * (m - 1) / 2) % 2 == 1) {
-    d = EScal(d, T(-1));
+    d = -d;
   }
   return std::make_pair(K, d);
 }
@@ -2139,7 +2139,7 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
           if (Dq == 1) {
             continue;
           }
-          if (!SqrtInK(EScal(d, UniversalScalarConversion<T, int64_t>(Dq)), K)) {
+          if (!SqrtInK(d * UniversalScalarConversion<T, int64_t>(Dq), K)) {
             continue;
           }
 #ifdef DEBUG_ABQUAD
@@ -2271,21 +2271,21 @@ LocalImagePiAdic(MyMatrix<T> const &B,
     ElemE<T> pibar = EConj(P.pi, K);
     {
       ElemE<T> th = EZetaPower(1, K);
-      ElemE<T> d = ESub(EConj(th, K), th);
-      if (!EIsZero(d) && LocalVal(d, P) < 1) {
+      ElemE<T> d = EConj(th, K) - th;
+      if (!d.is_zero() && LocalVal(d, P) < 1) {
         return {};
       }
     }
     int s0 = 1 << 28;
     for (auto const &row : H) {
       for (auto const &x : row) {
-        if (!EIsZero(x)) {
+        if (!x.is_zero()) {
           s0 = std::min(s0, LocalVal(x, P));
         }
       }
     }
     auto res_shift = [&](ElemE<T> const &x, int k) -> FqElt {
-      if (EIsZero(x)) {
+      if (x.is_zero()) {
         return {};
       }
       return LocalResidue(LocalShift(x, k, P), P);
@@ -2309,7 +2309,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       for (int col = 0; col < m; col++) {
         int piv = -1;
         for (int a = col; a < m; a++) {
-          if (!EIsZero(G[a][col])) {
+          if (!G[a][col].is_zero()) {
             piv = a;
             break;
           }
@@ -2326,19 +2326,19 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           Inv[col][b] = EMul(Inv[col][b], iv, K);
         }
         for (int a = 0; a < m; a++) {
-          if (a == col || EIsZero(G[a][col])) {
+          if (a == col || G[a][col].is_zero()) {
             continue;
           }
           ElemE<T> fct = G[a][col];
           for (int b = 0; b < m; b++) {
-            G[a][b] = ESub(G[a][b], EMul(fct, G[col][b], K));
-            Inv[a][b] = ESub(Inv[a][b], EMul(fct, Inv[col][b], K));
+            G[a][b] -= EMul(fct, G[col][b], K);
+            Inv[a][b] -= EMul(fct, Inv[col][b], K);
           }
         }
       }
       for (auto const &row : Inv) {
         for (auto const &x : row) {
-          if (!EIsZero(x)) {
+          if (!x.is_zero()) {
             eH = std::max(eH, -(LocalVal(x, P) + s0));
           }
         }
@@ -2541,8 +2541,8 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       for (int a = 0; a < m; a++) {
         for (int b = 0; b < m; b++) {
           for (int d = 0; d < m; d++) {
-            if (!EIsZero(X[a][d]) && !EIsZero(Y[d][b])) {
-              Z[a][b] = EAddE(Z[a][b], EMul(X[a][d], Y[d][b], K));
+            if (!X[a][d].is_zero() && !Y[d][b].is_zero()) {
+              Z[a][b] += EMul(X[a][d], Y[d][b], K);
             }
           }
         }
@@ -2575,9 +2575,9 @@ LocalImagePiAdic(MyMatrix<T> const &B,
       GMat E = matmul(matmul(gm, H), gs);
       for (int a = 0; a < m; a++) {
         for (int b = 0; b < m; b++) {
-          E[a][b] = ESub(E[a][b], H[a][b]);
+          E[a][b] -= H[a][b];
 #ifdef SANITY_CHECK_ABQUAD
-          if (!EIsZero(E[a][b]) && LocalVal(E[a][b], P) < j + s0) {
+          if (!E[a][b].is_zero() && LocalVal(E[a][b], P) < j + s0) {
             std::cerr << "ABQUAD: not a solution at level " << j << "\n";
             throw TerminalException{1};
           }
@@ -2657,7 +2657,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
         for (int b = 0; b < m; b++) {
           FqElt dlt = from_coeffs(v, static_cast<size_t>((a * m + b) * fr));
           if (!dlt.is_zero()) {
-            g2[a][b] = EAddE(g2[a][b], EMul(LiftResidue(dlt, K), pij, K));
+            g2[a][b] += EMul(LiftResidue(dlt, K), pij, K);
           }
         }
       }
@@ -2926,7 +2926,7 @@ LocalImagePiAdic(MyMatrix<T> const &B,
           for (int b2 = 0; b2 < m; b2++) {
             FqElt dlt = from_coeffs(v, static_cast<size_t>((a2 * m + b2) * fr));
             if (!dlt.is_zero()) {
-              g2[a2][b2] = EAddE(g2[a2][b2], EMul(LiftResidue(dlt, K), pij, K));
+              g2[a2][b2] += EMul(LiftResidue(dlt, K), pij, K);
             }
           }
         }
