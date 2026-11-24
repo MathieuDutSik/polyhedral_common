@@ -1129,7 +1129,8 @@ QuatLocalImageOrdersGenerators(MyMatrix<T> const &B,
     return v;
   };
   std::vector<Tint> res;
-#ifdef SANITY_CHECK_QUATERNIONIC_MASS
+  // the image at c + 1 too, to check that it is stable: expensive
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE
   int c_top = c + 1;
 #else
   int c_top = c;
@@ -1262,7 +1263,7 @@ std::optional<T> QuaternionicComponentMass(
   }
   int c = static_cast<int>(Center.size());
   int dimD = 4 * c;
-  int dim_u = c * r * (2 * r + 1);
+  [[maybe_unused]] int dim_u = c * r * (2 * r + 1);
   MyMatrix<T> Binv = Inverse(B);
   auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     return Binv * Y.transpose() * B;
@@ -1756,8 +1757,8 @@ std::optional<T> QuaternionicComponentMass(
     if (!nS) {
       return {};
     }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE
     Tint pdim = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), dim_u);
-#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (nX->second != nX->first * pdim || nS->second != nS->first * pdim) {
       std::cerr << "QUAT_MASS: the images at p=" << p << " do not grow by p^"
                 << dim_u << " from p^" << cc << " to p^" << cc + 1 << "\n";
