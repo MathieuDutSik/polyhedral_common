@@ -5,6 +5,7 @@
 // clang-format off
 #include "MassComponents.h"
 #include "MassLocalImage.h"
+#include "MassQuaternionic.h"
 // clang-format on
 
 /*
