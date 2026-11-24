@@ -976,7 +976,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             Gblk, EltsBlk, MakeAbelianCMField(Nexp, Hgens), m,
             QuaternionicMassBounds(), os);
       };
-#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS
+      // the mass of the block by the Tamagawa number, printed for a
+      // comparison: a second mass computation, expensive
+#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS_EXTENSIVE
       if (found_basis && is_cm && m <= 2) {
         std::optional<T> um = unitary_block_mass();
         os << "ISOM_MASS: unitary mass of the block by the Tamagawa number "
