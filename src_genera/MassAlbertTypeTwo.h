@@ -780,7 +780,10 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
     }
     mass *= *f;
   }
-#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+  // the local factors at further good primes: more local searches,
+  // expensive
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE
+  std::cerr << "ALB2_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE\n";
   {
     int64_t p = 2;
     int n_checked = 0;
@@ -798,6 +801,7 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
       n_checked++;
     }
   }
+  std::cerr << "ALB2_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE, done\n";
 #endif
   return mass;
 }
@@ -1286,7 +1290,10 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
   os << "ALB2_MASS: r=" << r << " Df=" << Df << " mass(N0)=" << *m0
      << " |B|=" << nB << " mass=" << mass << "\n";
 #endif
-#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+  // the local factors at further good primes: more local searches,
+  // expensive
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE
+  std::cerr << "ALB2_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE\n";
   {
     int64_t p = 2;
     int n_checked = 0;
@@ -1311,6 +1318,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
       n_checked++;
     }
   }
+  std::cerr << "ALB2_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE, done\n";
 #endif
   return mass;
 }
