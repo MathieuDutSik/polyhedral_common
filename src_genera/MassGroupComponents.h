@@ -726,7 +726,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             dKq *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
           }
         }
-        comp.quaternionic = true;
+        comp.kind = ComponentKind::Precomputed;
         QuaternionicMassBounds qbounds;
         // G spans M_s(D) on the block, of dimension 4 c s^2
         int dimA = 0;
@@ -759,7 +759,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           // the split M_{2r}(Q): the type I path below
         } else if (sq == 1) {
           // X = L_rho, on which G spans D
-          comp.quaternionic_mass = quat_mass(Gram, EltsC, qbounds);
+          comp.precomputed_mass = quat_mass(Gram, EltsC, qbounds);
           comp.multiplicity_factor = T(1);
         } else {
           /*
@@ -799,7 +799,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               DspanX.push_back(MyMatrix<T>(Xb * x * A * Xb.transpose() * GramXinv)
                                    .transpose());
             }
-            comp.quaternionic_mass = quat_mass(GramX, DspanX, qbounds);
+            comp.precomputed_mass = quat_mass(GramX, DspanX, qbounds);
             std::vector<MyMatrix<T>> OmegaQ;
             for (auto const &W2 : QuatIntegralPoints<T, Tint>(DspanX, dimF)) {
               OmegaQ.push_back(W2.transpose());
@@ -823,14 +823,14 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
 #ifdef DEBUG_ISOMETRY_MASS
         os << "ISOM_MASS: quaternionic component of rank " << k << ", r=" << rq
            << ", center of degree " << c << ", mass "
-           << (comp.quaternionic_mass ? "found" : "not found") << "\n";
+           << (comp.precomputed_mass ? "found" : "not found") << "\n";
 #endif
         if (!type2_split) {
           res.push_back(comp);
           continue;
         }
-        comp.quaternionic = false;
-        comp.quaternionic_mass.reset();
+        comp.kind = ComponentKind::Unsupported;
+        comp.precomputed_mass.reset();
         comp.multiplicity_factor.reset();
       }
     }
@@ -877,10 +877,12 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         // rank one (1/2), without the line F and without a local factor
         MyMatrix<T> one(1, 1);
         one(0, 0) = T(2);
+        comp.kind = ComponentKind::Multiplicity;
         comp.multiplicity_gram = one;
         res.push_back(comp);
         continue;
       }
+      comp.kind = ComponentKind::Multiplicity;
       comp.multiplicity_gram = found;
       if (found) {
         MultiplicityFactorBounds mbounds;
@@ -984,14 +986,14 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           dimA = RankMat(Fl);
         }
         if (dimA == 4 * c && k == 4 * c) {
-          comp.direct = true;
-          comp.direct_mass = unitary_block_mass();
+          comp.kind = ComponentKind::Precomputed;
+          comp.precomputed_mass = unitary_block_mass();
           comp.multiplicity_factor = T(1);
         }
 #ifdef DEBUG_ISOMETRY_MASS
         os << "ISOM_MASS: End_G a quaternion division algebra over the CM "
            << "center, G spans an algebra of dimension " << dimA << ", mass "
-           << (comp.direct_mass ? "found" : "not found") << "\n";
+           << (comp.precomputed_mass ? "found" : "not found") << "\n";
 #endif
       }
       if (found_basis) {
@@ -1085,11 +1087,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
            << Omega.size() << ", maximal " << maximal << "\n";
 #endif
         if (maximal) {
-          if (is_cm) {
-            comp.herm_field = Fk;
-          } else {
-            comp.quad_field = Fk;
-          }
+          comp.kind = is_cm ? ComponentKind::AbelianHermitian
+                            : ComponentKind::AbelianQuadratic;
+          comp.center_field = Fk;
           comp.center_gram = Xb * A * Xb.transpose();
           comp.center_omega = Omega;
           MultiplicityFactorBounds mbounds;
@@ -1108,7 +1108,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             orders of the images modulo p^c and the Lie lattices
             (MassQuaternionic.h, which holds for any order acting).
            */
-          comp.direct = true;
+          comp.kind = ComponentKind::Precomputed;
           auto zbasis_rat = [&](std::vector<MyMatrix<T>> const &L)
               -> std::vector<MyMatrix<T>> {
             MyMatrix<T> F(static_cast<int>(L.size()), mX * mX);
@@ -1339,7 +1339,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                 *mass_X *= ratio;
               }
             }
-            comp.direct_mass = mass_X;
+            comp.precomputed_mass = mass_X;
             if (mass_X) {
               MultiplicityFactorBounds mbounds;
               comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(

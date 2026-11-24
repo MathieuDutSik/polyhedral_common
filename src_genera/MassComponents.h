@@ -50,10 +50,33 @@
   integers; only the orders of the primary parts of D(L_d) become machine
   integers, in PrimaryQuadModule, where their size is checked.
  */
+/*
+  The kind of the centralizer of G on a component, which says how its mass
+  is computed (ComponentMass, MassIsometry.h):
+  - Orthogonal: d = 1, 2, G acts by +-1, the mass of the genus of L_d;
+  - CyclotomicHermitian: d >= 3, the Hermitian lattice L_d over Z[zeta_d];
+  - Multiplicity: End_G = Q, the genus of the multiplicity lattice X;
+  - AbelianHermitian, AbelianQuadratic: End_G a field K with O_K X = X,
+    X Hermitian over K (K CM) or quadratic (K totally real);
+  - Precomputed: the mass found with the decomposition, End_G quaternionic
+    or an order of K acting on X that is not O_K;
+  - Unsupported: no method.
+ */
+enum class ComponentKind {
+  Orthogonal,
+  CyclotomicHermitian,
+  Multiplicity,
+  AbelianHermitian,
+  AbelianQuadratic,
+  Precomputed,
+  Unsupported
+};
+
 template <typename T> struct IsometryComponent {
   // d = 0: a component of a non-abelian group on which it does not act
   // through a cyclic quotient
   int d;
+  ComponentKind kind = ComponentKind::Unsupported;
   MyMatrix<T> basis;
   MyMatrix<T> gram;
   MyMatrix<T> sigma;
@@ -64,22 +87,17 @@ template <typename T> struct IsometryComponent {
   std::optional<MyMatrix<T>> multiplicity_gram;
   // the product over p | |G| of [O(X_p) : Stab(L_p)], when computed
   std::optional<T> multiplicity_factor;
-  // End_G with a center K other than Q: the multiplicity lattice X, with
-  // the actions of a Z-basis of O_K, is Hermitian over K when K is CM
-  // (herm_field) and quadratic over K when K is totally real (quad_field)
-  std::optional<AbelianField> herm_field;
-  std::optional<AbelianField> quad_field;
+  // End_G with a center K other than Q (AbelianHermitian,
+  // AbelianQuadratic): the multiplicity lattice X with the actions of a
+  // Z-basis of O_K
+  std::optional<AbelianField> center_field;
   MyMatrix<T> center_gram;
   std::vector<MyMatrix<T>> center_omega;
-  // End_G = M_r(D), D a totally definite quaternion algebra over a real
-  // center: the mass of the component, computed directly
-  // (MassQuaternionic.h) when it could be
-  bool quaternionic = false;
-  std::optional<T> quaternionic_mass;
-  // a center K whose order on X is not O_K: the mass of X computed
-  // directly (by comparison with O_K X), times multiplicity_factor
-  bool direct = false;
-  std::optional<T> direct_mass;
+  // Precomputed: the mass of the component when found (End_G = M_r(D), D
+  // a totally definite quaternion algebra, MassQuaternionic.h; or an order
+  // of K on X that is not O_K, by comparison with O_K X), to be multiplied
+  // by multiplicity_factor
+  std::optional<T> precomputed_mass;
   MyMatrix<T> row;
   MyMatrix<T> row_inv;
   std::vector<typename underlying_z_ring<T>::ring_type> elem;
@@ -106,6 +124,8 @@ IsometryComponent<T> BuildIsometryComponent(MyMatrix<T> const &A,
                                             MyMatrix<T> const &P, int d) {
   IsometryComponent<T> comp;
   comp.d = d;
+  comp.kind = (d <= 2) ? ComponentKind::Orthogonal
+                       : ComponentKind::CyclotomicHermitian;
   comp.basis = E;
   comp.gram = E * A * E.transpose();
   comp.sigma = E * P * A * E.transpose() * Inverse(comp.gram);

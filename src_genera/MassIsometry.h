@@ -108,6 +108,68 @@ struct IsometryMassBounds {
   bool allow_image_assumption = false;
 };
 
+/*
+  The mass of a component according to the kind of its centralizer
+  (ComponentKind, MassComponents.h), times the local factor at the primes
+  dividing |G| when it was computed (multiplicity_factor). When it was not,
+  the mass is returned without it and local_factor_missing is set, except
+  for a lattice of rank one or a cyclic component, where there is none.
+  herm_mass: masses of the components d >= 3 supplied by the caller.
+ */
+template <typename T> struct ComponentMassValue {
+  std::optional<T> mass;
+  bool local_factor_missing = false;
+};
+
+template <typename T, typename Tint>
+ComponentMassValue<T> ComponentMass(IsometryComponent<T> const &comp,
+                                    std::map<int, T> const &herm_mass,
+                                    IsometryMassBounds const &bounds) {
+  std::optional<T> base;
+  bool needs_factor = true;
+  switch (comp.kind) {
+  case ComponentKind::Orthogonal:
+    return {GenusMass<T, Tint>(comp.gram), false};
+  case ComponentKind::CyclotomicHermitian: {
+    auto iter = herm_mass.find(comp.d);
+    if (iter != herm_mass.end()) {
+      return {iter->second, false};
+    }
+    return {HermitianMassCyclotomicLattice(comp.gram, comp.sigma, comp.d),
+            false};
+  }
+  case ComponentKind::Multiplicity:
+    if (!comp.multiplicity_gram) {
+      return {};
+    }
+    base = GenusMass<T, Tint>(*comp.multiplicity_gram);
+    // multiplicity one: the centralizer on the component is {+-1}, which
+    // preserves every lattice, so no local factor is missing
+    needs_factor = comp.multiplicity_gram->rows() > 1;
+    break;
+  case ComponentKind::AbelianHermitian:
+    base = HermitianMassAbelianLattice(comp.center_gram, comp.center_omega,
+                                       *comp.center_field);
+    break;
+  case ComponentKind::AbelianQuadratic:
+    base = QuadraticMassAbelianLattice(comp.center_gram, comp.center_omega,
+                                       *comp.center_field, bounds.lvalue);
+    break;
+  case ComponentKind::Precomputed:
+    base = comp.precomputed_mass;
+    break;
+  case ComponentKind::Unsupported:
+    return {};
+  }
+  if (!base) {
+    return {};
+  }
+  if (comp.multiplicity_factor) {
+    return {*base * *comp.multiplicity_factor, false};
+  }
+  return {*base, needs_factor};
+}
+
 template <typename T, typename Tint>
 IsometryMassResult<T>
 IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
@@ -154,62 +216,14 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     cm.d = comp.d;
     cm.rank = comp.gram.rows();
     cm.det = DeterminantMat(comp.gram);
-    if (comp.d == 0 && (comp.quaternionic || comp.direct)) {
-      std::optional<T> const &dm =
-          comp.quaternionic ? comp.quaternionic_mass : comp.direct_mass;
-      if (dm && comp.multiplicity_factor) {
-        cm.mass = *dm * *comp.multiplicity_factor;
-      } else if (dm) {
-        cm.mass = *dm;
-        cm.local_factor_missing = true;
-        res.local_correction_open = true;
-      } else {
-        res.unsupported_component = true;
-      }
-    } else if (comp.d == 0 && (comp.herm_field || comp.quad_field)) {
-      std::optional<T> hm =
-          comp.herm_field
-              ? HermitianMassAbelianLattice(comp.center_gram, comp.center_omega,
-                                            *comp.herm_field)
-              : QuadraticMassAbelianLattice(comp.center_gram, comp.center_omega,
-                                            *comp.quad_field, bounds.lvalue);
-      if (hm && comp.multiplicity_factor) {
-        cm.mass = *hm * *comp.multiplicity_factor;
-      } else if (hm) {
-        cm.mass = *hm;
-        cm.local_factor_missing = true;
-        res.local_correction_open = true;
-      } else {
-        res.unsupported_component = true;
-      }
-    } else if (comp.d == 0) {
-      if (comp.multiplicity_gram) {
-        cm.mass = GenusMass<T, Tint>(*comp.multiplicity_gram);
-        // multiplicity one: the centralizer on the component is {+-1},
-        // which preserves every lattice, so no local factor is missing;
-        // otherwise the local factors at p | |G|, unless beyond the bounds
-        if (comp.multiplicity_factor) {
-          *cm.mass *= *comp.multiplicity_factor;
-        } else if (comp.multiplicity_gram->rows() > 1) {
-          cm.local_factor_missing = true;
-          res.local_correction_open = true;
-        }
-      } else {
-        res.unsupported_component = true;
-      }
-    } else if (comp.d <= 2) {
-      cm.mass = GenusMass<T, Tint>(comp.gram);
-    } else {
-      auto iter = herm_mass.find(comp.d);
-      if (iter != herm_mass.end()) {
-        cm.mass = iter->second;
-      } else {
-        std::optional<T> opt =
-            HermitianMassCyclotomicLattice(comp.gram, comp.sigma, comp.d);
-        if (opt) {
-          cm.mass = *opt;
-        }
-      }
+    ComponentMassValue<T> v = ComponentMass<T, Tint>(comp, herm_mass, bounds);
+    cm.mass = v.mass;
+    if (v.local_factor_missing) {
+      cm.local_factor_missing = true;
+      res.local_correction_open = true;
+    }
+    if (!v.mass && comp.d == 0) {
+      res.unsupported_component = true;
     }
     if (cm.mass) {
       mass0 *= *cm.mass;
