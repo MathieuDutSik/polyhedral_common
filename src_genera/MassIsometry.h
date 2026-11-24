@@ -301,7 +301,10 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
          */
         IsometryComponent<T> const &comp_c = res.components[comp_pos[s]];
         if (comp_c.d >= 3 && comp_c.extra_sigma.empty()) {
-#ifdef SANITY_CHECK_ISOMETRY_MASS
+          // all the equivariant isometries against the image: two more
+          // enumerations, expensive
+#ifdef SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE
+          std::cerr << "ISOM_MASS: SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE\n";
           std::optional<std::vector<ModuleAut>> all_eq =
               EquivariantModuleIsometries(mods[s], bounds.max_module,
                                           bounds.max_group);
@@ -313,6 +316,7 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
                       << all_eq->size() << " equivariant isometries\n";
             throw TerminalException{1};
           }
+          std::cerr << "ISOM_MASS: SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE, done\n";
 #endif
           image_groups.push_back({});
           list_image.push_back("full");

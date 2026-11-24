@@ -1758,12 +1758,14 @@ std::optional<T> QuaternionicComponentMass(
       return {};
     }
 #ifdef SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE
+    std::cerr << "QUAT_MASS: SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE\n";
     Tint pdim = MyPow<Tint>(UniversalScalarConversion<Tint, int64_t>(p), dim_u);
     if (nX->second != nX->first * pdim || nS->second != nS->first * pdim) {
       std::cerr << "QUAT_MASS: the images at p=" << p << " do not grow by p^"
                 << dim_u << " from p^" << cc << " to p^" << cc + 1 << "\n";
       throw TerminalException{1};
     }
+    std::cerr << "QUAT_MASS: SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE, done\n";
 #endif
     int vX = RationalValuation(discX, p);
     int vS = RationalValuation(discS, p);

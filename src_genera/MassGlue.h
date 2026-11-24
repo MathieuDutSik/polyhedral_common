@@ -1086,8 +1086,10 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
         os << "ISOM_MASS: q=" << q << " d=" << comp.d << " image on D="
            << seen.size() << " from " << ggens->size() << " generators\n";
 #endif
-#ifdef SANITY_CHECK_ISOMETRY_MASS
-        // the listed image, when within the bounds, is the same set
+#ifdef SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE
+        // the listed image, when within the bounds, is the same set: a
+        // second enumeration, expensive
+        std::cerr << "ISOM_MASS: SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE\n";
         std::optional<std::vector<ModRowsI64>> lst;
         if (listable) {
           lst = LocalStabilizerImage(A_mod, basis, q, c, e, mbounds);
@@ -1110,6 +1112,7 @@ LocalImageOnModule(IsometryComponent<T> const &comp, PrimaryQuadModule const &M,
             throw TerminalException{1};
           }
         }
+        std::cerr << "ISOM_MASS: SANITY_CHECK_ISOMETRY_MASS_EXTENSIVE, done\n";
 #endif
         return std::vector<ModuleAut>(seen.begin(), seen.end());
       }

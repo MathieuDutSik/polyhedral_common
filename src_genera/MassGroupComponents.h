@@ -679,8 +679,10 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         if (!type2) {
           std::optional<T> qm = QuaternionicComponentMass<T, Tint>(
               Gx, Ds, FKq_holder, dKq_holder, rq, qb, os);
-#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
-          // the measures of the Tamagawa route on type III, rank one over Q
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE
+          // the measures of the Tamagawa route on type III, rank one over Q:
+          // a second mass computation, expensive
+          std::cerr << "ISOM_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE\n";
           if (qm && rq == 1 && c == 1) {
             std::optional<T> tm = TypeThreeRankOneTamagawaMass<T, Tint>(
                 Gx, Ds, AlbertTypeTwoMassBounds{qb}, os);
@@ -691,6 +693,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               throw TerminalException{1};
             }
           }
+          std::cerr << "ISOM_MASS: SANITY_CHECK_ALBERT_TYPE_TWO_MASS_EXTENSIVE, done\n";
 #endif
           return qm;
         }
@@ -979,11 +982,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       // the mass of the block by the Tamagawa number, printed for a
       // comparison: a second mass computation, expensive
 #ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS_EXTENSIVE
+      std::cerr << "ISOM_MASS: SANITY_CHECK_UNITARY_INNER_FORM_MASS_EXTENSIVE\n";
       if (found_basis && is_cm && m <= 2) {
         std::optional<T> um = unitary_block_mass();
         os << "ISOM_MASS: unitary mass of the block by the Tamagawa number "
            << (um ? *um : T(-1)) << "\n";
       }
+      std::cerr << "ISOM_MASS: SANITY_CHECK_UNITARY_INNER_FORM_MASS_EXTENSIVE, done\n";
 #endif
       if (!found_basis && is_cm && m == 2) {
         /*
