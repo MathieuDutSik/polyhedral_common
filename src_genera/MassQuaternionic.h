@@ -275,7 +275,9 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
       res(r2, u) /= D;
     }
   }
-#ifdef SANITY_CHECK_QUATERNIONIC_MASS
+  // the kernel again by the integral elimination: expensive
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE
+  std::cerr << "QUAT_MASS: SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE\n";
   if (N <= 400) {
     MyMatrix<Tint> ref = fallback();
     if (ComputeRowHermiteNormalForm(ref).second !=
@@ -285,6 +287,7 @@ MyMatrix<Tint> IntegralKernelOfConditions(MyMatrix<Tint> const &Eq) {
       throw TerminalException{1};
     }
   }
+  std::cerr << "QUAT_MASS: SANITY_CHECK_QUATERNIONIC_MASS_EXTENSIVE, done\n";
 #endif
   return res;
 }
