@@ -3,7 +3,8 @@
 #define SRC_GENERA_LOCALDENSITYBADPRIMES_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "SymmetricOrbitCounting.h"
 #include "ResidueArithmetic.h"
 #include <algorithm>
@@ -14,6 +15,10 @@
 #include <set>
 #include <vector>
 // clang-format on
+
+// The value of a character, or a small signed key standing for one (a
+// Legendre symbol, a unit residue modulo 8).
+using T_character = int64_t;
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
@@ -85,7 +90,7 @@ inline std::pair<int, T_character> ResidueClassKey(T_residue c,
     v++;
   }
   if (p != 2) {
-    return {v, KroneckerResidue(c, p)};
+    return {v, ResKronecker(c, p)};
   }
   T_residue rem = MyPow<T_residue>(2, k - v);
   T_residue mod_u = std::min<T_residue>(8, rem);
@@ -181,7 +186,7 @@ std::vector<T> ConvolveClassFunctions(ResidueClasses const &rc,
         for (int C = 0; C < nc; C++) {
           int64_t cnt = rc.n_sum[A][B][C];
           if (cnt != 0) {
-            h[C] += fg * ScalarFromInt64<T>(cnt);
+            h[C] += fg * UniversalScalarConversion<T, int64_t>(cnt);
           }
         }
       }
@@ -226,11 +231,11 @@ std::vector<T> BlockValueDistribution(ResidueClasses const &rc,
   for (T_residue c = 0; c < M; c++) {
     int A = rc.class_of[c];
     if (!seen[A]) {
-      f[A] = ScalarFromInt64<T>(hist[c]);
+      f[A] = UniversalScalarConversion<T, int64_t>(hist[c]);
       seen[A] = true;
     }
 #ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
-    else if (f[A] != ScalarFromInt64<T>(hist[c])) {
+    else if (f[A] != UniversalScalarConversion<T, int64_t>(hist[c])) {
       std::cerr << "LDBP: the distribution of a block is not a class "
                    "function\n";
       throw TerminalException{1};
@@ -275,7 +280,7 @@ T CountRepresentationsModPk(ResidueClasses const &rc,
 // 6.26 and 6.27).
 template <typename T>
 T QuadraticFormValueCount(int r, int64_t d, int64_t c_in, T_small_prime p) {
-  T p_T = ScalarFromInt64<T>(static_cast<int64_t>(p));
+  T p_T = UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(p));
   T_residue c = ResModSigned(c_in, p);
   T_residue d_r = ResModSigned(d, p);
   if (r == 0) {
@@ -284,16 +289,16 @@ T QuadraticFormValueCount(int r, int64_t d, int64_t c_in, T_small_prime p) {
   T base = MyPowSigned(p_T, r - 1);
   if (r % 2 == 0) {
     T_residue sgn = ((r / 2) % 2 == 0) ? 1 : p - 1;
-    int eta = KroneckerResidue(ResMul(sgn, d_r, p), p);
+    int eta = ResKronecker(ResMul(sgn, d_r, p), p);
     T nu = (c == 0) ? p_T - T(1) : T(-1);
-    return base + nu * MyPowSigned(p_T, r / 2 - 1) * ScalarFromInt64<T>(eta);
+    return base + nu * MyPowSigned(p_T, r / 2 - 1) * UniversalScalarConversion<T, int64_t>(eta);
   }
   if (c == 0) {
     return base;
   }
   T_residue sgn = (((r - 1) / 2) % 2 == 0) ? 1 : p - 1;
-  int eta = KroneckerResidue(ResMul(ResMul(sgn, c, p), d_r, p), p);
-  return base + MyPowSigned(p_T, (r - 1) / 2) * ScalarFromInt64<T>(eta);
+  int eta = ResKronecker(ResMul(ResMul(sgn, c, p), d_r, p), p);
+  return base + MyPowSigned(p_T, (r - 1) / 2) * UniversalScalarConversion<T, int64_t>(eta);
 }
 
 /*
@@ -317,7 +322,7 @@ T RankOneDensityOddLevels(std::map<int, std::pair<int, T_residue>> const &levels
     r0 = iter->second.first;
     d0 = iter->second.second;
   }
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   if (v == 0) {
     if (r0 == 0) {
       return T(0);
@@ -413,7 +418,7 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
     e_max = std::max(e_max, b.e);
   }
   int k = a.val + e_max + ((p == 2) ? 4 : 2);
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   auto density_at = [&](int kk) -> T {
     ResidueClasses const &rc = GetResidueClasses(cache.classes, p, kk);
     return CountRepresentationsModPk<T>(rc, q, a, cache) /
@@ -472,7 +477,7 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
   for (auto const &c : Cdiag) {
     e_max = std::max(e_max, c.val);
   }
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   // the coefficients of C up to unit squares: one transition table each
   std::set<std::pair<int, T_residue>> c_classes;
   for (auto const &c : Cdiag) {
@@ -500,13 +505,13 @@ std::optional<T> CountingDensity(std::vector<PadicClass> const &Sigma,
     std::vector<T_residue> zero(j * j, 0);
     state[so.index.at(SymmetricOrbitKey(zero, j, p, k, so.mod))] = T(1);
     for (auto const &c : Cdiag) {
-      T_residue u = (KroneckerResidue(c.unit, p) == 1) ? 1 : c.unit;
+      T_residue u = (ResKronecker(c.unit, p) == 1) ? 1 : c.unit;
       auto const &H = SymmetricOrbitTransitions(so, c.val, u);
       std::vector<T> next(no, T(0));
       for (int Cc = 0; Cc < no; Cc++) {
         for (int A = 0; A < no; A++) {
           if (H[Cc][A] != 0 && state[A] != 0) {
-            next[Cc] += ScalarFromInt64<T>(H[Cc][A]) * state[A];
+            next[Cc] += UniversalScalarConversion<T, int64_t>(H[Cc][A]) * state[A];
           }
         }
       }
@@ -576,7 +581,7 @@ T IsotropicSubspaceCount(int r, int det_leg, int w, T_small_prime p) {
   if (2 * w > r) {
     return T(0);
   }
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   T res(1);
   if (r % 2 == 1) {
     int m = (r - 1) / 2;
@@ -644,7 +649,7 @@ T DensityOddNonUnits(std::vector<PadicClass> const &Sigma,
   for (auto const &s : Sigma) {
     SigmaRed.push_back({s.val - 1, s.unit});
   }
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   int w_max = std::min(j, r / 2);
   std::vector<T> I(w_max + 1);
   for (int w = 0; w <= w_max; w++) {

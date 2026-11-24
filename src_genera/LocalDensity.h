@@ -102,7 +102,7 @@ inline std::vector<EulerTerm> GoodPrimeEulerTerms(int n, int m, int64_t detS,
 template <typename T>
 T EulerValueAtPrime(std::vector<EulerTerm> const &terms, int64_t p) {
   T val(1);
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   for (auto const &term : terms) {
     int chi = QuadraticCharacter(term.D, p);
     T ps = MyPow<T>(p_T, term.s);
@@ -141,8 +141,8 @@ PiRadical<T> ArchimedeanFactor(int n, int m, int64_t detS, int64_t detT) {
   for (int j = n - m + 1; j <= n; j++) {
     val = val * PiRadicalInverse(GammaHalfInteger<T>(j));
   }
-  val = val * RationalHalfPower<T>(ScalarFromInt64<T>(detS), n - m - 1);
-  val = val * RationalHalfPower<T>(ScalarFromInt64<T>(detT), -m);
+  val = val * RationalHalfPower<T>(UniversalScalarConversion<T, int64_t>(detS), n - m - 1);
+  val = val * RationalHalfPower<T>(UniversalScalarConversion<T, int64_t>(detT), -m);
   return val;
 }
 

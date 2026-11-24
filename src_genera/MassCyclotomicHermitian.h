@@ -10,7 +10,8 @@
 #include "LocalJordan.h"
 #include "ClassicalGroupOrders.h"
 #include "ScalarPolynomialModQ.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "SiegelSpecialValues.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
@@ -841,7 +842,7 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
   // the factor of a maximal lattice of the same space
   auto maximal_factor = [&](std::vector<std::vector<ElemE<T>>> const &H) -> T {
     if (m % 2 == 1) {
-      return RationalFraction<T>(1, 2);
+      return T(1) / T(2);
     }
     std::vector<std::vector<ElemE<T>>> G = H;
     ElemE<T> det = C.one;
@@ -928,7 +929,8 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
       std::cerr << "CYCLO: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
-    f *= RationalFraction<T>(A, Bc);
+    f *= UniversalScalarConversion<T, int64_t>(A) /
+           UniversalScalarConversion<T, int64_t>(Bc);
   }
   return f;
 }

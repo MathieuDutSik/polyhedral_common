@@ -117,7 +117,7 @@ void WriteCheckGroups(
   bool all_integral = true;
   for (auto const &kv : groups) {
     T ratio =
-        ScalarFromInt64<T>(kv.second.first) / (order_T * kv.second.second);
+        UniversalScalarConversion<T, int64_t>(kv.second.first) / (order_T * kv.second.second);
     os << "count=" << kv.second.first << " ratio=" << ratio << " " << kv.first
        << "\n";
     if (!IsInteger(ratio)) {
@@ -171,7 +171,7 @@ std::vector<MyMatrix<T>> OrthogonalGroupElements(MyMatrix<T> const &A,
               << " elements but |O(L)| = " << aut.order << "\n";
     throw TerminalException{1};
   }
-  order_T = ScalarFromInt64<T>(static_cast<int64_t>(elts.size()));
+  order_T = UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(elts.size()));
   return elts;
 }
 
@@ -255,7 +255,7 @@ void ProcessGroupCheck(std::string const &FileGram, std::string const &FileIsom,
     AddCheckResult(groups, res);
   }
   os << "|O(L)| = " << elts.size() << " |C(g)| = " << n_cent << "\n";
-  WriteCheckGroups(os, groups, ScalarFromInt64<T>(n_cent));
+  WriteCheckGroups(os, groups, UniversalScalarConversion<T, int64_t>(n_cent));
 }
 
 // The integers of a comma separated list.
@@ -356,7 +356,7 @@ void PrintMaximalOrder(std::vector<int64_t> const &f) {
     A(i + 1, i) = 1;
   }
   for (int i = 0; i < n; i++) {
-    A(i, n - 1) = ScalarFromInt64<T>(-f[i]);
+    A(i, n - 1) = UniversalScalarConversion<T, int64_t>(-f[i]);
   }
   std::vector<MyMatrix<T>> O{IdentityMat<T>(n)};
   for (int i = 1; i < n; i++) {

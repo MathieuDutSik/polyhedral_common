@@ -121,7 +121,7 @@ inline std::vector<int> SymmetricOrbitKey(std::vector<T_residue> a, int j,
   std::vector<int> key;
   for (int v = 0; v < k; v++) {
     key.push_back(count[v]);
-    key.push_back(count[v] > 0 ? KroneckerResidue(prod[v], p) : 0);
+    key.push_back(count[v] > 0 ? ResKronecker(prod[v], p) : 0);
   }
   key.push_back(count[k]);
   return key;

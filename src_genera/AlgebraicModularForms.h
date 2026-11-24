@@ -144,7 +144,7 @@ bool amf_is_isotropic(MyMatrix<Tint> const &G, std::vector<int64_t> const &z,
                              int64_t const &ell) {
   MyVector<Tint> x(z.size());
   for (size_t k = 0; k < z.size(); k++) {
-    x(k) = amf_int<Tint>(z[k]);
+    x(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
   }
   return order_residue(order_hermitian_norm(G, x), ell) == 0;
 }
@@ -390,7 +390,7 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
           AmfCanonical<T, Tint> can = amf_canonical<T, Tint, Tgroup>(ring, A_nb, os);
           size_t j = f_insert(can);
           if (!N) {
-            l_trans[ip].push_back({i, 0, j, 0, ScalarFromInt64<T>(static_cast<int64_t>(size_X))});
+            l_trans[ip].push_back({i, 0, j, 0, UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(size_X))});
             continue;
           }
           // The level lines of L_i carried to L_j: the coordinates in the
@@ -433,8 +433,8 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
           }
           for (auto &kv : count) {
             size_t o = kv.first.first;
-            T weight = ScalarFromInt64<T>(static_cast<int64_t>(size_X * kv.second)) /
-                       ScalarFromInt64<T>(static_cast<int64_t>(size_i[o]));
+            T weight = UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(size_X * kv.second)) /
+                       UniversalScalarConversion<T, int64_t>(static_cast<int64_t>(size_i[o]));
             l_trans[ip].push_back({i, o, j, kv.first.second, weight});
           }
         }

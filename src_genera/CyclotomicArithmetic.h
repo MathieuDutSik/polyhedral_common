@@ -3,7 +3,8 @@
 #define SRC_GENERA_CYCLOTOMICARITHMETIC_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "SiegelSpecialValues.h"
 #include "MAT_Matrix.h"
 #include <cstdint>
@@ -259,7 +260,7 @@ std::vector<T> ReduceCyclotomic(std::vector<T> const &x, int64_t e) {
     T c = r[k];
     if (c != 0) {
       for (int j = 0; j <= deg; j++) {
-        r[k - deg + j] -= c * ScalarFromInt64<T>(Phi[j]);
+        r[k - deg + j] -= c * UniversalScalarConversion<T, int64_t>(Phi[j]);
       }
     }
   }
@@ -310,14 +311,14 @@ std::vector<T> GeneralizedBernoulliCyclotomic(int k, int64_t f,
     if (ex < 0) {
       continue;
     }
-    T a_T = ScalarFromInt64<T>(a);
+    T a_T = UniversalScalarConversion<T, int64_t>(a);
     T pw(1);
     for (int t = 0; t <= k; t++) {
       S[t][ex] += pw;
       pw *= a_T;
     }
   }
-  T f_T = ScalarFromInt64<T>(f);
+  T f_T = UniversalScalarConversion<T, int64_t>(f);
   T fpow = T(1) / f_T;
   for (int j = 0; j <= k; j++) {
     T c = BinomialCoefficient<T>(k, j) * B[j] * fpow;

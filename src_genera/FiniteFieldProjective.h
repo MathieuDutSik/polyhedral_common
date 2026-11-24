@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "ScalarFiniteField.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MAT_MatrixModPrime.h"
 #include <cstdint>
 #include <iostream>

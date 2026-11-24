@@ -6,7 +6,8 @@
 #include "MassQuaternionic.h"
 #include "MaximalOrders.h"
 #include "MassCyclotomicHermitian.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixModInt64.h"
@@ -452,7 +453,7 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
           MyVector<T> x = ZeroVector<T>(k);
           x(i) = T(1);
           if (j != i) {
-            x(j) = ScalarFromInt64<T>(sgn);
+            x(j) = UniversalScalarConversion<T, int64_t>(sgn);
           }
           MyMatrix<T> Pm = make_Pm(x);
           T det = T_abs(DeterminantMat(MyMatrix<T>(Pm.transpose() * B * Pm)));
@@ -797,14 +798,14 @@ template <typename T> T SphereVolumeRational(int j) {
   if (j % 2 == 1) {
     int m = (j + 1) / 2;
     for (int i = 2; i < m; i++) {
-      res /= ScalarFromInt64<T>(i);
+      res /= UniversalScalarConversion<T, int64_t>(i);
     }
   } else {
     for (int i = 0; i < j / 2; i++) {
       res *= T(2);
     }
     for (int i = j - 1; i >= 1; i -= 2) {
-      res /= ScalarFromInt64<T>(i);
+      res /= UniversalScalarConversion<T, int64_t>(i);
     }
   }
   return res;
@@ -819,7 +820,7 @@ template <typename T> T ZetaEvenOverPi(int i) {
   }
   res /= T(2);
   for (int t = 2; t <= 2 * i; t++) {
-    res /= ScalarFromInt64<T>(t);
+    res /= UniversalScalarConversion<T, int64_t>(t);
   }
   return res;
 }
@@ -828,14 +829,14 @@ template <typename T> T ZetaEvenOverPi(int i) {
 template <typename T> T LValueOverPiSquared(int r, int64_t Df) {
   int64_t f = (Df < 0) ? -Df : Df;
   T Brc = GeneralizedBernoulli<T>(r, Df);
-  T fT = ScalarFromInt64<T>(f);
+  T fT = UniversalScalarConversion<T, int64_t>(f);
   T res = fT / T(4);
   for (int t = 0; t < r; t++) {
     res *= T(4) / (fT * fT);
   }
   T fact(1);
   for (int t = 2; t <= r; t++) {
-    fact *= ScalarFromInt64<T>(t);
+    fact *= UniversalScalarConversion<T, int64_t>(t);
   }
   return res * Brc * Brc / (fact * fact);
 }
@@ -936,7 +937,7 @@ ReducedNormsModP(std::vector<MyMatrix<T>> const &O0,
     T_residue tr = (*sol)[0];
     T_residue nr = ResNeg((*sol)[1], p);
     T_residue disc = ResSub(ResMul(tr, tr, p), ResMul(T_residue(4), nr, p), p);
-    if (disc == 0 || KroneckerResidue(disc, p) != 1) {
+    if (disc == 0 || ResKronecker(disc, p) != 1) {
       continue;
     }
     T_residue s = ResSqrtPrime(disc, p).value();
@@ -1015,7 +1016,7 @@ T TamagawaMassSquared(T const &tau, T const &Lprod_over_pi, T const &Vinf_over_p
   T num = tau * Lprod_over_pi;
   T res = num * num / (Vinf_over_pi * Vinf_over_pi);
   for (auto const &ld : loc) {
-    T pT = ScalarFromInt64<T>(ld.p);
+    T pT = UniversalScalarConversion<T, int64_t>(ld.p);
     // vol^2 = n^2 p^{-2 c dim} p^{-v}
     T vol2 = ld.n_over_idx;
     vol2 *= vol2;
@@ -1087,7 +1088,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
       MyMatrix<T> Y = u[t];
       for (int t2 = 0; t2 < static_cast<int>(u.size()); t2++) {
         if (t2 != t) {
-          Y += ScalarFromInt64<T>(s * (t2 + 1)) * u[t2];
+          Y += UniversalScalarConversion<T, int64_t>(s * (t2 + 1)) * u[t2];
         }
       }
       T det = DeterminantMat(Y);
@@ -1127,13 +1128,13 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
   };
   std::set<int64_t> primes{2};
   for (T const &x : {DeterminantMat(B), disc_u, QuatOrderDisc(O0, r), discD,
-                     ScalarFromInt64<T>(Df)}) {
+                     UniversalScalarConversion<T, int64_t>(Df)}) {
     for (int64_t q : prime_set(x)) {
       primes.insert(q);
     }
   }
   auto g_factor = [&](int64_t p) -> T {
-    T pinv = T(1) / ScalarFromInt64<T>(p);
+    T pinv = T(1) / UniversalScalarConversion<T, int64_t>(p);
     T res(1), pw(1);
     for (int i = 1; i < r; i++) {
       pw *= pinv * pinv;
@@ -1144,7 +1145,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
       pr *= pinv;
     }
     int ch = kronecker_symbol<int64_t>(Df, p);
-    return res * (T(1) - ScalarFromInt64<T>(ch) * pr);
+    return res * (T(1) - UniversalScalarConversion<T, int64_t>(ch) * pr);
   };
   std::vector<TamagawaLocalData<T>> loc;
   int nB = 0;
@@ -1181,7 +1182,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
     ld.p = p;
     ld.c = cc;
     ld.n_over_idx = UniversalScalarConversion<T, Tint>(o->first) /
-                    ScalarFromInt64<T>(idx);
+                    UniversalScalarConversion<T, int64_t>(idx);
     ld.v_disc_u = RationalValuation(disc_u, p);
     ld.g_p = g_factor(p);
 #ifdef DEBUG_ALBERT_TYPE_TWO_MASS
@@ -1199,7 +1200,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
     loc.push_back(res->first);
     nB += res->second;
   }
-  T Lprod = ScalarFromInt64<T>(1);
+  T Lprod = UniversalScalarConversion<T, int64_t>(1);
   for (int i = 1; i < r; i++) {
     Lprod *= ZetaEvenOverPi<T>(i);
   }
@@ -1240,7 +1241,7 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
         TamagawaLocalData<T> const &ld = res->first;
         T vol = ld.n_over_idx;
         for (int i = 0; i < ld.c * dim_u + ld.v_disc_u / 2; i++) {
-          vol /= ScalarFromInt64<T>(p);
+          vol /= UniversalScalarConversion<T, int64_t>(p);
         }
         if (ld.v_disc_u != 0 || vol != ld.g_p || res->second != 0) {
           std::cerr << "ALB2_MASS: the good prime " << p << " has vol " << vol
@@ -1302,12 +1303,12 @@ std::optional<T> TypeThreeRankOneTamagawaMass(MyMatrix<T> const &B,
     ld.c = cc;
     ld.n_over_idx = UniversalScalarConversion<T, Tint>(o->first);
     ld.v_disc_u = RationalValuation(disc_u, p);
-    ld.g_p = T(1) - T(1) / ScalarFromInt64<T>(p * p);
+    ld.g_p = T(1) - T(1) / UniversalScalarConversion<T, int64_t>(p * p);
     loc.push_back(ld);
   }
   // vol^2 = 4 pi^4 k^3
-  T Vinf2 = T(4) * ScalarFromInt64<T>(k) * ScalarFromInt64<T>(k) *
-            ScalarFromInt64<T>(k);
+  T Vinf2 = T(4) * UniversalScalarConversion<T, int64_t>(k) * UniversalScalarConversion<T, int64_t>(k) *
+            UniversalScalarConversion<T, int64_t>(k);
   T m2 = TamagawaMassSquared<T>(T(1), ZetaEvenOverPi<T>(1), T(1), 3, loc) / Vinf2;
   return RationalSquareRoot<T, Tint>(m2);
 }

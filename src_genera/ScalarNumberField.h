@@ -4,11 +4,13 @@
 
 // clang-format off
 #include "ScalarPolynomialModQ.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixSolutionMat.h"
 #include <initializer_list>
 #include <optional>
+#include <type_traits>
 #include <cstdint>
 #include <vector>
 // clang-format on
@@ -86,10 +88,14 @@ template <typename T> ElemE<T> operator-(ElemE<T> a) {
   }
   return a;
 }
-template <typename T> ElemE<T> operator*(ElemE<T> a, T const &x) {
+// T is read off the element, so that the scalar may be an expression of
+// the number type (as GMP's a / b) converted to T
+template <typename T>
+ElemE<T> operator*(ElemE<T> a, std::type_identity_t<T> const &x) {
   return a *= x;
 }
-template <typename T> ElemE<T> operator*(T const &x, ElemE<T> a) {
+template <typename T>
+ElemE<T> operator*(std::type_identity_t<T> const &x, ElemE<T> a) {
   return a *= x;
 }
 

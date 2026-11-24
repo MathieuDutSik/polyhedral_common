@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "NumberTheory.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "CyclotomicArithmetic.h"
 #include "ScalarAbelianField.h"
 #include "ScalarPolynomialModQ.h"

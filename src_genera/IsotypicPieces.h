@@ -466,7 +466,7 @@ std::vector<MyMatrix<T>> TwistedGrams(GroupLattice<T> const &M,
   for (int i = 0; i < k; i++) {
     T r2 = bound2 * Qinv(i, i);
     int64_t r = 0;
-    while (ScalarFromInt64<T>((r + 1) * (r + 1)) <= r2) {
+    while (UniversalScalarConversion<T, int64_t>((r + 1) * (r + 1)) <= r2) {
       r++;
     }
     box[i] = r;
@@ -478,7 +478,7 @@ std::vector<MyMatrix<T>> TwistedGrams(GroupLattice<T> const &M,
     if (i == k) {
       MyMatrix<T> X = ZeroMatrix<T>(M.gram.rows(), M.gram.rows());
       for (int u = 0; u < k; u++) {
-        X += ScalarFromInt64<T>(v[u]) * S[u];
+        X += UniversalScalarConversion<T, int64_t>(v[u]) * S[u];
       }
       T q(0);
       MyMatrix<T> X2 = X * X;
@@ -807,7 +807,7 @@ IsotypicPiecesTwisted(GroupLattice<T> const &M_in, int c,
   for (int a = 0; a < k; a++) {
     T r2 = bound2 * Qinv(a, a);
     int64_t r = 0;
-    while (ScalarFromInt64<T>((r + 1) * (r + 1)) <= r2) {
+    while (UniversalScalarConversion<T, int64_t>((r + 1) * (r + 1)) <= r2) {
       r++;
     }
     box[a] = r;
@@ -843,7 +843,7 @@ IsotypicPiecesTwisted(GroupLattice<T> const &M_in, int c,
     if (i == k) {
       MyMatrix<T> G = ZeroMatrix<T>(n, n);
       for (int u = 0; u < k; u++) {
-        G += ScalarFromInt64<T>(v[u]) * GB[u];
+        G += UniversalScalarConversion<T, int64_t>(v[u]) * GB[u];
       }
       MyMatrix<T> phi = Ainv * G;
       MyMatrix<T> phi2 = phi * phi;

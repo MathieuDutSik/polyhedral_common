@@ -32,7 +32,7 @@ template <typename T> T DiagonalFactorMp(int species, int64_t p) {
   }
   int n = (species > 0) ? species : -species;
   int s = (n + 1) / 2;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   T mp(2);
   T pk(1);
   for (int k = 1; k < s; k++) {
@@ -137,13 +137,13 @@ PiRadical<T> PMass(std::vector<int> const &species,
     }
   }
   return PiRadicalRational<T>(val) *
-         RationalHalfPower<T>(ScalarFromInt64<T>(p), ct2);
+         RationalHalfPower<T>(UniversalScalarConversion<T, int64_t>(p), ct2);
 }
 
 // The standard p-mass std_p of a lattice of rank n and determinant det.
 template <typename T> T StandardPMass(int n, int64_t det, int64_t p) {
   int s = (n + 1) / 2;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   T std_inv(2);
   T pk(1);
   for (int k = 1; k < s; k++) {
@@ -155,7 +155,7 @@ template <typename T> T StandardPMass(int n, int64_t det, int64_t p) {
     // the Kronecker symbol (4 D / p): 0 at p = 2 and at p | D
     int eps = (p == 2) ? 0 : kronecker_symbol<int64_t>(D, p);
     T ps = MyPow<T>(p_T, s);
-    std_inv *= T(1) - ScalarFromInt64<T>(eps) / ps;
+    std_inv *= T(1) - UniversalScalarConversion<T, int64_t>(eps) / ps;
   }
   return T(1) / std_inv;
 }
@@ -182,8 +182,8 @@ template <typename T, typename Tint> T GenusMass(MyMatrix<T> const &Gram) {
     std_mass = std_mass * LQuadraticValue<T>(s, d);
     // the Euler factors at the primes of the local symbols
     for (int64_t p : primes) {
-      T ps = MyPow<T>(ScalarFromInt64<T>(p), s);
-      T fac = T(1) - ScalarFromInt64<T>(kronecker_symbol<int64_t>(d, p)) / ps;
+      T ps = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), s);
+      T fac = T(1) - UniversalScalarConversion<T, int64_t>(kronecker_symbol<int64_t>(d, p)) / ps;
       std_mass = std_mass * PiRadicalRational<T>(fac);
     }
   }

@@ -76,7 +76,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
     DirichletGroup Gd = ComputeDirichletGroup(F.n);
     T d(1);
     for (auto const &t : FieldCharacters(Gd, F.H, false)) {
-      d *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+      d *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
     }
     return d;
   };
@@ -129,7 +129,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
                 << "does not fit\n";
       throw TerminalException{1};
     }
-    T q = MyPow<T>(ScalarFromInt64<T>(p), fp);
+    T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), fp);
     T res(1);
     for (int v = 0; v < gp; v++) {
       // chi^i, the trivial character for i even (also at a ramified v)
@@ -137,7 +137,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
       for (int i = 1; i <= n; i++) {
         qi *= q;
         int ci = (i % 2 == 0) ? 1 : chi;
-        res *= T(1) - ScalarFromInt64<T>(ci) / qi;
+        res *= T(1) - UniversalScalarConversion<T, int64_t>(ci) / qi;
       }
     }
     return res;
@@ -180,7 +180,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
   }
   // vol(U(n))^2 / pi^.. at each real place: s^{n^2} (2^{n(n+1)/2} / prod
   // k!)^2, s = 2 mu, mu = k / (2 n c)
-  T s = ScalarFromInt64<T>(k) / ScalarFromInt64<T>(n * c);
+  T s = UniversalScalarConversion<T, int64_t>(k) / UniversalScalarConversion<T, int64_t>(n * c);
   T V2(1);
   for (int pl = 0; pl < c; pl++) {
     for (int i = 0; i < n * n; i++) {
@@ -191,7 +191,7 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
       r *= T(2);
     }
     for (int i = 1; i < n; i++) {
-      r /= ScalarFromInt64<T>(i);
+      r /= UniversalScalarConversion<T, int64_t>(i);
     }
     V2 *= r * r;
   }

@@ -69,8 +69,7 @@
  */
 
 // The number types are T (a field, mpq_class or fmpq_class) and Tint (its
-// ring of integers); int64_t goes through ScalarFromInt64.
-template <typename Tring> Tring amf_int(int64_t const &x) { return ScalarFromInt64<Tring>(x); }
+// ring of integers); int64_t goes through UniversalScalarConversion.
 
 /*
   A prime ideal P of R: the rational prime ell under it and the residue
@@ -193,7 +192,7 @@ std::vector<OrderPrime> parse_order_primes(RealifiedRing<T, Tint> const &ring, s
 }
 
 template <typename Tint> int64_t order_residue(Tint const &x, int64_t const &ell) {
-  Tint ell_T = ScalarFromInt64<Tint>(ell);
+  Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
   Tint r = x % ell_T;
   if (r < 0) {
     r += ell_T;
@@ -232,7 +231,7 @@ inline FiniteField OrderResidueField(int64_t ell, int f, int64_t s,
 // The rank mod ell of the rows of M.
 template <typename Tint>
 int order_rank_mod(MyMatrix<Tint> const &M, int64_t const &ell) {
-  MyMatrix<Tint> NSP = NullspaceMatMod(M, amf_int<Tint>(ell));
+  MyMatrix<Tint> NSP = NullspaceMatMod(M, UniversalScalarConversion<Tint, int64_t>(ell));
   return M.rows() - NSP.rows();
 }
 
@@ -331,8 +330,8 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
     // the eigenspaces of Omega mod ell for r and conj(r) = s - r
     int64_t r_conj = ResidueModPrime(ring.s - P.r, ell);
     MyMatrix<Tint> Id = IdentityMat<Tint>(n);
-    MyMatrix<Tint> V1 = NullspaceMatMod(MyMatrix<Tint>(Omega - amf_int<Tint>(P.r) * Id), amf_int<Tint>(ell));
-    MyMatrix<Tint> V2 = NullspaceMatMod(MyMatrix<Tint>(Omega - amf_int<Tint>(r_conj) * Id), amf_int<Tint>(ell));
+    MyMatrix<Tint> V1 = NullspaceMatMod(MyMatrix<Tint>(Omega - UniversalScalarConversion<Tint, int64_t>(P.r) * Id), UniversalScalarConversion<Tint, int64_t>(ell));
+    MyMatrix<Tint> V2 = NullspaceMatMod(MyMatrix<Tint>(Omega - UniversalScalarConversion<Tint, int64_t>(r_conj) * Id), UniversalScalarConversion<Tint, int64_t>(ell));
     if (V1.rows() != ring.m || V2.rows() != ring.m) {
       std::cerr << "AMF: the eigenspaces of omega mod " << ell << " have dimensions " << V1.rows() << ", "
                 << V2.rows() << " instead of " << ring.m << "\n";
@@ -658,7 +657,7 @@ GeneralLevelSpace get_general_level_space(RealifiedRing<T, Tint> const &ring, My
   int n = ring.n();
   gls.n = n;
   // n L: the rows of a I + b Omega
-  MyMatrix<Tint> A = amf_int<Tint>(lev.a) * IdentityMat<Tint>(n) + amf_int<Tint>(lev.b) * Omega;
+  MyMatrix<Tint> A = UniversalScalarConversion<Tint, int64_t>(lev.a) * IdentityMat<Tint>(n) + UniversalScalarConversion<Tint, int64_t>(lev.b) * Omega;
   // the exponent of L / n L divides N(n)
   gls.M = lev.norm;
   gls.Om.resize(n * n);
@@ -705,7 +704,7 @@ GeneralLevelSpace get_general_level_space(RealifiedRing<T, Tint> const &ring, My
     }
     MyVector<Tint> x(n);
     for (int i = 0; i < n; i++) {
-      x(i) = amf_int<Tint>(z[i]);
+      x(i) = UniversalScalarConversion<Tint, int64_t>(z[i]);
     }
     if (order_residue(order_hermitian_norm(G, x), lev.t) != 0) {
       continue;
@@ -748,10 +747,10 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
   bool split = ring.d == 2 && P.f == 1;
   int n = G.rows();
   int64_t ell = P.ell;
-  Tint ell_T = amf_int<Tint>(ell);
+  Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
   MyVector<Tint> x(n);
   for (int k = 0; k < n; k++) {
-    x(k) = amf_int<Tint>(z[k]);
+    x(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
   }
   MyMatrix<Tint> Id = IdentityMat<Tint>(n);
   if (split) {
@@ -759,14 +758,14 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     Tint hx = order_hermitian_norm(G, x);
     int64_t hx_res = order_residue(hx, ell);
     if (hx_res != 0) {
-      MyMatrix<Tint> OmR = Omega - amf_int<Tint>(P.r) * Id;
+      MyMatrix<Tint> OmR = Omega - UniversalScalarConversion<Tint, int64_t>(P.r) * Id;
       bool done = false;
       for (int k = 0; k < n && !done; k++) {
         MyVector<Tint> y = GetMatrixRow(OmR, k);
         int64_t bxy = order_residue(Tint(x.dot(G * y)), ell);
         if (bxy != 0) {
           int64_t c = ResidueModPrime(-hx_res * InverseModPrime(bxy, ell), ell);
-          x += amf_int<Tint>(c) * y;
+          x += UniversalScalarConversion<Tint, int64_t>(c) * y;
           done = true;
         }
       }
@@ -789,7 +788,7 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
         int64_t bxe = order_residue(Gx(k), ell);
         if (bxe != 0) {
           int64_t c = ResidueModPrime(-hx_red * InverseModPrime(bxe, ell), ell);
-          x(k) += ell_T * amf_int<Tint>(c);
+          x(k) += ell_T * UniversalScalarConversion<Tint, int64_t>(c);
           done = true;
         }
       }
@@ -819,11 +818,11 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     int64_t b = order_residue(l_h[k].second, ell);
     if (split) {
       // omega = conj(r) mod conj(P)
-      Func(k, 0) = amf_int<Tint>((a + b * r_conj) % ell);
+      Func(k, 0) = UniversalScalarConversion<Tint, int64_t>((a + b * r_conj) % ell);
     } else {
-      Func(k, 0) = amf_int<Tint>(a);
+      Func(k, 0) = UniversalScalarConversion<Tint, int64_t>(a);
       if (ring.d == 2) {
-        Func(k, 1) = amf_int<Tint>(b);
+        Func(k, 1) = UniversalScalarConversion<Tint, int64_t>(b);
       }
     }
   }
@@ -839,7 +838,7 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
   }
   for (int i = 0; i < n; i++) {
     for (int k = 0; k < n; k++) {
-      Gens(pos, k) = (i == k) ? amf_int<T>(ell) : T(0);
+      Gens(pos, k) = (i == k) ? UniversalScalarConversion<T, int64_t>(ell) : T(0);
     }
     pos++;
   }
@@ -869,8 +868,8 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
         int64_t c1 = ResidueModPrime((target_a * b2 - a2 * target_b) % ell * det_inv, ell);
         int64_t c2 = ResidueModPrime((a1 * target_b - target_a * b1) % ell * det_inv, ell);
         MyVector<Tint> y1 = ZeroVector<Tint>(n);
-        y1(k1) = amf_int<Tint>(c1);
-        y1(k2) = amf_int<Tint>(c2);
+        y1(k1) = UniversalScalarConversion<Tint, int64_t>(c1);
+        y1(k2) = UniversalScalarConversion<Tint, int64_t>(c2);
         opt_y1 = y1;
       }
     }
@@ -879,7 +878,7 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
       throw TerminalException{1};
     }
     for (int64_t t = 1; t < ell; t++) {
-      Tint coef = ell_T * amf_int<Tint>(t);
+      Tint coef = ell_T * UniversalScalarConversion<Tint, int64_t>(t);
       l_lift.push_back(MyVector<Tint>(x + coef * (*opt_y1)));
     }
   }
@@ -901,10 +900,10 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     for (int k = 0; k < n; k++) {
       if (split) {
         Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k));
-        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - amf_int<Tint>(r_conj) * xl(k)) / amf_int<T>(ell);
+        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - UniversalScalarConversion<Tint, int64_t>(r_conj) * xl(k)) / UniversalScalarConversion<T, int64_t>(ell);
       } else {
-        Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k)) / amf_int<T>(ell);
-        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k)) / amf_int<T>(ell);
+        Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k)) / UniversalScalarConversion<T, int64_t>(ell);
+        Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k)) / UniversalScalarConversion<T, int64_t>(ell);
       }
     }
     MyMatrix<T> Basis = GetZbasis(Gens);

@@ -498,7 +498,7 @@ inline std::tuple<int, int, int> AbelianPrimeDecomposition(int64_t n,
 // Tr_{K/Q}(trd(x y)) for x, y in D acting on F of dimension 4 c r
 template <typename T>
 T QuatTrTrd(MyMatrix<T> const &X, MyMatrix<T> const &Y, int r) {
-  return QuatTrace(MyMatrix<T>(X * Y)) / ScalarFromInt64<T>(2 * r);
+  return QuatTrace(MyMatrix<T>(X * Y)) / UniversalScalarConversion<T, int64_t>(2 * r);
 }
 
 template <typename T>
@@ -633,7 +633,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
           Igen.push_back(v);
         }
         MyVector<T> w = ZeroVector<T>(d);
-        w(f) = ScalarFromInt64<T>(p);
+        w(f) = UniversalScalarConversion<T, int64_t>(p);
         Igen.push_back(w);
       }
       MyMatrix<T> Iall(static_cast<int>(Igen.size()), d);
@@ -747,7 +747,7 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         for (int t1 = 0; t1 < cc; t1++) {
           for (int t2 = 0; t2 < cc; t2++) {
             Gz(t1, t2) = QuatTrace(MyMatrix<T>(Zs[t1] * Zs[t2])) /
-                         ScalarFromInt64<T>(k / cc);
+                         UniversalScalarConversion<T, int64_t>(k / cc);
           }
         }
         has_OK = (4 * r * cc == k) && (T_abs(DeterminantMat(Gz)) == dK);
@@ -1004,10 +1004,10 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         MyMatrix<T> x = ZeroMatrix<T>(k, k);
         for (int i = 0; i < d; i++) {
           if (a[i] != 0) {
-            x += ScalarFromInt64<T>(a[i]) * O[i];
+            x += UniversalScalarConversion<T, int64_t>(a[i]) * O[i];
           }
         }
-        x /= ScalarFromInt64<T>(p);
+        x /= UniversalScalarConversion<T, int64_t>(p);
         n_closure++;
         std::vector<MyMatrix<T>> M = O;
         M.push_back(x);
@@ -1349,10 +1349,10 @@ std::optional<T> QuaternionicComponentMass(
     std::vector<T> Bern = BernoulliNumbers<T>(2 * r);
     for (int i = 1; i <= r; i++) {
       T z = FK ? DedekindZetaAbelian<T>(*FK, 2 * i)
-               : T(-Bern[2 * i] / ScalarFromInt64<T>(2 * i));
+               : T(-Bern[2 * i] / UniversalScalarConversion<T, int64_t>(2 * i));
       mass_S *= T_abs(z);
       for (int j = 0; j < c; j++) {
-        mass_S /= ScalarFromInt64<T>(2);
+        mass_S /= UniversalScalarConversion<T, int64_t>(2);
       }
     }
   }
@@ -1379,7 +1379,7 @@ std::optional<T> QuaternionicComponentMass(
       T qi(1);
       for (int i = 1; i <= r; i++) {
         qi *= q;
-        mass_S *= qi + ScalarFromInt64<T>((i % 2 == 0) ? 1 : -1);
+        mass_S *= qi + UniversalScalarConversion<T, int64_t>((i % 2 == 0) ? 1 : -1);
       }
     }
   }
@@ -1528,7 +1528,7 @@ std::optional<T> QuaternionicComponentMass(
     while (true) {
       MyMatrix<T> lam = ZeroMatrix<T>(k, k);
       for (int t = 0; t < nb; t++) {
-        lam += ScalarFromInt64<T>(cf[t]) * LambdaBasis[t];
+        lam += UniversalScalarConversion<T, int64_t>(cf[t]) * LambdaBasis[t];
       }
       cands.push_back(lam);
       int t = 0;
@@ -1554,7 +1554,7 @@ std::optional<T> QuaternionicComponentMass(
       while (true) {
         MyMatrix<T> G = ZeroMatrix<T>(kS, kS);
         for (int t = 0; t < nb; t++) {
-          G += ScalarFromInt64<T>(cg[t]) * GramLB[t];
+          G += UniversalScalarConversion<T, int64_t>(cg[t]) * GramLB[t];
         }
         cand_gram.push_back(G);
         int t = 0;

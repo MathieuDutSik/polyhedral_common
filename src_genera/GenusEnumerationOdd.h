@@ -120,7 +120,7 @@ void GenusOddOverlattices(MyMatrix<T> const &GramM,
   std::vector<uint64_t> col(n, 0);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      if (ResidueModP(G(i, j), 2) != 0) {
+      if (ResModOf(G(i, j), static_cast<T_residue>(2)) != 0) {
         col[j] |= uint64_t(1) << i;
       }
     }
@@ -178,7 +178,7 @@ void GenusOddOverlattices(MyMatrix<T> const &GramM,
       }
       for (int j = 0; j < n; j++) {
         if ((x >> j) & 1) {
-          s += ResidueModP(G(i, j), 8);
+          s += ResModOf(G(i, j), static_cast<T_residue>(8));
         }
       }
     }
@@ -214,7 +214,7 @@ void GenusOddOverlattices(MyMatrix<T> const &GramM,
     std::vector<uint64_t> rows(n, 0);
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        if (ResidueModP(g(i, j), 2) != 0) {
+        if (ResModOf(g(i, j), static_cast<T_residue>(2)) != 0) {
           rows[i] |= uint64_t(1) << j;
         }
       }

@@ -3,7 +3,8 @@
 #define SRC_GENERA_SIEGELSPECIALVALUES_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "NumberTheory.h"
 #include "factorizations.h"
 #include <cstdint>
@@ -100,7 +101,7 @@ template <typename T> T GeneralizedBernoulli(int k, int64_t D) {
     if (c == 0) {
       continue;
     }
-    T a_T = ScalarFromInt64<T>(a);
+    T a_T = UniversalScalarConversion<T, int64_t>(a);
     T pw(1);
     for (int t = 0; t <= k; t++) {
       if (c == 1) {
@@ -111,7 +112,7 @@ template <typename T> T GeneralizedBernoulli(int k, int64_t D) {
       pw *= a_T;
     }
   }
-  T f_T = ScalarFromInt64<T>(f);
+  T f_T = UniversalScalarConversion<T, int64_t>(f);
   T res(0);
   // f^{j-1} for j = 0 is 1/f
   T fpow = T(1) / f_T;
@@ -252,7 +253,7 @@ template <typename T> PiRadical<T> LQuadraticValue(int k, int64_t D) {
     throw TerminalException{1};
   }
   int64_t f = (D < 0) ? -D : D;
-  T f_T = ScalarFromInt64<T>(f);
+  T f_T = UniversalScalarConversion<T, int64_t>(f);
   T q = GeneralizedBernoulli<T>(k, D) / T(2);
   T fact(1);
   for (int i = 2; i <= k; i++) {

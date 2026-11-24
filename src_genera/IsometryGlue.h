@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MassIsometry.h"
 #include "GenusEnumerationGroup.h"
 #include "MAT_MatrixPolynomial.h"
@@ -624,12 +625,12 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
         MyVector<T> v = ZeroVector<T>(n);
         for (size_t i = 0; i < M1.rank(); i++) {
           for (int j = 0; j < n1; j++) {
-            v(j) += ScalarFromInt64<T>(x[i]) * gens1[i](j);
+            v(j) += UniversalScalarConversion<T, int64_t>(x[i]) * gens1[i](j);
           }
         }
         for (size_t i = 0; i < M2.rank(); i++) {
           for (int j = 0; j < n2; j++) {
-            v(n1 + j) += ScalarFromInt64<T>(x[M1.rank() + i]) * gens2[i](j);
+            v(n1 + j) += UniversalScalarConversion<T, int64_t>(x[M1.rank() + i]) * gens2[i](j);
           }
         }
         vects.push_back(v);
@@ -676,7 +677,7 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
       for (auto const &v : ListLifts[iq][choice[iq]]) {
         rows.push_back(v);
       }
-      glue_order *= ScalarFromInt64<T>(ListOrders[iq][choice[iq]]);
+      glue_order *= UniversalScalarConversion<T, int64_t>(ListOrders[iq][choice[iq]]);
     }
     MyMatrix<T> Gen(n + static_cast<int>(rows.size()), n);
     for (int i = 0; i < n; i++) {

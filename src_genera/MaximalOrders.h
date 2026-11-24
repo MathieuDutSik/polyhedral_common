@@ -3,7 +3,8 @@
 #define SRC_GENERA_MAXIMALORDERS_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixModPrime.h"
@@ -306,7 +307,7 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
   }
   for (int64_t p : primes) {
     T_small_prime pu = static_cast<T_small_prime>(p);
-    T pT = ScalarFromInt64<T>(p);
+    T pT = UniversalScalarConversion<T, int64_t>(p);
     while (true) {
       MyMatrix<T> Boinv = Inverse(Bo);
       auto row = [&](int i) -> MyVector<T> {

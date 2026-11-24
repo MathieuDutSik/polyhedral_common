@@ -3,7 +3,8 @@
 #define SRC_GENERA_SCALARABELIANFIELD_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "CyclotomicArithmetic.h"
 #include <cstdint>
 #include <iostream>

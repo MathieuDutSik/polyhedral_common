@@ -3,7 +3,8 @@
 #define SRC_GENERA_GENUSENUMERATIONGROUP_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "FiniteMatrixGroupFund.h"
 #include "GenusEnumeration.h"
 #include "LatticeOrbitSplitCanonical.h"

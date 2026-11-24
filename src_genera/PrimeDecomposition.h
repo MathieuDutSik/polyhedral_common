@@ -237,7 +237,7 @@ AbelianPrimesOverQ(LocalGenerator<T> const &lg, int64_t q, int64_t eK) {
     // Horner
     std::vector<T_residue> cc;
     for (auto const &x : lg.conj) {
-      cc.push_back(ResidueModInt<T, Tint>(x, q_u));
+      cc.push_back(ResModOfRational<T, Tint>(x, q_u));
     }
     PolyQ c(q_u, std::move(cc));
     PolyQ fq = PolyReduceSigned(lg.f, q);
@@ -578,7 +578,7 @@ PrimeLocalGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega
   int f_res = static_cast<int>(dK.f);
   T_small_prime q_u = static_cast<T_small_prime>(q);
   auto red = [&](T const &x) -> T_residue {
-    return ResidueModInt<T, Tint>(x, q_u);
+    return ResModOfRational<T, Tint>(x, q_u);
   };
   // the small elements of O_K, by increasing size
   std::vector<std::vector<int>> cands;

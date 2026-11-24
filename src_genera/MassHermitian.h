@@ -3,7 +3,8 @@
 #define SRC_GENERA_MASSHERMITIAN_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "RealifiedRing.h"
 #include "SiegelSpecialValues.h"
 #include "SiegelSeries.h"
@@ -55,8 +56,8 @@ HermitianGramStandard(RealifiedRing<T, Tint> const &ring) {
   int m = ring.m;
   int n = ring.n();
   MyMatrix<Tint> BW = ring.B * ring.W.transpose();
-  T s = ScalarFromInt64<T>(ring.s);
-  T nw = ScalarFromInt64<T>(ring.p);
+  T s = UniversalScalarConversion<T, int64_t>(ring.s);
+  T nw = UniversalScalarConversion<T, int64_t>(ring.p);
   T absD = 4 * nw - s * s;
   std::vector<std::vector<std::pair<T, T>>> h(m, std::vector<std::pair<T, T>>(m));
   for (int j = 0; j < m; j++) {
@@ -131,25 +132,25 @@ T HermitianLocalFactorDyadicUnimodular(int m, int e, int norm_val, bool d_is_nor
   int k1 = 0;
   int f2 = e / 2;
   int l = norm_val / 2;
-  T fac_m = MyPowSigned<T>(ScalarFromInt64<T>(q), m) - T(1);
+  T fac_m = MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), m) - T(1);
   if (d_is_norm) {
     bool h0 = (norm_val == 2 * f2);
     if (h0) {
       int t = (e % 2 == 0) ? k1 : k0;
-      return (MyPowSigned<T>(ScalarFromInt64<T>(q), t) + T(1)) * half;
+      return (MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), t) + T(1)) * half;
     }
     if (e % 2 == 0) {
-      return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
+      return MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
     }
-    return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - l) - k0) * fac_m * half;
+    return MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), m * (f2 - l) - k0) * fac_m * half;
   }
   if (e % 2 == 1) {
     if (l == (e - 1) / 2) {
-      return (MyPowSigned<T>(ScalarFromInt64<T>(q), k0) - T(1)) * half;
+      return (MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), k0) - T(1)) * half;
     }
-    return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - l) - k0) * fac_m * half;
+    return MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), m * (f2 - l) - k0) * fac_m * half;
   }
-  return MyPowSigned<T>(ScalarFromInt64<T>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
+  return MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(q), m * (f2 - 1 - l) + k1) * fac_m * half;
 }
 
 /*
@@ -173,7 +174,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
   int64_t absD = -D;
   // unimodular at every prime iff det B = |D|^m
   T detB = DeterminantMat(UniversalMatrixConversion<T, Tint>(ring.B));
-  T target = MyPow<T>(ScalarFromInt64<T>(absD), m);
+  T target = MyPow<T>(UniversalScalarConversion<T, int64_t>(absD), m);
   if (T_abs(detB) != target) {
 #ifdef DEBUG_HERMITIAN_MASS
     os << "HMASS: the lattice is not unimodular, det B = " << detB << "\n";
@@ -181,10 +182,10 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
     return {};
   }
   // the standard mass
-  T mass = MyPowSigned<T>(ScalarFromInt64<T>(2), 1 - m);
+  T mass = MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(2), 1 - m);
   for (int i = 1; i <= m; i++) {
     int64_t chi = (i % 2 == 1) ? D : 1;
-    T Lval = -GeneralizedBernoulli<T>(i, chi) / ScalarFromInt64<T>(i);
+    T Lval = -GeneralizedBernoulli<T>(i, chi) / UniversalScalarConversion<T, int64_t>(i);
     mass *= T_abs(Lval);
   }
   // the discriminant class
@@ -217,7 +218,7 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
       if (m % 2 == 1) {
         lambda = T(1) / T(2);
       } else {
-        lambda = (MyPowSigned<T>(ScalarFromInt64<T>(p), m / 2) + ScalarFromInt64<T>(d_is_norm ? 1 : -1)) / T(2);
+        lambda = (MyPowSigned<T>(UniversalScalarConversion<T, int64_t>(p), m / 2) + UniversalScalarConversion<T, int64_t>(d_is_norm ? 1 : -1)) / T(2);
       }
     } else {
       int e = 0;

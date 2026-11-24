@@ -3,7 +3,8 @@
 #define SRC_GENERA_LOCALDENSITYOVERLATTICE_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "LocalDensityBadPrimes.h"
 #include "MAT_MatrixInt.h"
 #include "ResidueArithmetic.h"
@@ -47,7 +48,7 @@ OddLocalSymbolFromClasses(std::vector<PadicClass> const &classes,
   }
   std::vector<std::array<int, 3>> res;
   for (auto const &kv : levels) {
-    res.push_back({kv.first, kv.second.first, KroneckerResidue(kv.second.second, p)});
+    res.push_back({kv.first, kv.second.first, ResKronecker(kv.second.second, p)});
   }
   return res;
 }
@@ -245,7 +246,7 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, T_small_prime p,
         if (j < i) {
           continue;
         }
-        int v = static_cast<int>(ValuationResidue(A(i, j), p, K));
+        int v = static_cast<int>(ResValuation(A(i, j), p, K));
         // a diagonal pivot when it has the minimal valuation
         if (v < best_v || (v == best_v && i == j && bi != bj)) {
           best_v = v;
@@ -271,7 +272,7 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, T_small_prime p,
       }
       A(i, i) = ResAdd(A(i, i), A(j, i), M);
       bj = bi;
-      if (ValuationResidue(A(i, i), p, K) != e) {
+      if (ResValuation(A(i, i), p, K) != e) {
         std::cerr << "LDOV: the diagonal pivot has the wrong valuation\n";
         throw TerminalException{1};
       }
@@ -396,7 +397,7 @@ UnimodularSplit<T> ComputeUnimodularSplit(MyMatrix<T> const &Tgram,
       if (b.kind == SiegelBlockKind::Unit) {
         // 2^e u in T / 2, so 2^{e+1} u in T: never unimodular for even T
         MyMatrix<T> G(1, 1);
-        G(0, 0) = MyPowSigned(T(2), b.e + 1) * ScalarFromInt64<T>(b.unit);
+        G(0, 0) = MyPowSigned(T(2), b.e + 1) * UniversalScalarConversion<T, int64_t>(b.unit);
         blocksP.push_back(G);
         continue;
       }
@@ -428,8 +429,8 @@ UnimodularSplit<T> ComputeUnimodularSplit(MyMatrix<T> const &Tgram,
         res.detU_unit = ResMul(res.detU_unit, ResMul(T_residue(2), c.unit, M), M);
       } else {
         MyMatrix<T> G(1, 1);
-        G(0, 0) = T(2) * MyPowSigned(ScalarFromInt64<T>(p), c.val) *
-                  ScalarFromInt64<T>(c.unit);
+        G(0, 0) = T(2) * MyPowSigned(UniversalScalarConversion<T, int64_t>(p), c.val) *
+                  UniversalScalarConversion<T, int64_t>(c.unit);
         blocksP.push_back(G);
       }
     }
@@ -516,7 +517,7 @@ template <typename T, typename Tint>
 OverlatticeSet<T> EnumerateOverlattices(MyMatrix<T> const &R, int64_t p) {
   int m = R.rows();
   bool even = (p == 2);
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   OverlatticeSet<T> os;
   os.basis.push_back(IdentityMat<T>(m));
   os.gram.push_back(R);
@@ -622,7 +623,7 @@ T PrimitiveDensityOverlattices(MyMatrix<T> const &S, OverlatticeSet<T> const &os
                                SiegelSeriesCache<T> &cache) {
   int m = S.rows();
   int c = m + 1 - n;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   size_t K = os.basis.size();
   std::vector<T> f(K), g(K);
   for (size_t i = 0; i < K; i++) {
@@ -932,13 +933,13 @@ T PrimitiveDensityElementary(
     int k_N, int xi_N, int n, SiegelSeriesCache<T> &cache) {
   int m = S.rows();
   int c = m + 1 - n;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   T g(0);
   for (auto const &cls : classes) {
     MyMatrix<T> G = (m == 0) ? cls.gram : BlockDiagonal2(S, cls.gram);
     T f = TrueAlphaUnimodularTarget<T, Tint>(G, p, k_N, xi_N, cache);
     T coef = MyPowSigned(p_T, cls.k * (cls.k - 1) / 2 + c * cls.k) *
-             ScalarFromInt64<T>(cls.count);
+             UniversalScalarConversion<T, int64_t>(cls.count);
     if (cls.k % 2 == 1) {
       coef = -coef;
     }
@@ -1114,8 +1115,8 @@ std::optional<T> BruteForceDensity(MyMatrix<T> const &S, MyMatrix<T> const &Tgra
         cnt++;
       }
     }
-    T p_T = ScalarFromInt64<T>(p);
-    return ScalarFromInt64<T>(cnt) / MyPowSigned(p_T, kk * (n * m - m * (m + 1) / 2));
+    T p_T = UniversalScalarConversion<T, int64_t>(p);
+    return UniversalScalarConversion<T, int64_t>(cnt) / MyPowSigned(p_T, kk * (n * m - m * (m + 1) / 2));
   };
   T v1 = count_at(k - 1);
   T v2 = count_at(k);
@@ -1420,7 +1421,7 @@ T FullRankRepresentationMass(MyMatrix<T> const &S, MyMatrix<T> const &Tgram,
     if (n_p == 0) {
       return T(0);
     }
-    count *= ScalarFromInt64<T>(n_p);
+    count *= UniversalScalarConversion<T, int64_t>(n_p);
   }
   return count;
 }

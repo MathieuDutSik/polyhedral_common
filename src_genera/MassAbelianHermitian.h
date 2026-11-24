@@ -528,7 +528,7 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
   std::vector<std::vector<size_t>> lines = GDLines(m, C.reps.size());
   auto maximal_factor = [&](std::vector<std::vector<ElemE<T>>> const &H) -> T {
     if (m % 2 == 1) {
-      return RationalFraction<T>(1, 2);
+      return T(1) / T(2);
     }
     std::vector<std::vector<ElemE<T>>> G = H;
     ElemE<T> det = C.one;
@@ -612,7 +612,8 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
       std::cerr << "ABHERM: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
-    fac *= RationalFraction<T>(A, Bc);
+    fac *= UniversalScalarConversion<T, int64_t>(A) /
+           UniversalScalarConversion<T, int64_t>(Bc);
   }
   return fac;
 }

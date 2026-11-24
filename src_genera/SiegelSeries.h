@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "ScalarRationalFunctions.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MAT_Matrix.h"
 #include "SiegelSpecialValues.h"
 #include "ResidueArithmetic.h"
@@ -121,10 +122,10 @@ inline int HilbertSymbolClass(PadicClass const &x, PadicClass const &y,
       sign = -1;
     }
     if (b % 2 != 0) {
-      sign *= KroneckerResidue(x.unit, p);
+      sign *= ResKronecker(x.unit, p);
     }
     if (a % 2 != 0) {
-      sign *= KroneckerResidue(y.unit, p);
+      sign *= ResKronecker(y.unit, p);
     }
     return sign;
   }
@@ -418,7 +419,7 @@ SiegelJordanBlocks JordanBlocksOdd(MyMatrix<T> const &B, T_small_prime p) {
       part.push_back({e, SiegelBlockKind::Unit, 1});
       j++;
     }
-    if (KroneckerResidue(prod, p) == -1) {
+    if (ResKronecker(prod, p) == -1) {
       part.back().unit = nonres;
     }
     res.insert(res.end(), part.begin(), part.end());
@@ -639,7 +640,7 @@ inline void CheckNonNegative(int a) {
 
 template <typename T>
 UnivariatePolynomial<T> SiegelSeriesDim1(SiegelJordanBlocks const &q) {
-  T p_T = ScalarFromInt64<T>(q.p);
+  T p_T = UniversalScalarConversion<T, int64_t>(q.p);
   UnivariatePolynomial<T> P;
   for (int a = 0; a <= ContentOrder(q); a++) {
     P = P + PolyMonomial<T>(MyPowSigned(p_T, a), a);
@@ -653,7 +654,7 @@ RationalFunction<T> SiegelSeriesDim2Kernel(int64_t p, int a, int b) {
     return RatFromPoly(UnivariatePolynomial<T>());
   }
   a = std::min(a, b - 1);
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   // r1 = (1 - (p^2 X)^{a+1}) / (1 - p^2 X) = sum_{i=0}^{a} (p^2 X)^i
   UnivariatePolynomial<T> r1;
   for (int i = 0; i <= a; i++) {
@@ -673,7 +674,7 @@ RationalFunction<T> SiegelSeriesDim2Kernel(int64_t p, int a, int b) {
 template <typename T>
 UnivariatePolynomial<T> SiegelSeriesDim2(SiegelJordanBlocks const &q) {
   int64_t p = q.p;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   int c = ContentOrder(q);
   // det_4 = 4 * Gram_det, and the local class of the fundamental
   // discriminant of -det_4
@@ -712,7 +713,7 @@ UnivariatePolynomial<T> SiegelSeriesDim2(SiegelJordanBlocks const &q) {
 template <typename T>
 RationalFunction<T> KatsuradaC1(SiegelJordanBlocks const &q,
                                 SiegelJordanBlocks const &q2) {
-  T p_T = ScalarFromInt64<T>(q.p);
+  T p_T = UniversalScalarConversion<T, int64_t>(q.p);
   int n = q.dim();
   if (n % 2 == 0) {
     int xi = XiInvariant(q);
@@ -727,7 +728,7 @@ RationalFunction<T> KatsuradaC1(SiegelJordanBlocks const &q,
 template <typename T>
 RationalFunction<T> KatsuradaC0(SiegelJordanBlocks const &q,
                                 SiegelJordanBlocks const &q2) {
-  T p_T = ScalarFromInt64<T>(q.p);
+  T p_T = UniversalScalarConversion<T, int64_t>(q.p);
   int n = q.dim();
   if (n % 2 == 0) {
     int xi = XiInvariant(q);
@@ -892,7 +893,7 @@ UnivariatePolynomial<T> SiegelSeriesPolynomialBlocks(SiegelJordanBlocks const &q
   }
   UnivariatePolynomial<T> res;
   int64_t p = q.p;
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   int dim = q.dim();
   if (dim == 1) {
     res = SiegelSeriesDim1<T>(q);
@@ -977,7 +978,7 @@ template <typename T, typename Tint>
 T AlphaUnimodularTarget(MyMatrix<T> const &S, int64_t p, int k, int xi_T,
                         SiegelSeriesCache<T> &cache) {
   int m = S.rows();
-  T p_T = ScalarFromInt64<T>(p);
+  T p_T = UniversalScalarConversion<T, int64_t>(p);
   T X = T(xi_T) / MyPowSigned(p_T, k);
   UnivariatePolynomial<T> F = SiegelSeriesPolynomial<T, Tint>(S, p, cache);
   T val = PolyEvaluate(F, X) * (T(1) - X);

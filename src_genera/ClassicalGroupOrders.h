@@ -3,7 +3,8 @@
 #define SRC_GENERA_CLASSICALGROUPORDERS_H_
 
 // clang-format off
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include <vector>
 // clang-format on
 

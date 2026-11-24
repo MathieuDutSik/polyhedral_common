@@ -847,7 +847,7 @@ HermHermiteStarts(int64_t d, int b, Tint const &N, std::ostream &os) {
       }
     }
     for (int64_t sv = 1;; sv++) {
-      T s2 = ScalarFromInt64<T>(sv * sv);
+      T s2 = UniversalScalarConversion<T, int64_t>(sv * sv);
       MyMatrix<T> Gs = s2 * G;
       bool ok = IsIntegralMatrix(Gs);
       for (int k = 0; ok && k < phi; k++) {
@@ -897,7 +897,7 @@ HermHermiteStarts(int64_t d, int b, Tint const &N, std::ostream &os) {
       MyVector<T> c = ZeroVector<T>(phi);
       for (int u = 0; u < m; u++) {
         if (v[u] != 0) {
-          c += ScalarFromInt64<T>(v[u]) * GetMatrixRow(Kb, u);
+          c += UniversalScalarConversion<T, int64_t>(v[u]) * GetMatrixRow(Kb, u);
         }
       }
       T tr = trace_of(c);

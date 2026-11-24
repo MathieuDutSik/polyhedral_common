@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "LocalDensity.h"
 #include "LocalDensityOverlattice.h"
 #include "ClassicLLL.h"
@@ -915,7 +916,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
     for (int i = 0; i < m; i++) {
       for (int j = i; j < m; j++) {
         T val = RT[i].dot(G * RT[j]) / p_T;
-        M[i][j] = M[j][i] = ResidueModInt<T, Tint>(val, p);
+        M[i][j] = M[j][i] = ResModOfRational<T, Tint>(val, p);
       }
     }
     std::optional<std::vector<int64_t>> c = IsotropicVectorFp(M, p);
@@ -928,7 +929,7 @@ IsotropicRadicalVector(MyMatrix<T> const &G, int64_t p) {
   for (int i = 0; i < m; i++) {
     for (int j = i; j < m; j++) {
       T val = RT[i].dot(G * RT[j]);
-      N[i][j] = N[j][i] = ResidueModInt<T, Tint>(val, 8);
+      N[i][j] = N[j][i] = ResModOfRational<T, Tint>(val, 8);
     }
   }
   int jmax = std::min(m, 20);
@@ -1083,7 +1084,7 @@ std::vector<std::vector<int64_t>> SublatticeForms(MyMatrix<T> const &G,
   std::vector<std::vector<int64_t>> Qp(n, std::vector<int64_t>(n));
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      Qp[i][j] = ResidueModInt<T, Tint>(Q(i, j), p);
+      Qp[i][j] = ResModOfRational<T, Tint>(Q(i, j), p);
     }
   }
   std::vector<int64_t> lambdas;
@@ -1239,7 +1240,7 @@ std::vector<int> SymbolKeyAt(MyMatrix<T> const &G, int64_t p, int e) {
   MyMatrix<int64_t> Gm(n, n);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      Gm(i, j) = ResidueModInt<T, Tint>(G2(i, j), M);
+      Gm(i, j) = ResModOfRational<T, Tint>(G2(i, j), M);
     }
   }
   std::optional<std::vector<int>> key = LocalSymbolKeyModular(Gm, p, prec);
@@ -1415,7 +1416,7 @@ SymbolLattice<T> DescendToLocalSymbol(SymbolLattice<T> const &L, int64_t p,
         Gm = MyMatrix<int64_t>(n, n);
         for (int a = 0; a < n; a++) {
           for (int b = 0; b < n; b++) {
-            Gm(a, b) = ResidueModInt<T, Tint>(G2(a, b), mod->second);
+            Gm(a, b) = ResModOfRational<T, Tint>(G2(a, b), mod->second);
           }
         }
       }

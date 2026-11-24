@@ -204,25 +204,25 @@ template <typename T> MyMatrix<T> AdeGramMatrix(AdeType const &t) {
 template <typename Tint> Tint AutOrderIrreducible(char letter, int r) {
   Tint fact(1);
   for (int i = 2; i <= r; i++) {
-    fact *= ScalarFromInt64<Tint>(i);
+    fact *= UniversalScalarConversion<Tint, int64_t>(i);
   }
   if (letter == 'A') {
-    return (r == 1) ? Tint(2) : Tint(2) * fact * ScalarFromInt64<Tint>(r + 1);
+    return (r == 1) ? Tint(2) : Tint(2) * fact * UniversalScalarConversion<Tint, int64_t>(r + 1);
   }
   if (letter == 'D') {
     if (r == 4) {
-      return ScalarFromInt64<Tint>(1152);
+      return UniversalScalarConversion<Tint, int64_t>(1152);
     }
     Tint pow2 = MyPow<Tint>(Tint(2), r);
     return pow2 * fact;
   }
   if (r == 6) {
-    return ScalarFromInt64<Tint>(103680);
+    return UniversalScalarConversion<Tint, int64_t>(103680);
   }
   if (r == 7) {
-    return ScalarFromInt64<Tint>(2903040);
+    return UniversalScalarConversion<Tint, int64_t>(2903040);
   }
-  return ScalarFromInt64<Tint>(696729600);
+  return UniversalScalarConversion<Tint, int64_t>(696729600);
 }
 
 template <typename Tint> Tint AutOrderAde(AdeType const &t) {
@@ -235,7 +235,7 @@ template <typename Tint> Tint AutOrderAde(AdeType const &t) {
     }
     Tint a = AutOrderIrreducible<Tint>(t[i].first, t[i].second);
     for (size_t k = i; k < j; k++) {
-      res *= a * ScalarFromInt64<Tint>(static_cast<int64_t>(k - i + 1));
+      res *= a * UniversalScalarConversion<Tint, int64_t>(static_cast<int64_t>(k - i + 1));
     }
     i = j;
   }
@@ -667,8 +667,8 @@ Tint RootEmbeddingNumber(AdeType const &R, AdeType const &T,
       AdeType Tnew = others;
       Tnew.insert(Tnew.end(), C.begin(), C.end());
       Tint val = RootEmbeddingNumber(Rrest, AdeCanonical(Tnew), cache);
-      total += ScalarFromInt64<Tint>(count) *
-               ScalarFromInt64<Tint>(static_cast<int64_t>(mult)) * val;
+      total += UniversalScalarConversion<Tint, int64_t>(count) *
+               UniversalScalarConversion<Tint, int64_t>(static_cast<int64_t>(mult)) * val;
     }
   }
   total *= AutOrderIrreducible<Tint>(R1[0].first, R1[0].second);

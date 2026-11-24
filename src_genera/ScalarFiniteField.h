@@ -199,7 +199,7 @@ inline int FqQuadraticCharacter(FiniteField const &F, FqElt const &u) {
     std::cerr << "FQ: the norm is not in F_p\n";
     throw TerminalException{1};
   }
-  return KroneckerResidue(prod[0], F.p);
+  return ResKronecker(prod[0], F.p);
 }
 
 inline void FqCheckCodes(FiniteField const &F) {

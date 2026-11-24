@@ -281,14 +281,14 @@ PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
     M.N = std::max(M.N, qe);
     MyVector<T> g(k);
     for (int j = 0; j < k; j++) {
-      g(j) = comp.row(i, j) / ScalarFromInt64<T>(qe);
+      g(j) = comp.row(i, j) / UniversalScalarConversion<T, int64_t>(qe);
     }
     gens.push_back(g);
   }
   size_t r = gens.size();
   M.bnum.assign(r, std::vector<int64_t>(r, 0));
   M.qnum.assign(r, 0);
-  T N_T = ScalarFromInt64<T>(M.N);
+  T N_T = UniversalScalarConversion<T, int64_t>(M.N);
   for (size_t i = 0; i < r; i++) {
     for (size_t j = 0; j < r; j++) {
       T val = N_T * gens[i].dot(comp.gram * gens[j]);
@@ -336,7 +336,7 @@ std::vector<MyVector<T>> PrimaryModuleGenerators(IsometryComponent<T> const &com
     int i = M.index[s];
     MyVector<T> g(k);
     for (int j = 0; j < k; j++) {
-      g(j) = comp.row(i, j) / ScalarFromInt64<T>(M.ord[s]);
+      g(j) = comp.row(i, j) / UniversalScalarConversion<T, int64_t>(M.ord[s]);
     }
     gens.push_back(g);
   }
@@ -3330,7 +3330,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       }
       int tot = 0;
       for (int64_t lambda : ListLambda) {
-        MyMatrix<T> M = Rk - ScalarFromInt64<T>(lambda) * IdentityMat<T>(n);
+        MyMatrix<T> M = Rk - UniversalScalarConversion<T, int64_t>(lambda) * IdentityMat<T>(n);
         MyMatrix<T> EM = blk.E * M;
         MyMatrix<Tint> EM_i = UniversalMatrixConversion<Tint, T>(EM);
         MyMatrix<Tint> K_i = NullspaceIntTrMat(MyMatrix<Tint>(EM_i.transpose()));
@@ -3560,7 +3560,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             FKq_holder = MakeAbelianRealField(Nexp2, Hgens2);
             DirichletGroup Gd = ComputeDirichletGroup(FKq_holder->n);
             for (auto const &t : FieldCharacters(Gd, FKq_holder->H, false)) {
-              dKq_holder *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+              dKq_holder *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
             }
           }
           if (EndIsQuaternionDivision<T, Tint>(EndC, k, c, dKq_holder,
@@ -3635,7 +3635,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           }
           DirichletGroup Gd = ComputeDirichletGroup(FKq->n);
           for (auto const &t : FieldCharacters(Gd, FKq->H, false)) {
-            dKq *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+            dKq *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
           }
         }
         comp.quaternionic = true;
@@ -3755,7 +3755,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
       std::vector<size_t> owner;
       for (size_t i = 0; i < n_elt; i++) {
         for (int sgn : {1, -1}) {
-          cand.push_back(elts[i] - ScalarFromInt64<T>(sgn) * IdentityMat<T>(n));
+          cand.push_back(elts[i] - UniversalScalarConversion<T, int64_t>(sgn) * IdentityMat<T>(n));
           owner.push_back(i);
         }
       }
@@ -3837,7 +3837,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         for (size_t i = 0; i < n_elt; i++) {
           for (int sgn : {1, -1}) {
             cand.push_back(elts[i] -
-                           ScalarFromInt64<T>(sgn) * IdentityMat<T>(n));
+                           UniversalScalarConversion<T, int64_t>(sgn) * IdentityMat<T>(n));
             owner.push_back(i);
           }
         }
@@ -3981,14 +3981,14 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
               for (int u = 0; u < mX; u++) {
                 t += P(u, u);
               }
-              Tr(i, j) = t / ScalarFromInt64<T>(m);
+              Tr(i, j) = t / UniversalScalarConversion<T, int64_t>(m);
             }
           }
           T dO = T_abs(DeterminantMat(Tr));
           DirichletGroup Gd = ComputeDirichletGroup(Fk.n);
           T dK(1);
           for (auto const &t : FieldCharacters(Gd, Fk.H, false)) {
-            dK *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+            dK *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
           }
           maximal = (dO == dK);
         }
@@ -4048,10 +4048,10 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
           {
             DirichletGroup Gd = ComputeDirichletGroup(Fk.n);
             for (auto const &t : FieldCharacters(Gd, Fk.H, false)) {
-              dKval *= ScalarFromInt64<T>(PrimitiveCharacter(Gd, t).first);
+              dKval *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
             }
           }
-          T tr_scale = ScalarFromInt64<T>(mX / c);
+          T tr_scale = UniversalScalarConversion<T, int64_t>(mX / c);
           auto disc_of = [&](std::vector<MyMatrix<T>> const &L) -> T {
             int d0 = static_cast<int>(L.size());
             MyMatrix<T> G(d0, d0);
@@ -4078,7 +4078,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                 T term = ek[kk - i] * pk[i];
                 sacc += (i % 2 == 1) ? term : T(-term);
               }
-              ek[kk] = sacc / ScalarFromInt64<T>(kk);
+              ek[kk] = sacc / UniversalScalarConversion<T, int64_t>(kk);
               if (!IsInteger(ek[kk])) {
                 return false;
               }
@@ -4126,10 +4126,10 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                   int64_t a = static_cast<int64_t>(tt % static_cast<size_t>(pp));
                   tt /= static_cast<size_t>(pp);
                   if (a != 0) {
-                    x += ScalarFromInt64<T>(a) * OK[i];
+                    x += UniversalScalarConversion<T, int64_t>(a) * OK[i];
                   }
                 }
-                x /= ScalarFromInt64<T>(pp);
+                x /= UniversalScalarConversion<T, int64_t>(pp);
                 if (integral(x)) {
                   std::vector<MyMatrix<T>> L = OK;
                   L.push_back(x);
@@ -4239,9 +4239,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                 int ex = (vX - vS) / 2;
                 for (int i = 0; i < (ex >= 0 ? ex : -ex); i++) {
                   if (ex >= 0) {
-                    ratio *= ScalarFromInt64<T>(pp);
+                    ratio *= UniversalScalarConversion<T, int64_t>(pp);
                   } else {
-                    ratio /= ScalarFromInt64<T>(pp);
+                    ratio /= UniversalScalarConversion<T, int64_t>(pp);
                   }
                 }
 #ifdef DEBUG_ISOMETRY_MASS

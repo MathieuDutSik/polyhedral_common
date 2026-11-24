@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "FiniteFieldProjective.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "Boost_bitset.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
@@ -284,7 +285,7 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
   MyVector<Tint> w = G * v;
   int jpiv = -1;
   for (int i = 0; i < n; i++) {
-    if (ResidueModP(w(i), p) != 0) {
+    if (ResModOf(w(i), static_cast<T_residue>(p)) != 0) {
       jpiv = i;
       break;
     }
@@ -578,10 +579,10 @@ struct ProjectiveLineSelection {
 template <typename Tint>
 bool IsScalarModP(MyMatrix<Tint> const &eGen, int p) {
   int n = eGen.rows();
-  int diag = ResidueModP(eGen(0, 0), p);
+  int diag = ResModOf(eGen(0, 0), static_cast<T_residue>(p));
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      int res = ResidueModP(eGen(i, j), p);
+      int res = ResModOf(eGen(i, j), static_cast<T_residue>(p));
       if (i == j && res != diag) {
         return false;
       }
@@ -680,7 +681,7 @@ ProjectiveLineOrbitRepresentativesP2(int n,
     std::vector<uint32_t> rows(n, 0);
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        if (ResidueModP(eGen(i, j), 2) != 0) {
+        if (ResModOf(eGen(i, j), static_cast<T_residue>(2)) != 0) {
           rows[i] |= uint32_t(1) << j;
         }
       }
@@ -1486,7 +1487,7 @@ GenusRandomNeighborLine(MyMatrix<Tint> const &G_int, int p, Tengine &engine) {
   std::vector<int64_t> G_mod(n * n);
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      G_mod[i * n + j] = ResidueModP(G_int(i, j), p);
+      G_mod[i * n + j] = ResModOf(G_int(i, j), static_cast<T_residue>(p));
     }
   }
   int64_t p64 = p;

@@ -4,7 +4,8 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "GroupNeighborModP.h"
 #include "ResidueArithmetic.h"
 #include "MAT_MatrixModPrime.h"

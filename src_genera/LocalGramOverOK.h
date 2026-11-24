@@ -69,7 +69,7 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
   int m = r / deg;
   T_small_prime q_u = static_cast<T_small_prime>(q);
   auto red = [&](T const &x) -> T_residue {
-    return ResidueModInt<T, Tint>(x, q_u);
+    return ResModOfRational<T, Tint>(x, q_u);
   };
   std::vector<MyMatrix<T>> Spow{IdentityMat<T>(r)};
   for (int t = 1; t < deg; t++) {

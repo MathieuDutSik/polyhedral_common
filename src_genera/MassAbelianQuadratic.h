@@ -10,7 +10,8 @@
 #include "LocalJordan.h"
 #include "ScalarFiniteField.h"
 #include "ClassicalGroupOrders.h"
-#include "GeneraArithmetic.h"
+#include "ArithmeticFunctions.h"
+#include "ResidueArithmetic.h"
 #include "MassAbelianHermitian.h"
 #include "ClassicLLL.h"
 #include <algorithm>
@@ -59,7 +60,7 @@ StandardQuadraticMassAbelian(AbelianField const &FK, int m, bool disc_square,
     return T(1);
   }
   if (m == 1) {
-    return RationalFraction<T>(1, 2);
+    return T(1) / T(2);
   }
   int64_t deg = AbelianFieldDegree(FK);
   int r = m / 2;
@@ -639,7 +640,7 @@ inline std::pair<int, ElemE<T>> QuadDefectUnit(ElemE<T> a, LocalPrimeK<T> &P,
   if (w == ee) {
     ElemE<T> am1 = a;
     am1[0] -= 1;
-    FqElt c = LocalResidue(am1 * RationalFraction<T>(1, 4), P);
+    FqElt c = LocalResidue(am1 * (T(1) / T(4)), P);
     if (FqTrace(F, c) == 0) {
       return {QD_INF, EOne(K)};
     }
@@ -879,14 +880,14 @@ inline T LocalFactorMaximalDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
   } else {
     int qd = QuadDefect(d, P, F);
     if (vd % 2 != 0) {
-      return RationalFraction<T>(1, 2);
+      return T(1) / T(2);
     } else if (qd == QD_INF) {
       if (w == -1) {
         return (QPowRat(q, r - 1) - 1) * (QPowRat(q, r) - 1) /
                T(q + 1) / 2;
       }
     } else if (qd % 2 != 0) {
-      return RationalFraction<T>(1, 2);
+      return T(1) / T(2);
     } else if (w == -1) {
       return (QPowRat(q, r - 1) + 1) * (QPowRat(q, r) + 1) /
              T(q + 1) / 2;
@@ -1214,7 +1215,7 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
       disc = -disc;
     }
     int c = QuadDefect(disc, P, F);
-    T rh = T(r) - RationalFraction<T>(1, 2);
+    T rh = T(r) - T(1) / T(2);
     if (d == 2) {
       if (a < b && b == 2 && c == 2 * e) {
         lf = qp((e - a - 1) / 2) * (q - eps(c));
@@ -2081,7 +2082,7 @@ QuadraticMassAbelianLattice(MyMatrix<T> const &B,
   int deg = static_cast<int>(Omega.size());
   int m = B.rows() / deg;
   if (m == 1) {
-    return RationalFraction<T>(1, 2);
+    return T(1) / T(2);
   }
   T local(1);
   for (auto const &kv : QuadraticLocalFactors(B, Omega, FK)) {
