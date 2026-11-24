@@ -26,7 +26,10 @@ grep -v '^#' maximal_order_tests.txt | while read -r f disc; do
     fi
 done
 echo "--- the maximal orders, with the checks ---"
+# each suite leaves its CI_CONCLUSION: removed, so that only the end of
+# this script can leave one
 bash RunIsometryMassTests.sh > /dev/null
+rm -f CI_CONCLUSION
 echo "--- the isometry masses, with the checks ---"
 bash RunCharPolyTests.sh sanity_tests.txt | tail -1
 rm -f CI_CONCLUSION

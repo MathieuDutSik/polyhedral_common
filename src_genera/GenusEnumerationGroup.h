@@ -1374,9 +1374,20 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
       bd.fam = std::make_shared<MyMatrix<Tint> const>(std::move(fam));
     }
     MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(bd.M);
-    for (auto const &F : PairForms(A, ListP)) {
-      MyMatrix<T> F_M = M_T * F * M_T.transpose();
-      bd.forms.push_back(UniversalMatrixConversion<Tint, T>(F_M));
+    // Plesken-Souvignier needs symmetric or antisymmetric forms: A P^T is
+    // replaced by A P^T + P A and A P^T - P A, preserved by g exactly when
+    // A P^T is. The split is the same for every pair, so that the forms of
+    // two pairs correspond.
+    std::vector<MyMatrix<T>> ListF = PairForms(A, ListP);
+    for (size_t i = 0; i < ListF.size(); i++) {
+      MyMatrix<T> F_M = M_T * ListF[i] * M_T.transpose();
+      if (i == 0) {
+        bd.forms.push_back(UniversalMatrixConversion<Tint, T>(F_M));
+      } else {
+        MyMatrix<T> F_Mtr = F_M.transpose();
+        bd.forms.push_back(UniversalMatrixConversion<Tint, T>(F_M + F_Mtr));
+        bd.forms.push_back(UniversalMatrixConversion<Tint, T>(F_M - F_Mtr));
+      }
     }
     if (bd.fam) {
       bd.values = form_values(bd.forms, *bd.fam);
