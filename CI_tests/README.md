@@ -26,7 +26,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 13 min, whole job 16 min, 2026-11-02.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
   GitHub CI: build and run 9 min, whole job 15 min, 2026-10-02.
-* `03_Tspaces_IsoDelaunay` -- `ci_03A_enum_isodelaunay`: Enumeration of isoDelaunay domains.
+* `03A_Tspaces_IsoDelaunay` -- `ci_03A_enum_isodelaunay`: Enumeration of isoDelaunay domains.
   GitHub CI: build and run 13 min, whole job 16 min, 2026-11-03.
 * `03B_KCovering` -- `ci_03B_k_covering`: Order-k Delaunay tilings and (L,k)-types: the tilings of classical lattices (A2, Z^2, Z^3, A3, D4) with their k-covering radius and volume identity, and the enumeration of the (L,k)-types of the space of all forms in dimensions 2 and 3 with the minimal k-covering density, which in the plane agrees with Blundon's thinnest k-fold lattice coverings.
   GitHub CI: build and run 8 min, whole job 10 min, 2026-10-03.
@@ -74,8 +74,9 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 13 s, whole job 3 min, 2026-11-17.
 * `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra with src_erdahl: the 4 of the full space in dimension 7 and the 3 centrally symmetric ones (functions of center e_1/2) in dimension 8, with the CUT_8 dual description heuristics of `16A_EquivDualDesc/CUT_K8`; and the perfect Delaunay polytopes only (method `polytopes`, from the Erdahl-Rybnikov polytope and its symmetrization) in the same two cases.
   GitHub CI: `TestErdahl_centered8` build and run 19 min, whole job 25 min; `TestErdahl_full7` build and run 23 min, whole job 29 min (jobs in parallel), 2026-10-17.
-* `19_IndefiniteComp` -- `ci_19_indefinite_comp`: Computation of indefinite forms.
+* `19A_IndefiniteComp` -- `ci_19A_indefinite_comp`: Computation of indefinite forms.
   GitHub CI: build and run 1.8 h, whole job 1.8 h, 2026-11-19.
+* `19B_AlgebraicModularForms` -- `ci_19B_algebraic_modular_forms`: The Hecke matrices of the algebraic modular forms over Z (GENUS_MPI_AlgebraicModularForms), from the classes of a genus, with and without a level structure: E8 at levels 1 and 5, II_16, and a genus of 25 classes of DefLatDB at levels 1 and 11 (1365 states). Each result is compared with the expected one and checked in GAP: rows summing to the number of neighbors, self-adjoint for the mass inner product, the operators at two primes commuting; one case also on two MPI processes, and the whole again with the SANITY_CHECK macros.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
   GitHub CI: build and run 45 min, whole job 48 min, 2026-11-20.
 * `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.

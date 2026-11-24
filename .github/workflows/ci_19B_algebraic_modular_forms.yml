@@ -1,0 +1,73 @@
+name: CI(19B) of the algebraic modular forms over Z
+
+on:
+  # One time every two months, alternating with ci_19A
+  schedule:
+    - cron: "0 0 19 2,4,6,8,10,12 *"
+  # Manually triggered
+  workflow_dispatch:
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      # Boost.MPI, for GENUS_MPI_AlgebraicModularForms
+      MPI_LINK_CPP: "-lboost_mpi"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # MPFR, which the src_genera Makefile links (QuadraticHeckeL.h)
+      - name: Install MPFR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpfr-dev
+
+      - uses: ./.github/actions/install-boost
+      - uses: ./.github/actions/install-mpi
+      - uses: ./.github/actions/install-nauty
+      - uses: ./.github/actions/install-bliss
+      - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-gap
+      - name: Test the algebraic modular forms
+        run: |
+          make -C src_genera GENUS_MPI_AlgebraicModularForms
+          echo "After compilation of GENUS_MPI_AlgebraicModularForms"
+
+          # Running the test
+          cd CI_tests/19B_AlgebraicModularForms
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestAlgebraicModularForms.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The algebraic modular forms test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
+      # The same, with the checks in the code: the Hecke matrices
+      # self-adjoint and commuting, the recognition of the classes of the
+      # family. The runs on two MPI processes are skipped.
+      - name: Test the algebraic modular forms with the SANITY_CHECK macros
+        run: |
+          make -C src_genera -B GENUS_MPI_AlgebraicModularForms CDEFS="-DGMP_POOL -DSANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z -DSANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z_EXTENSIVE -DSANITY_CHECK_LATTICE_INVARIANT_FAMILY"
+          cd CI_tests/19B_AlgebraicModularForms
+          rm -f CI_CONCLUSION
+          AMF_MPI=0 ../../gap.sh < TestAlgebraicModularForms.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The algebraic modular forms sanity test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..

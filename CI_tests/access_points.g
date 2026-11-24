@@ -3185,3 +3185,57 @@ get_genus_local_density:=function(arith, task, ListRecord)
     RemoveFile(FileE);
     return ListVal;
 end;
+
+# The algebraic modular forms over Z (GENUS_MPI_AlgebraicModularForms) of
+# the genus whose classes are ListGram (all of them: the mass is checked),
+# at the Hecke primes ListPrime, with the level structure at the prime
+# level (1 for none). The options: np, the number of MPI processes (1 by
+# default, run without mpirun). The result is the record of the program:
+# ListAutOrder, ListOrbitSize, mass, ListHecke (prime, n_neighbor and the
+# sparse entries [row, column, value] of the matrix on the states).
+get_algebraic_modular_forms:=function(arg)
+    local ListGram, ListPrime, level, np, options, TmpDir, FileC, FileN, FileO, FileE, eProg, strOut, binary, list_arg, status, U;
+    ListGram:=arg[1];
+    ListPrime:=arg[2];
+    level:=arg[3];
+    np:=1;
+    if Length(arg) >= 4 then
+        options:=arg[4];
+        if IsBound(options.np) then
+            np:=options.np;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileC:=Filename(TmpDir, "Amf.classes");
+    FileN:=Filename(TmpDir, "Amf.nml");
+    FileO:=Filename(TmpDir, "Amf.out");
+    FileE:=Filename(TmpDir, "Amf.err");
+    WriteListMatrixFile(FileC, ListGram);
+    strOut:=Concatenation("&DATA\n ClassesFile = \"", FileC, "\"\n",
+                          " ListPrime = ", JoinStringsWithSeparator(List(ListPrime, String), ", "), "\n",
+                          " level = ", String(level), "\n/\n\n",
+                          "&METHOD\n/\n\n",
+                          "&SYSTEM\n OutFormat = \"GAP\"\n OutFile = \"", FileO, "\"\n/\n");
+    WriteStringFile(FileN, strOut);
+    eProg:=GetBinaryFilename("GENUS_MPI_AlgebraicModularForms");
+    if np = 1 then
+        binary:=eProg;
+        list_arg:=[FileN];
+    else
+        binary:="/usr/bin/env";
+        list_arg:=["mpirun", "-np", String(np), "--oversubscribe", eProg, FileN];
+    fi;
+    status:=run_binary(binary, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(binary, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_MPI_AlgebraicModularForms wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileC);
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;

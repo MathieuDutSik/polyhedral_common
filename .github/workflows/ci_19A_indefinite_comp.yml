@@ -1,9 +1,9 @@
-name: CI(19) of computation of indefinite forms
+name: CI(19A) of computation of indefinite forms
 
 on:
-  # One time per month
+  # One time every two months, alternating with ci_19B
   schedule:
-    - cron: "0 0 19 * *"
+    - cron: "0 0 19 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -41,7 +41,7 @@ jobs:
           echo "After compilation of indefinite codes"
 
           # Running the test
-          cd CI_tests/19_IndefiniteComp
+          cd CI_tests/19A_IndefiniteComp
           ../../gap.sh < AllTests.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "Error: file not found!" >&2

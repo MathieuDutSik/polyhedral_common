@@ -65,18 +65,18 @@ $(PROGRAM): %: %.o
 		@echo link $@
 		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
 
-# The MPI program, not in PROGRAM: it needs Boost.MPI and an MPI library,
+# The MPI programs, not in PROGRAM: they need Boost.MPI and an MPI library,
 # which the other programs do not. Build with `make GENUS_MPI_Enumerate`.
-MPI_PROGRAM	= GENUS_MPI_Enumerate
+MPI_PROGRAM	= GENUS_MPI_Enumerate GENUS_MPI_AlgebraicModularForms
 MPI_CFLAGS	= $(shell pkg-config --cflags ompi)
 MPI_LIBS	= $(shell pkg-config --libs ompi) $(MPI_LINK_CPP)
 
-GENUS_MPI_Enumerate.o: GENUS_MPI_Enumerate.cpp
+$(MPI_PROGRAM:%=%.o): %.o: %.cpp
 	@echo
 	@echo compile $<
 	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(MPI_CFLAGS) $(CDEPS) $(NOLINKFLAG) $<
 
-GENUS_MPI_Enumerate: GENUS_MPI_Enumerate.o
+$(MPI_PROGRAM): %: %.o
 	@echo
 	@echo link $@
 	$(CC) $(DEBUGFLAG) $@.o $(LIBS) $(MPI_LIBS) -o $@
@@ -88,4 +88,4 @@ clean:;
 
 # The header dependencies, written by the compiler as it compiles (-MMD),
 # so that a change to a header rebuilds the objects that include it.
--include $(OBJECTS:.o=.d) GENUS_MPI_Enumerate.d
+-include $(OBJECTS:.o=.d) $(MPI_PROGRAM:%=%.d)

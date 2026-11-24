@@ -53,7 +53,7 @@ jobs:
           pwd
           echo "After compilation of TSPACE_IntegralSaturation"
 
-          cd CI_tests/03_Tspaces_IsoDelaunay
+          cd CI_tests/03A_Tspaces_IsoDelaunay
           ../../gap.sh < TestEnumIsoDelaunayDomain.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2

@@ -972,6 +972,9 @@ if(WITH_MPI)
   add_polyhedral_binary(GENUS_MPI_Enumerate
     "${CMAKE_SOURCE_DIR}/src_genera/GENUS_MPI_Enumerate.cpp"
     polyhedral_latt_support)
+  add_polyhedral_binary(GENUS_MPI_AlgebraicModularForms
+    "${CMAKE_SOURCE_DIR}/src_genera/GENUS_MPI_AlgebraicModularForms.cpp"
+    polyhedral_latt_support)
 endif()
 
 set(
