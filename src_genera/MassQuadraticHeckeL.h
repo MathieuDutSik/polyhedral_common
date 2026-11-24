@@ -3,7 +3,7 @@
 #define SRC_GENERA_MASSQUADRATICHECKEL_H_
 
 // clang-format off
-#include "MassAbelianQuadratic.h"
+#include "MassAbelianQuadraticLocal.h"
 #include "RealFunctions.h"
 #include <cmath>
 #include <chrono>

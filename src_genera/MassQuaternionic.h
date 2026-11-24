@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
-#include "MassMultiplicityLocalFactor.h"
+#include "MassLocalImage.h"
 #include "MassAbelianQuadratic.h"
 #include "SiegelSpecialValues.h"
 #include "ClassicLLL.h"

@@ -6,7 +6,7 @@
 #include "Permutation.h"
 #include "IsometryGlue.h"
 #include "IsometryGlueFactors.h"
-#include "MassGroupHomCount.h"
+#include "Mass.h"
 #include "GenusSymbol.h"
 #include <optional>
 #include <set>

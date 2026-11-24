@@ -5,9 +5,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
-#include "MassIsometry.h"
-#include "MassAbelianHermitian.h"
-#include "MassAbelianQuadratic.h"
+#include "Mass.h"
 #include "LatticeMethods.h"
 #include <fstream>
 #include <map>

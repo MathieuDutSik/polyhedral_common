@@ -318,7 +318,7 @@ by x^{-1} is a similitude onto S_p: the ratio is 1 without the image
 search (whose first column would run over an orbit of size about p^{dim
 u}), the Lie discriminants being checked equal.
 
-The image search (MassMultiplicityLocalFactor.h) works in a Jordan basis
+The image search (MassLocalImage.h) works in a Jordan basis
 (JordanBasisModPW) for e >= 1: the images of the columns of level l have
 zero coordinates on the lower columns, B(y, y) known modulo p^{l + 1}
 (modulo 4 at level 0 and p = 2), the pairings of two columns of the same
@@ -380,7 +380,8 @@ give the standard mass of a quadratic lattice of rank m over the totally
 real subfield K of Q(zeta_n) fixed by <h_i, -1>, and the mass, the local
 mass and the local factors of a quadratic lattice over K given by its
 trace Gram matrix and the actions of a Z-basis of O_K
-(`MassAbelianQuadratic.h`, after Hecke.jl's MassQuad.jl). At each prime q
+(`MassAbelianQuadratic.h` and its local part `MassAbelianQuadraticLocal.h`,
+after Hecke.jl's MassQuad.jl). At each prime q
 the form is written over K on a local O_K-basis and each prime of K over
 q is treated with the exact arithmetic of K, the valuations and residues
 being read through its idempotent: the odd primes by the Jordan
@@ -465,7 +466,7 @@ the adelic centralizer is a subgroup of finite index of that of L_0, so
     mass(L, g) = prod_d mass(L_d, g) * prod_q |G_q . H_q| ,
 
 H_q the glue L / L_0 at q in the discriminant group of L_0 and G_q the
-image of the local stabilizer of L_0 (see `MassIsometry.h`). The masses of
+image of the local stabilizer of L_0 (see `MassGlue.h`). The masses of
 the orthogonal components (d = 1, 2) come from `GenusMass`. Those of the
 Hermitian components (d >= 3, lattices over Z[zeta_d]) of rank one are
 computed (`MassCyclotomicHermitian.h`: the mass is 2^{1-n} |L(0,
