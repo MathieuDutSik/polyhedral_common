@@ -17,15 +17,15 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ALGEBRAIC_MODULAR_FORMS_Z
+# define DEBUG_ALGEBRAIC_MODULAR_FORMS_Z
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
+# define SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
 #endif
 
 #ifdef TIMINGS
-#define TIMINGS_ALGEBRAIC_MODULAR_FORMS_Z
+# define TIMINGS_ALGEBRAIC_MODULAR_FORMS_Z
 #endif
 
 /*
@@ -217,20 +217,24 @@ AmfZRow AmfZComputeRow(size_t i, int p, InvariantFamily<Tint> const &family,
     std::optional<MyMatrix<Tint>> opt_iso =
         LatticeIsometry<T, Tint, Tgroup>({G_j}, {GramM}, {},
                                          methods.isomorphism, os);
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
     if (!opt_iso) {
       std::cerr << "AMFZ: the neighbor recognized as the class " << j
                 << " is not isometric to it\n";
       throw TerminalException{1};
     }
+#endif
     MyMatrix<T> Q = UniversalMatrixConversion<T, Tint>(*opt_iso);
     if (Q * G_j * Q.transpose() != GramM) {
       // the isometry the other way
       Q = Inverse(Q);
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
       if (Q * G_j * Q.transpose() != GramM) {
         std::cerr << "AMFZ: the isometry does not map the class to the "
                      "neighbor\n";
         throw TerminalException{1};
       }
+#endif
     }
     MyMatrix<T> B_M = UniversalMatrixConversion<T, Tint>(opt->Bp) / T(p);
     MyMatrix<T> R = Inverse(B_M) * Q;
@@ -258,11 +262,13 @@ AmfZRow AmfZComputeRow(size_t i, int p, InvariantFamily<Tint> const &family,
         w[b] = static_cast<int>(sum);
       }
       int64_t o2 = level_j.orbit_of_line[IndexOfProjectiveLine(w, N)];
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
       if (o2 < 0) {
         std::cerr << "AMFZ: an isotropic level line is sent to a non "
                      "isotropic one\n";
         throw TerminalException{1};
       }
+#endif
       count[{static_cast<size_t>(o), static_cast<size_t>(o2)}]++;
     }
     for (auto const &[key, c] : count) {
@@ -272,10 +278,12 @@ AmfZRow AmfZComputeRow(size_t i, int p, InvariantFamily<Tint> const &family,
   for (auto const &[key, s] : sums) {
     int64_t size_O =
         static_cast<int64_t>(level[i].orbit_size[std::get<0>(key)]);
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS_Z
     if (s % size_O != 0) {
       std::cerr << "AMFZ: a Hecke matrix entry is not an integer\n";
       throw TerminalException{1};
     }
+#endif
     row.entries[key] = s / size_O;
   }
 #ifdef TIMINGS_ALGEBRAIC_MODULAR_FORMS_Z
