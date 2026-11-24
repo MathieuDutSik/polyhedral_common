@@ -274,14 +274,8 @@ void process(std::string const &mode, std::string const &FileGram1,
     }
     IsometryMassBounds mass_bounds;
     mass_bounds.lvalue = lvalue;
-    std::map<int, T> herm_mass;
-    // a group (several generators): FiniteGroupGenusMass
     IsometryMassResult<T> mres =
-        gens.size() == 1
-            ? IsometryGenusMass<T, Tint>(gp.gram, gp.isom, herm_mass,
-                                         mass_bounds, std::cerr)
-            : FiniteGroupGenusMass<T, Tint>(gp.gram, gens, mass_bounds,
-                                            std::cerr);
+        GroupGenusMass<T, Tint>(gp.gram, gens, mass_bounds, std::cerr);
     if (!mres.mass) {
       // no component mass, or local factors missing
       // (mass_without_local_factors, only a lower bound)

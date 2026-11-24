@@ -4,34 +4,38 @@
 # of gmp, and the enumerations must close with the same number of classes.
 # An arithmetic that was not compiled is skipped.
 set -e
-MASS=../../src_genera/GENUS_IsometryMass
+. ./MassPrograms.sh
 ENUM=../../src_genera/GENUS_EnumerateIsometry
 
-# lattice, isometry or group file, mode (mass or group)
+# lattice, isometry or group file
 MASS_CASES="
-E8 refl mass
-E8 E8_inv3 mass
-E6 E6_g24 mass
-det30_L557 det30_g19 mass
-A6A6 A6A6_F21 group
-A4A4A4 A4A4A4_D5 group
-qD4x2 qD4x2_Q8 group
+E8 refl
+E8 E8_inv3
+E6 E6_g24
+det30_L557 det30_g19
+A6A6 A6A6_F21
+A4A4A4 A4A4A4_D5
+qD4x2 qD4x2_Q8
 "
 
 # the masses of MassAbelianHermitian.h and MassAbelianQuadratic.h, generic
-# in the rational type: mode (hermitianablattice or quadablocal), the
-# files tag_gram.txt and tag_omega.txt, n and the generators of H
+# in the rational type (GENUS_ComponentMass): the field (abelian_cm or
+# abelian_real), the files tag_gram.txt and tag_omega.txt, n and the
+# generators of H
 ABMASS_CASES="
-hermitianablattice hab_q7r3 7 1,2,4
-hermitianablattice hab_s17m2 136 9,19
-quadablocal quadm_z7pm2 7 1
-quadablocal quad_s2m4 8 7
-quadablocal quad_s17s41m3 697 2,21
+abelian_cm hab_q7r3 7 1,2,4
+abelian_cm hab_s17m2 136 9,19
+abelian_real quadm_z7pm2 7 1
+abelian_real quad_s2m4 8 7
+abelian_real quad_s17s41m3 697 2,21
 "
 
 abmass_of() {
-    arith=$1; mode=$2; tag=$3; n=$4; H=$5
-    $MASS $mode ${tag}_gram.txt ${tag}_omega.txt $n $H arithmetic=$arith \
+    arith=$1; field=$2; tag=$3; n=$4; H=$5
+    output=mass
+    [ "$field" = abelian_real ] && output=local_factors
+    component_mass field=$field output=$output GramFile=${tag}_gram.txt \
+          OmegaFile=${tag}_omega.txt n=$n H=$H arithmetic=$arith \
           2>/dev/null | sed -n 's/^return rec(mass:=\([^,)]*\).*/\1/p'
 }
 # lattice, isometries, expected classes
@@ -45,18 +49,13 @@ qD4W2glue qD4W2glueQS 3
 
 compiled() {
     # the dispatch refuses a name that was not compiled
-    $MASS hermitian 3 1 arithmetic=$1 > /dev/null 2>&1
+    component_mass field=cyclotomic n=3 rank=1 arithmetic=$1 > /dev/null 2>&1
 }
 
 mass_of() {
-    arith=$1; lat=$2; isom=$3; mode=$4
-    if [ "$mode" = "mass" ]; then
-        $MASS mass isom_${lat}.txt isom_${isom}.txt none stdout \
-              arithmetic=$arith 2>/dev/null
-    else
-        $MASS group isom_${lat}.txt isom_${isom}.txt stdout \
-              arithmetic=$arith 2>/dev/null
-    fi | sed -n 's/^  mass:=\(.*\));$/\1/p'
+    arith=$1; lat=$2; isom=$3
+    isometry_mass GramFile=isom_${lat}.txt GeneratorsFile=isom_${isom}.txt \
+          arithmetic=$arith 2>/dev/null | sed -n 's/^  mass:=\(.*\));$/\1/p'
 }
 
 n_arith=0
@@ -67,20 +66,20 @@ for arith in gmp flint gmp_boost multi_boost; do
     fi
     n_arith=$((n_arith + 1))
     echo "--- arithmetic=$arith ---"
-    echo "$MASS_CASES" | while read lat isom mode; do
+    echo "$MASS_CASES" | while read lat isom; do
         [ -z "$lat" ] && continue
-        ref=$(mass_of gmp $lat $isom $mode)
-        val=$(mass_of $arith $lat $isom $mode)
+        ref=$(mass_of gmp $lat $isom)
+        val=$(mass_of $arith $lat $isom)
         echo "mass ($lat, $isom): $val"
         if [ -z "$ref" ] || [ "$val" != "$ref" ]; then
             echo "ERROR: ($lat, $isom) with $arith gave '$val', gmp '$ref'" >&2
             exit 1
         fi
     done
-    echo "$ABMASS_CASES" | while read mode tag n H; do
-        [ -z "$mode" ] && continue
-        ref=$(abmass_of gmp $mode $tag $n $H)
-        val=$(abmass_of $arith $mode $tag $n $H)
+    echo "$ABMASS_CASES" | while read field tag n H; do
+        [ -z "$field" ] && continue
+        ref=$(abmass_of gmp $field $tag $n $H)
+        val=$(abmass_of $arith $field $tag $n $H)
         echo "mass ($tag): $val"
         if [ -z "$ref" ] || [ "$val" != "$ref" ]; then
             echo "ERROR: $tag with $arith gave '$val', gmp '$ref'" >&2

@@ -16,7 +16,7 @@
   the genus of the pair (GENUS_IsometryMass) is reached. See
   GenusEnumerationGroup.h. With k isometries per seed, the classes of
   (L, G) for the finite abelian group G = <g_1, ..., g_k>, the mass then
-  given by GENUS_IsometryMass group; generators that do not commute give
+  given by GENUS_IsometryMass (GroupGenusMass); generators that do not commute give
   the classes of (L, G) for a non-abelian G, by the G-stable neighbors of
   the irreducible isotropic submodules.
 

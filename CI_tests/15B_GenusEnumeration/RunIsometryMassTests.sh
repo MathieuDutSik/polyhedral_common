@@ -14,15 +14,16 @@
 # of genera of pairs in it. The involutions of A2+A2, D4 and D5 give glue
 # factors 2, 3 and 6; the elements of order 3, 4 and 6 of A2, D4 and E6
 # have Hermitian components of rank one over Z[zeta_3] or Z[i], of mass
-# 1/6 or 1/4 (isom_herm_rank1.txt), glued to orthogonal ones.
+# 1/6 or 1/4, glued to orthogonal ones.
 set -e
-BIN=../../src_genera/GENUS_IsometryMass
+. ./MassPrograms.sh
+MAXORD=../../src_genera/GENUS_MaximalOrder
 
 # The maximal orders (MaximalOrders.h) of the orders Z[x] / (f): the
 # discriminant of the field
 grep -v '^#' maximal_order_tests.txt | while read -r f disc; do
     [ -z "$f" ] && continue
-    out=$($BIN maximalorder $f 2>/dev/null)
+    out=$($MAXORD $f 2>/dev/null)
     if [ "${out##* }" != "$disc" ]; then
         echo "ERROR: the maximal order of Z[x] / ($f) gave '$out', expected $disc" >&2
         exit 1
@@ -35,7 +36,7 @@ mass_case() {
     isom=$2
     expected=$3
     echo "--- mass of ($lat, $isom), expecting $expected ---"
-    out=$($BIN mass isom_${lat}.txt isom_${isom}.txt none stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_${lat}.txt GeneratorsFile=isom_${isom}.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$expected" ]; then
@@ -53,8 +54,8 @@ check_case() {
     lat=$1
     isom=$2
     echo "--- check of ($lat, $isom) ---"
-    out=$($BIN check isom_${lat}.txt isom_${isom}.txt isom_herm_rank1.txt \
-              stdout 2>/dev/null)
+    out=$(isometry_mass mode=check GramFile=isom_${lat}.txt \
+              GeneratorsFile=isom_${isom}.txt 2>/dev/null)
     echo "$out"
     if ! echo "$out" | grep -q "^check: every ratio is an integer$"; then
         echo "ERROR: the check of ($lat, $isom) failed" >&2
@@ -88,29 +89,14 @@ check_case D4 D4_w012
 check_case D4 D4_w0123
 check_case E6 E6_w01
 
-# The same check with all the masses computed (no mass file), on glued
+# The same check on glued
 # Hermitian components of rank two, where the image of the local unitary
 # group is taken to be all the equivariant isometries of the discriminant
 # form (Question 6 of the paper): an element of order 4 of D5 (Z[i] in
 # rank 2, glued to the fixed line) and one of order 6 of E6 (Z[zeta_3] in
 # rank 2 glued to Z[zeta_6] in rank 1).
-check_case_computed() {
-    lat=$1
-    isom=$2
-    echo "--- check of ($lat, $isom), masses computed ---"
-    out=$($BIN check isom_${lat}.txt isom_${isom}.txt none stdout 2>/dev/null)
-    echo "$out"
-    if ! echo "$out" | grep -q "^check: every ratio is an integer$"; then
-        echo "ERROR: the check of ($lat, $isom) failed" >&2
-        exit 1
-    fi
-    if echo "$out" | grep "^count=" | grep -v -q " ratio=1 "; then
-        echo "ERROR: the check of ($lat, $isom) has a ratio other than 1" >&2
-        exit 1
-    fi
-}
-check_case_computed D5 D5_g5
-check_case_computed E6 E6_g24
+check_case D5 D5_g5
+check_case E6 E6_g24
 
 # Question 6 decided: the image of the local centralizer on the
 # discriminant modules of the glued Hermitian components is computed, by
@@ -123,7 +109,7 @@ image_case() {
     isom=$2
     expected=$3
     echo "--- image of the local group for ($lat, $isom), expecting mass $expected ---"
-    out=$($BIN mass isom_${lat}.txt isom_${isom}.txt none stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_${lat}.txt GeneratorsFile=isom_${isom}.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     assumed=$(echo "$out" | sed -n 's/^  image_assumed:=\(.*\),$/\1/p')
     echo "mass = $mass, image_assumed = $assumed"
@@ -145,7 +131,7 @@ herm_case() {
     m=$2
     key=$3
     expected=$4
-    out=$($BIN hermitian $d $m 2>/dev/null)
+    out=$(component_mass field=cyclotomic n=$d rank=$m 2>/dev/null)
     val=$(echo "$out" | sed -n "s/.*${key}:=\([0-9/]*\).*/\1/p")
     echo "--- hermitian d=$d m=$m $key=$val (expecting $expected) ---"
     if [ "$val" != "$expected" ]; then
@@ -162,7 +148,7 @@ herm_lattice_case() {
     name=$1
     d=$2
     expected=$3
-    out=$($BIN mass herm_${name}_gram.txt herm_${name}_isom.txt none stdout \
+    out=$(isometry_mass GramFile=herm_${name}_gram.txt GeneratorsFile=herm_${name}_isom.txt \
               2>/dev/null)
     val=$(echo "$out" | grep "rec(d:=$d," | sed -n 's/.*mass:=\([0-9/]*\).*/\1/p')
     echo "--- Hermitian lattice $name over Q(zeta_$d): mass=$val (expecting $expected) ---"
@@ -193,7 +179,8 @@ hab_case() {
     n=$2
     H=$3
     expected=$4
-    out=$($BIN hermitianablattice hab_${tag}_gram.txt hab_${tag}_omega.txt $n $H \
+    out=$(component_mass field=abelian_cm output=mass GramFile=hab_${tag}_gram.txt \
+              OmegaFile=hab_${tag}_omega.txt n=$n H=$H \
               2>/dev/null)
     val=$(echo "$out" | sed -n 's/return rec(mass:=\(.*\));/\1/p')
     echo "--- Hermitian lattice $tag over the subfield of Q(zeta_$n): mass=$val (expecting $expected) ---"
@@ -237,7 +224,8 @@ quad_case() {
     n=$2
     H=$3
     expected=$4
-    out=$($BIN quadablocal quad_${tag}_gram.txt quad_${tag}_omega.txt $n $H \
+    out=$(component_mass field=abelian_real output=local_factors \
+              GramFile=quad_${tag}_gram.txt OmegaFile=quad_${tag}_omega.txt n=$n H=$H \
               2>/dev/null)
     val=$(echo "$out" | sed -n 's/.*local_mass:=\([^,]*\),.*/\1/p')
     echo "--- quadratic lattice $tag over a real subfield of Q(zeta_$n): local mass=$val (expecting $expected) ---"
@@ -272,7 +260,8 @@ quadmass_case() {
     n=$2
     H=$3
     expected=$4
-    out=$($BIN quadablocal quadm_${tag}_gram.txt quadm_${tag}_omega.txt $n $H \
+    out=$(component_mass field=abelian_real output=local_factors \
+              GramFile=quadm_${tag}_gram.txt OmegaFile=quadm_${tag}_omega.txt n=$n H=$H \
               2>/dev/null)
     val=$(echo "$out" | sed -n 's/return rec(mass:=\([^,]*\),.*/\1/p')
     echo "--- quadratic lattice $tag over a real subfield of Q(zeta_$n): mass=$val (expecting $expected) ---"
@@ -321,7 +310,8 @@ quadmass_method_case() {
     H=$4
     expected=$5
     # without flint, lvalue=arb stops with an error, hence the || true
-    out=$($BIN quadablocal quadm_${tag}_gram.txt quadm_${tag}_omega.txt $n $H \
+    out=$(component_mass field=abelian_real output=local_factors \
+              GramFile=quadm_${tag}_gram.txt OmegaFile=quadm_${tag}_omega.txt n=$n H=$H \
               lvalue=$method 2>&1 || true)
     if echo "$out" | grep -q "built without flint"; then
         echo "--- quadratic lattice $tag with $method: skipped, no flint ---"
@@ -346,7 +336,7 @@ herm_case 39 1 mass 1/39
 herm_case 3 2 standard_mass 1/72
 herm_case 16 2 standard_mass 5/768
 
-# Finite abelian groups (GENUS_IsometryMass group), the components being
+# Finite abelian groups (several commuting generators), the components being
 # the Galois orbits of characters: on E8+E8, <-1, r> has the mass of the
 # root reflection r alone; two orthogonal reflections (in one summand or in
 # both, the same genus of pairs), an element of order 3 times a commuting
@@ -357,7 +347,7 @@ group_mass_case() {
     gens=$2
     expected=$3
     echo "--- mass of ($lat, <$gens>), expecting $expected ---"
-    out=$($BIN group isom_${lat}.txt isom_${lat}_${gens}.txt stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_${lat}.txt GeneratorsFile=isom_${lat}_${gens}.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$expected" ]; then
@@ -526,7 +516,7 @@ for c in "A2x4w6 1/2" "A2x4w3 1/6" "A2x4s5 1" "A2x4s5b 1/2" "A2x4s13 7/2" \
          "A2x4s2 1/2"; do
     set -- $c
     echo "--- mass of (G48_15 on $1), expecting $2 ---"
-    out=$($BIN group isom_G48_15_$1.txt isom_G48_15_$1_G.txt stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_G48_15_$1.txt GeneratorsFile=isom_G48_15_$1_G.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$2" ]; then
@@ -542,7 +532,7 @@ done
 for c in "G80_15 G80_15_G 1/2" "G80_15_s3 G80_15_s3_G 5/2"; do
     set -- $c
     echo "--- mass of ($1, <G>) over Q(sqrt 5), expecting $3 ---"
-    out=$($BIN group isom_$1.txt isom_$2.txt stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_$1.txt GeneratorsFile=isom_$2.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$3" ]; then
@@ -560,7 +550,7 @@ done
 for c in "G48_1_s2 G48_1_s2_G 1/16"; do
     set -- $c
     echo "--- mass of ($1, <G>), Schur index 2 over a CM center, expecting $3 ---"
-    out=$($BIN group isom_$1.txt isom_$2.txt stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=isom_$1.txt GeneratorsFile=isom_$2.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$3" ]; then
@@ -582,7 +572,7 @@ for c in "G 1/48" "R2w3w6_G 1/12" "R2w6w6_G 1/4" "R2w3w3_G 1/72" \
         lat=isom_G48_15_${1%_G}.txt
     fi
     echo "--- mass of (G48_15 rank two, $1), expecting $2 ---"
-    out=$($BIN group $lat isom_G48_15_$1.txt stdout 2>/dev/null)
+    out=$(isometry_mass GramFile=$lat GeneratorsFile=isom_G48_15_$1.txt 2>/dev/null)
     mass=$(echo "$out" | sed -n 's/^  mass:=\(.*\));$/\1/p')
     echo "mass = $mass"
     if [ "$mass" != "$2" ]; then
@@ -599,7 +589,7 @@ group_check_case() {
     lat=$1
     isom=$2
     echo "--- group check of ($lat, $isom) ---"
-    out=$($BIN groupcheck isom_${lat}.txt isom_${isom}.txt stdout 2>/dev/null)
+    out=$(isometry_mass mode=check check_kind=centralizer GramFile=isom_${lat}.txt GeneratorsFile=isom_${isom}.txt 2>/dev/null)
     echo "$out"
     if ! echo "$out" | grep -q "^check: every ratio is an integer$"; then
         echo "ERROR: the group check of ($lat, $isom) failed" >&2

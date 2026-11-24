@@ -11,7 +11,7 @@ set -e
 set -o pipefail
 rm -f CI_CONCLUSION
 HP=../../src_genera/GENUS_HermitianPieces
-MASS=../../src_genera/GENUS_IsometryMass
+MAXORD=../../src_genera/GENUS_MaximalOrder
 if [ "$($HP primes 150 100 2>/dev/null)" != "$(grep -v '^#' hermitian_primes_150_100.txt)" ]; then
     echo "ERROR: the prime decompositions differ under the checks" >&2
     exit 1
@@ -19,7 +19,7 @@ fi
 echo "--- the prime decompositions, with the checks ---"
 grep -v '^#' maximal_order_tests.txt | while read -r f disc; do
     [ -z "$f" ] && continue
-    out=$($MASS maximalorder $f 2>/dev/null)
+    out=$($MAXORD $f 2>/dev/null)
     if [ "${out##* }" != "$disc" ]; then
         echo "ERROR: the maximal order of Z[x] / ($f) gave '$out'" >&2
         exit 1
