@@ -4,8 +4,8 @@
 
 // clang-format off
 #include "FiniteFieldProjective.h"
-#include "PolynomialModQ.h"
-#include "CyclotomicHermitianMass.h"
+#include "ScalarPolynomialModQ.h"
+#include "MassCyclotomicHermitian.h"
 #include "MAT_MatrixModPrime.h"
 #include <algorithm>
 #include <limits>
@@ -446,7 +446,7 @@ inline ModMatrix HomOfPoint(IrreducibleType const &tp,
   int n = tp.Phi[0].cols();
   ModMatrix res = ZeroMatrix<T_residue>(k, n);
   for (size_t i = 0; i < tp.Phi.size(); i++) {
-    // alpha_i an element of F_q (FiniteField.h), trimmed: its coefficients
+    // alpha_i an element of F_q (ScalarFiniteField.h), trimmed: its coefficients
     for (size_t a = 0; a < alpha[i].size(); a++) {
       T_residue c = alpha[i][a];
       if (c != 0) {

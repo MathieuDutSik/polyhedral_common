@@ -6,7 +6,7 @@
 #include "Permutation.h"
 #include "IsometryGlue.h"
 #include "IsometryGlueFactors.h"
-#include "GroupHomCount.h"
+#include "MassGroupHomCount.h"
 #include "GenusSymbol.h"
 #include <optional>
 #include <set>
@@ -50,7 +50,7 @@
   |O(Lambda)|): the total found must equal it ("certified = true"); less is
   an incomplete list (exit 2), more an error (exit 3). With target=auto
   (factors mode) the total is computed here
-  (GroupHomCount.h: the classes of the genus, then the homomorphisms into
+  (MassGroupHomCount.h: the classes of the genus, then the homomorphisms into
   their orthogonal groups up to conjugacy).
  */
 

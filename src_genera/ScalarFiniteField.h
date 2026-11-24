@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_FINITEFIELD_H_
-#define SRC_GENERA_FINITEFIELD_H_
+#ifndef SRC_GENERA_SCALARFINITEFIELD_H_
+#define SRC_GENERA_SCALARFINITEFIELD_H_
 
 // clang-format off
-#include "PolynomialModQ.h"
+#include "ScalarPolynomialModQ.h"
 #include "ResidueArithmetic.h"
 #include <algorithm>
 #include <cstdint>
@@ -353,5 +353,5 @@ inline FqTables BuildFqTables(FiniteField const &F) {
 }
 
 // clang-format off
-#endif  // SRC_GENERA_FINITEFIELD_H_
+#endif  // SRC_GENERA_SCALARFINITEFIELD_H_
 // clang-format on

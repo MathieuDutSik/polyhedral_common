@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_QUATERNIONICMASS_H_
-#define SRC_GENERA_QUATERNIONICMASS_H_
+#ifndef SRC_GENERA_MASSQUATERNIONIC_H_
+#define SRC_GENERA_MASSQUATERNIONIC_H_
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
-#include "MultiplicityLocalFactor.h"
-#include "AbelianQuadraticMass.h"
+#include "MassMultiplicityLocalFactor.h"
+#include "MassAbelianQuadratic.h"
 #include "SiegelSpecialValues.h"
 #include "ClassicLLL.h"
 #include "MAT_Matrix.h"
@@ -1751,5 +1751,5 @@ std::optional<T> QuaternionicComponentMass(
 }
 
 // clang-format off
-#endif  // SRC_GENERA_QUATERNIONICMASS_H_
+#endif  // SRC_GENERA_MASSQUATERNIONIC_H_
 // clang-format on

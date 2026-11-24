@@ -5,7 +5,7 @@
 // clang-format off
 #include "GenusEnumeration.h"
 #include "LocalDensity.h"
-#include "GenusMass.h"
+#include "MassGenus.h"
 #include "LocalDensityOverlattice.h"
 #include <cstdint>
 #include <unordered_map>

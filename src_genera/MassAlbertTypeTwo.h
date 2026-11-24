@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ALBERTTYPETWOMASS_H_
-#define SRC_GENERA_ALBERTTYPETWOMASS_H_
+#ifndef SRC_GENERA_MASSALBERTTYPETWO_H_
+#define SRC_GENERA_MASSALBERTTYPETWO_H_
 
 // clang-format off
-#include "QuaternionicMass.h"
+#include "MassQuaternionic.h"
 #include "MaximalOrders.h"
-#include "CyclotomicHermitianMass.h"
+#include "MassCyclotomicHermitian.h"
 #include "GeneraArithmetic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
@@ -1313,5 +1313,5 @@ std::optional<T> TypeThreeRankOneTamagawaMass(MyMatrix<T> const &B,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_ALBERTTYPETWOMASS_H_
+#endif  // SRC_GENERA_MASSALBERTTYPETWO_H_
 // clang-format on

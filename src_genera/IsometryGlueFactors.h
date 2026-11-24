@@ -596,7 +596,7 @@ Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
   the pairs (L, G) sought: block diagonal, s_j Id for an orth factor, M (x)
   Id_c for an irrep factor, zeta_d^e_j (x) Id_b for a herm factor, the
   first piece for a file factor; the generators acting on the columns
-  (GroupHomCount.h).
+  (MassGroupHomCount.h).
  */
 template <typename T>
 std::vector<MyMatrix<T>>

@@ -1,17 +1,17 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ABELIANQUADRATICMASS_H_
-#define SRC_GENERA_ABELIANQUADRATICMASS_H_
+#ifndef SRC_GENERA_MASSABELIANQUADRATIC_H_
+#define SRC_GENERA_MASSABELIANQUADRATIC_H_
 
 // clang-format off
 #include "MAT_MatrixModPrime.h"
-#include "NumberField.h"
-#include "AbelianField.h"
+#include "ScalarNumberField.h"
+#include "ScalarAbelianField.h"
 #include "LocalGramOverOK.h"
 #include "LocalJordan.h"
-#include "FiniteField.h"
+#include "ScalarFiniteField.h"
 #include "ClassicalGroupOrders.h"
 #include "GeneraArithmetic.h"
-#include "AbelianHermitianMass.h"
+#include "MassAbelianHermitian.h"
 #include "ClassicLLL.h"
 #include <algorithm>
 #include <cmath>
@@ -198,7 +198,7 @@ inline T LocalFactorOddGram(std::vector<std::vector<ElemE<T>>> const &H,
       blocks, UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf));
 }
 
-// The matrices over a residue field F (FiniteField.h).
+// The matrices over a residue field F (ScalarFiniteField.h).
 using FqMat = std::vector<std::vector<FqElt>>;
 
 // A basis of {v : v M = 0} for M with nr rows.
@@ -1940,7 +1940,7 @@ std::optional<AbelianField> AbelianQuadraticExtensionFieldPrimes(
 
 /*
   The evaluation of L(1 - r, chi_{E/K}) when E is not abelian
-  (QuadraticHeckeL.h): Mpfr rounds an MPFR value checked at two
+  (MassQuadraticHeckeL.h): Mpfr rounds an MPFR value checked at two
   precisions, Arb moreover certifies the integer with Arb balls (proven
   error bounds, about twice the time), and Double evaluates every term of
   the sum in double precision (the kernel itself is still built with
@@ -1990,7 +1990,7 @@ inline QuadLValueMethod ExtractQuadLValueOption(int &argc, char *argv[]) {
   return res;
 }
 
-// QuadraticHeckeL.h, for E not abelian
+// MassQuadraticHeckeL.h, for E not abelian
 template <typename T>
 std::optional<T>
 QuadraticMassNonAbelianE(MyMatrix<T> const &B,
@@ -3231,6 +3231,6 @@ LocalImagePiAdic(MyMatrix<T> const &B,
 }
 
 // clang-format off
-#include "QuadraticHeckeL.h"
-#endif  // SRC_GENERA_ABELIANQUADRATICMASS_H_
+#include "MassQuadraticHeckeL.h"
+#endif  // SRC_GENERA_MASSABELIANQUADRATIC_H_
 // clang-format on

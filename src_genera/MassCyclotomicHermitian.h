@@ -1,15 +1,15 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_CYCLOTOMICHERMITIANMASS_H_
-#define SRC_GENERA_CYCLOTOMICHERMITIANMASS_H_
+#ifndef SRC_GENERA_MASSCYCLOTOMICHERMITIAN_H_
+#define SRC_GENERA_MASSCYCLOTOMICHERMITIAN_H_
 
 // clang-format off
 #include "CyclotomicArithmetic.h"
-#include "NumberField.h"
-#include "AbelianField.h"
+#include "ScalarNumberField.h"
+#include "ScalarAbelianField.h"
 #include "PrimeDecomposition.h"
 #include "LocalJordan.h"
 #include "ClassicalGroupOrders.h"
-#include "PolynomialModQ.h"
+#include "ScalarPolynomialModQ.h"
 #include "GeneraArithmetic.h"
 #include "SiegelSpecialValues.h"
 #include "MAT_Matrix.h"
@@ -100,7 +100,7 @@ inline T RankOneHermitianMassCyclotomic(int64_t d_in) {
 }
 
 /*
-  The standard mass over an abelian CM field (AbelianField.h): its
+  The standard mass over an abelian CM field (ScalarAbelianField.h): its
   Dirichlet characters are those modulo n trivial on H, the even ones being
   those of K, so the formula above holds with the characters restricted:
   zeta_K(s) and L(s, chi_{E/K}) are the products of the L(s, chi) over the
@@ -1080,5 +1080,5 @@ HermitianMassCyclotomicLattice(MyMatrix<T> const &B,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_CYCLOTOMICHERMITIANMASS_H_
+#endif  // SRC_GENERA_MASSCYCLOTOMICHERMITIAN_H_
 // clang-format on

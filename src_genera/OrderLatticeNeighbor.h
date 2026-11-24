@@ -213,7 +213,7 @@ template <typename T> int64_t order_residue_rat(T const &x, int64_t const &ell) 
 }
 
 /*
-  F_q = O_K / P (FiniteField.h) on the codes: for f = 1 the residues mod
+  F_q = O_K / P (ScalarFiniteField.h) on the codes: for f = 1 the residues mod
   ell, for f = 2 the code a + ell b of a + b omega, omega^2 = s omega - n,
   that is F_ell[x] / (x^2 - s x + n).
  */

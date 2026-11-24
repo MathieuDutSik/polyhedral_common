@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_GROUPHOMCOUNT_H_
-#define SRC_GENERA_GROUPHOMCOUNT_H_
+#ifndef SRC_GENERA_MASSGROUPHOMCOUNT_H_
+#define SRC_GENERA_MASSGROUPHOMCOUNT_H_
 
 // clang-format off
 #include "GenusEnumeration.h"
 #include "GenusEnumerationGroup.h"
 #include "GenusEnumerationOdd.h"
-#include "GenusMass.h"
+#include "MassGenus.h"
 #include "InvariantVectorFamily.h"
 #include "PERM_Fct.h"
 #include <functional>
@@ -273,5 +273,5 @@ std::optional<T> HomomorphismGenusMass(MyMatrix<T> const &A,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_GROUPHOMCOUNT_H_
+#endif  // SRC_GENERA_MASSGROUPHOMCOUNT_H_
 // clang-format on

@@ -13,8 +13,8 @@
 #include "LatticeRootDecomposition.h"
 #include "LatticeMethods.h"
 #include "LocalDensity.h"
-#include "GenusMass.h"
-#include "HermitianMass.h"
+#include "MassGenus.h"
+#include "MassHermitian.h"
 #include <map>
 #include <optional>
 #include <string>

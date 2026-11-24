@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_GENUSMASS_H_
-#define SRC_GENERA_GENUSMASS_H_
+#ifndef SRC_GENERA_MASSGENUS_H_
+#define SRC_GENERA_MASSGENUS_H_
 
 // clang-format off
 #include "LocalDensityOverlattice.h"
@@ -227,5 +227,5 @@ template <typename T, typename Tint> T GenusMass(MyMatrix<T> const &Gram) {
 }
 
 // clang-format off
-#endif  // SRC_GENERA_GENUSMASS_H_
+#endif  // SRC_GENERA_MASSGENUS_H_
 // clang-format on

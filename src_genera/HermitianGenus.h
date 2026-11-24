@@ -6,8 +6,8 @@
 #include "NumberTheory.h"
 #include "GeneraArithmetic.h"
 #include "CyclotomicArithmetic.h"
-#include "AbelianField.h"
-#include "PolynomialModQ.h"
+#include "ScalarAbelianField.h"
+#include "ScalarPolynomialModQ.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -72,7 +72,7 @@ inline int64_t HermPrimePowerPart(int64_t d, int64_t l) {
 }
 
 // The primes of K_0 over l and their type in E, from the decomposition of
-// l in Q(zeta_d) and its real subfield (AbelianField.h); checked against
+// l in Q(zeta_d) and its real subfield (ScalarAbelianField.h); checked against
 // the explicit formulas under SANITY_CHECK_HERMITIAN_GENUS: d = l^a m,
 // e_E = phi(l^a), f = ord(l mod m), the primes ramified over K_0 when d =
 // l^a, inert when -1 is a power of l modulo m, split otherwise.

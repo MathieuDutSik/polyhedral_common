@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_UNITARYINNERFORMMASS_H_
-#define SRC_GENERA_UNITARYINNERFORMMASS_H_
+#ifndef SRC_GENERA_MASSUNITARYINNERFORM_H_
+#define SRC_GENERA_MASSUNITARYINNERFORM_H_
 
 // clang-format off
-#include "AlbertTypeTwoMass.h"
+#include "MassAlbertTypeTwo.h"
 #include <optional>
 #include <set>
 #include <vector>
@@ -210,5 +210,5 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_UNITARYINNERFORMMASS_H_
+#endif  // SRC_GENERA_MASSUNITARYINNERFORM_H_
 // clang-format on

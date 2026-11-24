@@ -5,9 +5,9 @@
 #include "Group.h"
 #include "Permutation.h"
 #include "LatticeStabEquiCan.h"
-#include "IsometryMass.h"
-#include "AbelianHermitianMass.h"
-#include "AbelianQuadraticMass.h"
+#include "MassIsometry.h"
+#include "MassAbelianHermitian.h"
+#include "MassAbelianQuadratic.h"
 #include "LatticeMethods.h"
 #include <fstream>
 #include <map>
@@ -19,7 +19,7 @@
 
 /*
   The mass of the genus of a pair (L, g), g an isometry of finite order of
-  the even positive definite lattice L, see IsometryMass.h.
+  the even positive definite lattice L, see MassIsometry.h.
 
   The check mode is a brute-force test on small lattices: it lists the
   elements of O(L), keeps those tau with the same characteristic
@@ -273,7 +273,7 @@ inline std::vector<int64_t> ParseIntList(std::string const &lst) {
 
 /*
   The quadratic Hecke character chi_{E/K} of a quadratic lattice over a
-  totally real abelian field (QuadraticHeckeL.h): the field K, the
+  totally real abelian field (MassQuadraticHeckeL.h): the field K, the
   discriminant d, |D_K|, the norm of the conductor and the Dirichlet
   coefficients a_1, ..., a_X of L(s, chi), and with prec_bits > 0 the
   value L(1 - r, chi) for m = 2r (MPFR, and Arb when built with flint),

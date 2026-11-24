@@ -1,21 +1,21 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ISOMETRYMASS_H_
-#define SRC_GENERA_ISOMETRYMASS_H_
+#ifndef SRC_GENERA_MASSISOMETRY_H_
+#define SRC_GENERA_MASSISOMETRY_H_
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
 #include "FiniteMatrixGroupFund.h"
 #include "MAT_MatrixPolynomial.h"
 #include "LocalDensity.h"
-#include "GenusMass.h"
-#include "CyclotomicHermitianMass.h"
-#include "MultiplicityLocalFactor.h"
-#include "AlbertTypeTwoMass.h"
-#include "UnitaryInnerFormMass.h"
+#include "MassGenus.h"
+#include "MassCyclotomicHermitian.h"
+#include "MassMultiplicityLocalFactor.h"
+#include "MassAlbertTypeTwo.h"
+#include "MassUnitaryInnerForm.h"
 #include "ResidueArithmetic.h"
-#include "AbelianHermitianMass.h"
-#include "AbelianQuadraticMass.h"
-#include "QuaternionicMass.h"
+#include "MassAbelianHermitian.h"
+#include "MassAbelianQuadratic.h"
+#include "MassQuaternionic.h"
 #include "WeightMatrix.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "MAT_Matrix.h"
@@ -77,7 +77,7 @@
   The masses of the orthogonal L_d come from GenusMass. The genus of the
   pair (L_d, sigma_d), d >= 3, is the genus of L_d as a Hermitian lattice
   over Z[zeta_d], for the form h with b = Tr h. Its mass is computed
-  exactly (CyclotomicHermitianMass.h); a mass supplied by the caller takes
+  exactly (MassCyclotomicHermitian.h); a mass supplied by the caller takes
   precedence.
 
   Conventions: the Gram matrix A of L, the isometry g acting on the column
@@ -118,7 +118,7 @@ template <typename T> struct IsometryComponent {
   std::vector<MyMatrix<T>> center_omega;
   // End_G = M_r(D), D a totally definite quaternion algebra over a real
   // center: the mass of the component, computed directly
-  // (QuaternionicMass.h) when it could be
+  // (MassQuaternionic.h) when it could be
   bool quaternionic = false;
   std::optional<T> quaternionic_mass;
   // a center K whose order on X is not O_K: the mass of X computed
@@ -4018,7 +4018,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             (or quadratic) mass, and mass(X) = mass(S) prod_p vol U(S_p) /
             vol U(X_p) over the primes of [S : X], the volumes from the
             orders of the images modulo p^c and the Lie lattices
-            (QuaternionicMass.h, which holds for any order acting).
+            (MassQuaternionic.h, which holds for any order acting).
            */
           comp.direct = true;
           auto zbasis_rat = [&](std::vector<MyMatrix<T>> const &L)
@@ -4361,5 +4361,5 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
 }
 
 // clang-format off
-#endif  // SRC_GENERA_ISOMETRYMASS_H_
+#endif  // SRC_GENERA_MASSISOMETRY_H_
 // clang-format on

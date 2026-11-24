@@ -24,7 +24,7 @@
     product of them): Round 2 at each prime whose square divides the
     discriminant, polynomial in the dimension (checked against the search
     under SANITY_CHECK_MAXIMAL_ORDERS_EXTENSIVE).
-  The maximal orders of the quaternion algebras are in QuaternionicMass.h
+  The maximal orders of the quaternion algebras are in MassQuaternionic.h
   (QuatMaximalOrder, through the dual for the reduced trace).
  */
 

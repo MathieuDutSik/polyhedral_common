@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ROOTFREEMASS_H_
-#define SRC_GENERA_ROOTFREEMASS_H_
+#ifndef SRC_GENERA_MASSROOTFREE_H_
+#define SRC_GENERA_MASSROOTFREE_H_
 
 // clang-format off
-#include "GenusMass.h"
+#include "MassGenus.h"
 #include "LocalDensityOverlattice.h"
 #include "RootEmbeddings.h"
 #include <algorithm>
@@ -143,5 +143,5 @@ RootFreeMassResult<T> ComputeRootFreeMass(MyMatrix<T> const &Tgram,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_ROOTFREEMASS_H_
+#endif  // SRC_GENERA_MASSROOTFREE_H_
 // clang-format on

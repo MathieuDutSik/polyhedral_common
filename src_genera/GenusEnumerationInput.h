@@ -5,7 +5,7 @@
 // clang-format off
 #include "GenusEnumeration.h"
 #include "LocalDensity.h"
-#include "GenusMass.h"
+#include "MassGenus.h"
 #include "GenusEnumerationOdd.h"
 #include "GenusSymbol.h"
 #include "GenusSpinor.h"
@@ -72,7 +72,7 @@ ReadGenusEnumerationInput(FullNamelist const &eFull, std::ostream &os) {
           "genus of the even sublattices\n";
   }
   // The mass, computed from the first seed by the mass formula of Conway
-  // and Sloane (GenusMass.h); the enumeration stops when sum 1/|Aut|
+  // and Sloane (MassGenus.h); the enumeration stops when sum 1/|Aut|
   // reaches it, and that equality certifies completeness. Tmass is
   // mpq_class, the type GenusMass computes in. The genus of an odd L has the
   // classes, automorphism groups and mass of the genus of L(2), which is

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_RATIONALFUNCTIONS_H_
-#define SRC_GENERA_RATIONALFUNCTIONS_H_
+#ifndef SRC_GENERA_SCALARRATIONALFUNCTIONS_H_
+#define SRC_GENERA_SCALARRATIONALFUNCTIONS_H_
 
 // clang-format off
 #include "NumberTheory.h"
@@ -180,5 +180,5 @@ template <typename T> UnivariatePolynomial<T> OneMinus(T const &c, int d) {
 }
 
 // clang-format off
-#endif  // SRC_GENERA_RATIONALFUNCTIONS_H_
+#endif  // SRC_GENERA_SCALARRATIONALFUNCTIONS_H_
 // clang-format on

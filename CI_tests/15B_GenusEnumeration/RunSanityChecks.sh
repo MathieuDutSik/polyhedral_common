@@ -1,7 +1,7 @@
 #!/bin/bash
 # The programs built with the SANITY_CHECK macros of src_genera (see the
 # 15B workflow), on cases that reach the checks: the residue fields F_q
-# (FiniteField.h), the maximal orders (Round 2 against the search), the
+# (ScalarFiniteField.h), the maximal orders (Round 2 against the search), the
 # Howell forms and the local images of the multiplicity factors (against
 # brute force and a listing), the glue arithmetic and the decomposition of
 # the primes in Q(zeta_d) (against the explicit formulas). A check that

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ABELIANFIELD_H_
-#define SRC_GENERA_ABELIANFIELD_H_
+#ifndef SRC_GENERA_SCALARABELIANFIELD_H_
+#define SRC_GENERA_SCALARABELIANFIELD_H_
 
 // clang-format off
 #include "GeneraArithmetic.h"
@@ -163,5 +163,5 @@ inline CMPrimeDecomposition DecomposePrimeCM(AbelianField const &F,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_ABELIANFIELD_H_
+#endif  // SRC_GENERA_SCALARABELIANFIELD_H_
 // clang-format on

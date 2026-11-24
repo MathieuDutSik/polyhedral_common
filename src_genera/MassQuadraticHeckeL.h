@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_QUADRATICHECKEL_H_
-#define SRC_GENERA_QUADRATICHECKEL_H_
+#ifndef SRC_GENERA_MASSQUADRATICHECKEL_H_
+#define SRC_GENERA_MASSQUADRATICHECKEL_H_
 
 // clang-format off
-#include "AbelianQuadraticMass.h"
+#include "MassAbelianQuadratic.h"
 #include "RealFunctions.h"
 #include <cmath>
 #include <chrono>
@@ -1673,5 +1673,5 @@ std::optional<T> QuadraticMassNonAbelianE(
 }
 
 // clang-format off
-#endif  // SRC_GENERA_QUADRATICHECKEL_H_
+#endif  // SRC_GENERA_MASSQUADRATICHECKEL_H_
 // clang-format on

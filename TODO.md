@@ -573,7 +573,7 @@ beyond 48, longer caps.
   21 genera with >= 2 classes (up to 5).
 - Unsupported then: g40_1_c11 and g48_1_c19 (complex character with Schur
   index 2: a quaternion algebra over a CM field with an involution of the
-  second kind). Now UnitaryInnerFormMass.h (Tamagawa number of the inner
+  second kind). Now MassUnitaryInnerForm.h (Tamagawa number of the inner
   form of U_2), on X = L_rho only: g48_1_c19 1/48 (5 min), its index-2
   sublattice 1/16 (2.3 min), both closed by enumeration. Still open: the
   reduction X = L cap e V_rho when G spans M_s(D), s > 1; the speed of the

@@ -3,9 +3,9 @@
 #define SRC_GENERA_PRIMEDECOMPOSITION_H_
 
 // clang-format off
-#include "FiniteField.h"
-#include "NumberField.h"
-#include "PolynomialModQ.h"
+#include "ScalarFiniteField.h"
+#include "ScalarNumberField.h"
+#include "ScalarPolynomialModQ.h"
 #include "MAT_MatrixModPrime.h"
 #include <map>
 #include <memory>

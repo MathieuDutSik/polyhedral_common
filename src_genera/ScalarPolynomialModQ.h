@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_POLYNOMIALMODQ_H_
-#define SRC_GENERA_POLYNOMIALMODQ_H_
+#ifndef SRC_GENERA_SCALARPOLYNOMIALMODQ_H_
+#define SRC_GENERA_SCALARPOLYNOMIALMODQ_H_
 
 // clang-format off
 #include "GeneraArithmetic.h"
@@ -17,7 +17,7 @@
   coefficients (PolyZ): the ring operations, division, gcd and inverses
   modulo a polynomial, powers modulo a polynomial, and the factorization by
   distinct and equal degrees. The elements of the residue fields
-  F_q[x] / (mu) are another type (FqElt, FiniteField.h).
+  F_q[x] / (mu) are another type (FqElt, ScalarFiniteField.h).
  */
 
 /*
@@ -406,5 +406,5 @@ inline bool IsIrreducibleModP(PolyQ const &f) {
 }
 
 // clang-format off
-#endif  // SRC_GENERA_POLYNOMIALMODQ_H_
+#endif  // SRC_GENERA_SCALARPOLYNOMIALMODQ_H_
 // clang-format on

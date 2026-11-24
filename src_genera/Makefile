@@ -27,7 +27,7 @@ CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(NAUTY_LINK)
 
 # MPFR, with the mpfrc++ wrapper of basic_common_cpp/ExternalLib, for the
-# L-values of QuadraticHeckeL.h.
+# L-values of MassQuadraticHeckeL.h.
 MPFR_INCDIR	?= $(GMP_INCDIR)
 MPFR_LINK	?= -lmpfr
 CTOTAL		+= -I$(MPFR_INCDIR) -I../basic_common_cpp/ExternalLib/mpfrc++-3.6.8

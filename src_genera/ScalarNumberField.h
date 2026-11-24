@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_NUMBERFIELD_H_
-#define SRC_GENERA_NUMBERFIELD_H_
+#ifndef SRC_GENERA_SCALARNUMBERFIELD_H_
+#define SRC_GENERA_SCALARNUMBERFIELD_H_
 
 // clang-format off
-#include "PolynomialModQ.h"
+#include "ScalarPolynomialModQ.h"
 #include "GeneraArithmetic.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixSolutionMat.h"
@@ -20,7 +20,7 @@
   of theta): products, inverses, conjugation, the norm valuation, the
   power traces. The primes of E, their valuations and residues are in
   PrimeDecomposition.h, the abelian fields as subfields of Q(zeta_n) in
-  AbelianField.h.
+  ScalarAbelianField.h.
  */
 
 /*
@@ -289,5 +289,5 @@ inline MyMatrix<T> PowerTraceMatrix(std::vector<int64_t> const &f) {
 }
 
 // clang-format off
-#endif  // SRC_GENERA_NUMBERFIELD_H_
+#endif  // SRC_GENERA_SCALARNUMBERFIELD_H_
 // clang-format on

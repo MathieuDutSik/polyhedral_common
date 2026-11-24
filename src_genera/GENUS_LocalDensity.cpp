@@ -5,10 +5,10 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
-#include "GenusMass.h"
+#include "MassGenus.h"
 #include "LocalDensityOverlattice.h"
 #include "RootEmbeddings.h"
-#include "RootFreeMass.h"
+#include "MassRootFree.h"
 #include "Arithmetic_dispatch_types.h"
 #include <fstream>
 #include <map>

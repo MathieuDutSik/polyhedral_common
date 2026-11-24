@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_MULTIPLICITYLOCALFACTOR_H_
-#define SRC_GENERA_MULTIPLICITYLOCALFACTOR_H_
+#ifndef SRC_GENERA_MASSMULTIPLICITYLOCALFACTOR_H_
+#define SRC_GENERA_MASSMULTIPLICITYLOCALFACTOR_H_
 
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
@@ -29,7 +29,7 @@
 
 /*
   The local factors of the mass of a component V_rho = W (x) U of a finite
-  group G with End_G(V_rho) = Q (IsometryMass.h, FiniteGroupComponents).
+  group G with End_G(V_rho) = Q (MassIsometry.h, FiniteGroupComponents).
 
   X = L cap (l (x) U) is the multiplicity lattice, N = Z[G] X subset
   L_rho. The centralizer C_rho = O(U) commutes with G, so the stabilizer
@@ -3122,5 +3122,5 @@ LocalStabilizerImage(ModRowsI64 const &A_in, std::vector<ModRowsI64> const &basi
 }
 
 // clang-format off
-#endif  // SRC_GENERA_MULTIPLICITYLOCALFACTOR_H_
+#endif  // SRC_GENERA_MASSMULTIPLICITYLOCALFACTOR_H_
 // clang-format on

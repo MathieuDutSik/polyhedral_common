@@ -33,7 +33,7 @@ jobs:
         with:
           submodules: recursive
 
-      # MPFR, for the L-values of the quadratic masses (QuadraticHeckeL.h)
+      # MPFR, for the L-values of the quadratic masses (MassQuadraticHeckeL.h)
       - name: Install MPFR
         run: |
           sudo apt-get update

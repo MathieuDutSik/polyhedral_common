@@ -18,7 +18,7 @@ A4A4A4 A4A4A4_D5 group
 qD4x2 qD4x2_Q8 group
 "
 
-# the masses of AbelianHermitianMass.h and AbelianQuadraticMass.h, generic
+# the masses of MassAbelianHermitian.h and MassAbelianQuadratic.h, generic
 # in the rational type: mode (hermitianablattice or quadablocal), the
 # files tag_gram.txt and tag_omega.txt, n and the generators of H
 ABMASS_CASES="

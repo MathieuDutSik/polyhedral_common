@@ -3,7 +3,7 @@
 #define SRC_GENERA_FINITEFIELDPROJECTIVE_H_
 
 // clang-format off
-#include "FiniteField.h"
+#include "ScalarFiniteField.h"
 #include "GeneraArithmetic.h"
 #include "MAT_MatrixModPrime.h"
 #include <cstdint>
@@ -12,7 +12,7 @@
 // clang-format on
 
 /*
-  Projective spaces over F_p and over F_q (FiniteField.h), indexed without
+  Projective spaces over F_p and over F_q (ScalarFiniteField.h), indexed without
   being enumerated, on the elements and on their integer codes through the
   tables of a small q.
  */

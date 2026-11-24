@@ -5,7 +5,7 @@
 // clang-format off
 #include "ResidueArithmeticLegacy.h"
 #include "GeneraArithmetic.h"
-#include "IsometryMass.h"
+#include "MassIsometry.h"
 #include "GenusEnumerationGroup.h"
 #include "MAT_MatrixPolynomial.h"
 #include <functional>

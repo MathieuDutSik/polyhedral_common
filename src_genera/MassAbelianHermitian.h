@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_ABELIANHERMITIANMASS_H_
-#define SRC_GENERA_ABELIANHERMITIANMASS_H_
+#ifndef SRC_GENERA_MASSABELIANHERMITIAN_H_
+#define SRC_GENERA_MASSABELIANHERMITIAN_H_
 
 // clang-format off
 #include "LocalGramOverOK.h"
-#include "AbelianField.h"
+#include "ScalarAbelianField.h"
 #include "ClassicalGroupOrders.h"
-#include "PolynomialModQ.h"
+#include "ScalarPolynomialModQ.h"
 #include "MAT_MatrixModPrime.h"
-#include "CyclotomicHermitianMass.h"
+#include "MassCyclotomicHermitian.h"
 #include <map>
 #include <memory>
 #include <optional>
@@ -979,5 +979,5 @@ HermitianMassAbelianLattice(MyMatrix<T> const &B,
 }
 
 // clang-format off
-#endif  // SRC_GENERA_ABELIANHERMITIANMASS_H_
+#endif  // SRC_GENERA_MASSABELIANHERMITIAN_H_
 // clang-format on

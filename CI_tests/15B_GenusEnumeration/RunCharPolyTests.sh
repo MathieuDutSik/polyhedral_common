@@ -7,7 +7,7 @@
 # polynomial sig of 1 / |O(Lambda)|), every genus of pairs closed. The
 # oracle's mass is passed as target=, so the program itself certifies that
 # no genus of pairs is missing ("certified = true"). With TARGET=auto the
-# program computes the target itself (GroupHomCount.h), and the total is
+# program computes the target itself (MassGroupHomCount.h), and the total is
 # still compared with the oracle (e.g. TARGET=auto RunCharPolyTests.sh
 # homcount_tests.txt). For an
 # odd lattice (I4, I8, I9, A2I2) the pairs of its even sublattice are

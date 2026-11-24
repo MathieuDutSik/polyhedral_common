@@ -3,7 +3,7 @@
 #define SRC_GENERA_SIEGELSERIES_H_
 
 // clang-format off
-#include "RationalFunctions.h"
+#include "ScalarRationalFunctions.h"
 #include "GeneraArithmetic.h"
 #include "MAT_Matrix.h"
 #include "SiegelSpecialValues.h"

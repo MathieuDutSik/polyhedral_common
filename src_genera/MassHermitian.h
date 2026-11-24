@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GENERA_HERMITIANMASS_H_
-#define SRC_GENERA_HERMITIANMASS_H_
+#ifndef SRC_GENERA_MASSHERMITIAN_H_
+#define SRC_GENERA_MASSHERMITIAN_H_
 
 // clang-format off
 #include "GeneraArithmetic.h"
@@ -244,5 +244,5 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
 }
 
 // clang-format off
-#endif  // SRC_GENERA_HERMITIANMASS_H_
+#endif  // SRC_GENERA_MASSHERMITIAN_H_
 // clang-format on

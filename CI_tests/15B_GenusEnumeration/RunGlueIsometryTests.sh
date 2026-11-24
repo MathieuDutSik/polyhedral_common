@@ -148,7 +148,7 @@ if [ "$ours" != "$theirs" ]; then
 fi
 echo "--- the numbers of hermitian genera of $(echo "$theirs" | wc -l | tr -d ' ') cases agree with Hecke ---"
 # The primes of Q(zeta_d)^+ and their type in Q(zeta_d), from the Dirichlet
-# characters (AbelianField.h), against the table of the explicit formulas
+# characters (ScalarAbelianField.h), against the table of the explicit formulas
 if [ "$($THP primes 150 100 2>/dev/null)" != "$(grep -v '^#' hermitian_primes_150_100.txt)" ]; then
     echo "ERROR: the prime decompositions differ from hermitian_primes_150_100.txt" >&2
     exit 1
