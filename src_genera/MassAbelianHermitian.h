@@ -594,10 +594,12 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
       break;
     }
     chain.push_back(*opt);
+#ifdef SANITY_CHECK_ABELIAN_HERMITIAN_MASS
     if (chain.size() > 64) {
       std::cerr << "ABHERM: the chain of overlattices does not end\n";
       throw TerminalException{1};
     }
+#endif
   }
   T fac = maximal_factor(alg.H);
   for (size_t i = 0; i + 1 < chain.size(); i++) {

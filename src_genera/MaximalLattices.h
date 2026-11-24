@@ -114,7 +114,7 @@ MaximalOrderAt(GroupLattice<T> const &M, Tint const &p, size_t max_elt) {
     ListP.push_back(g.transpose());
   }
   std::vector<MyMatrix<T>> elts;
-  for (auto const &x : GroupElementsAndInverses(ListP, 100000).first) {
+  for (auto const &x : GroupElementsAndInverses(ListP).first) {
     elts.push_back(x.transpose());
   }
   return MaximalOrderOfSpanAt<T, Tint>(elts, p, max_elt);

@@ -911,10 +911,12 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
       break;
     }
     chain.push_back(*opt);
+#ifdef SANITY_CHECK_CYCLOTOMIC_HERMITIAN_MASS
     if (chain.size() > 64) {
       std::cerr << "CYCLO: the chain of overlattices does not end\n";
       throw TerminalException{1};
     }
+#endif
   }
   T f = maximal_factor(hlg.H);
   for (size_t i = 0; i + 1 < chain.size(); i++) {

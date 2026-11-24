@@ -21,6 +21,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TOO_LONG
+# define TOO_LONG_ISOMETRY_GLUE_FACTORS
+#endif
+
 #ifdef SANITY_CHECK
 # define SANITY_CHECK_ISOMETRY_GLUE_FACTORS
 #endif
@@ -505,8 +509,11 @@ template <typename T> int64_t CyclotomicIndexOf(std::vector<T> const &mu) {
       return n;
     }
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
   std::cerr << "ISOM_FACTORS: a minimal polynomial is not cyclotomic\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 /*
@@ -593,7 +600,7 @@ Tint FactorsGroupOrder(std::vector<IsometryFactor<T>> const &factors) {
     }
     ListP.push_back(P);
   }
-  size_t order = GroupElementsAndInverses(ListP, 1000000).first.size();
+  size_t order = GroupElementsAndInverses(ListP).first.size();
   return Tint(static_cast<long>(order));
 }
 
@@ -766,13 +773,26 @@ GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
       cands.push_back(c);
     }
   }
-  if (cands.size() > 20) {
-    std::cerr << "ISOM_FACTORS: too many candidate factors for the glue "
-                 "bound\n";
+  // the subsets are masks of 64 bits
+  if (cands.size() > 63) {
+    std::cerr << "ISOM_FACTORS: more than 63 candidate factors for the glue "
+                 "bound, not done\n";
     throw TerminalException{1};
   }
   std::optional<Tint> best;
-  for (size_t mask = 1; mask < (size_t(1) << cands.size()); mask++) {
+  size_t n_cands = cands.size();
+#ifdef TOO_LONG_ISOMETRY_GLUE_FACTORS
+  // too many subsets to try: the cover by all the candidates, a weaker bound
+  if (n_cands > 20) {
+    Tint cost(1);
+    for (auto const &c : cands) {
+      cost *= c.cost;
+    }
+    best = cost;
+    n_cands = 0;
+  }
+#endif
+  for (size_t mask = 1; mask < (size_t(1) << n_cands); mask++) {
     std::vector<uint8_t> covered(iY.size(), 0);
     Tint cost(1);
     for (size_t c = 0; c < cands.size(); c++) {
@@ -1268,7 +1288,7 @@ template <typename T> struct OddOverlattice {
   overlattice A0 + w per orbit with the orbit size.
  */
 template <typename T, typename Tint>
-std::vector<OddOverlattice<T>>
+std::optional<std::vector<OddOverlattice<T>>>
 OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &ListP,
                      std::vector<MyMatrix<Tint>> const &ListGen) {
   int n = A0.rows();
@@ -1287,10 +1307,12 @@ OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &List
     std::cerr << "ISOM_FACTORS: the odd overlattices are for rank <= 64\n";
     throw TerminalException{1};
   }
+#ifdef TOO_LONG_ISOMETRY_GLUE_FACTORS
+  // 2^24 vectors of D(L_0)[2] at most
   if (kernel.size() > 24) {
-    std::cerr << "ISOM_FACTORS: D(L_0)[2] is too large\n";
-    throw TerminalException{1};
+    return {};
   }
+#endif
   auto key = [](std::vector<int> const &v) -> uint64_t {
     uint64_t k = 0;
     for (size_t i = 0; i < v.size(); i++) {

@@ -274,10 +274,12 @@ inline std::vector<PolyQ> EqualDegreeFactorization(PolyQ const &g, int f) {
       res.insert(res.end(), res2.begin(), res2.end());
       return res;
     }
+#ifdef SANITY_CHECK_POLYQ
     if (c > 100000) {
       std::cerr << "POLYQ: the equal degree splitting failed\n";
       throw TerminalException{1};
     }
+#endif
   }
 }
 

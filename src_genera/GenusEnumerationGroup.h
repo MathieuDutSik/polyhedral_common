@@ -847,8 +847,7 @@ std::vector<int> OrderedNeighborPrimes(std::vector<MyMatrix<T>> const &ListP,
  */
 template <typename T>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
-GroupElementsAndInverses(std::vector<MyMatrix<T>> const &ListP,
-                         size_t max_group) {
+GroupElementsAndInverses(std::vector<MyMatrix<T>> const &ListP) {
   int n = ListP[0].rows();
   auto flatten = [&](MyMatrix<T> const &M) -> std::vector<T> {
     std::vector<T> v;
@@ -866,11 +865,6 @@ GroupElementsAndInverses(std::vector<MyMatrix<T>> const &ListP,
       MyMatrix<T> x = elts[pos] * h;
       if (seen.insert(flatten(x)).second) {
         elts.push_back(x);
-        if (elts.size() > max_group) {
-          std::cerr << "GENUS_GROUP: the group has more than " << max_group
-                    << " elements\n";
-          throw TerminalException{1};
-        }
       }
     }
   }
@@ -919,7 +913,7 @@ GroupModuleAtPrime ComputeGroupModuleAtPrime(MyMatrix<T> const &A,
                                              T_small_prime p) {
   GroupModuleAtPrime gm;
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> ei =
-      GroupElementsAndInverses(ListP, 1000000);
+      GroupElementsAndInverses(ListP);
   std::vector<ModMatrix> elt, eltinv;
   for (size_t i = 0; i < ei.first.size(); i++) {
     elt.push_back(ModMatrixOfMatrix(ei.first[i], p));
@@ -1571,7 +1565,7 @@ GenusEnumerationGroupResult<T, Tgroup> GenusEnumerationAbelianGroup(
         // the exponent from all the elements: the orders of the
         // generators do not see the primes of |G|
         std::vector<MyMatrix<T>> elts =
-            GroupElementsAndInverses(ListP, 1000000).first;
+            GroupElementsAndInverses(ListP).first;
         for (auto const &x : elts) {
           MyMatrix<Tint> x_int = UniversalMatrixConversion<Tint, T>(x);
           m_seed = std::lcm(m_seed, FiniteMatrixOrderInt(x_int));

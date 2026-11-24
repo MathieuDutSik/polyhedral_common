@@ -864,8 +864,8 @@ ProjectiveLineOrbitRepresentatives(int n, int p,
   the target and the program reports the enumeration as incomplete.
  */
 template <typename T> int ChooseNeighborPrime(T const &det) {
-  std::vector<int> ListPrime{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
-  for (auto &p : ListPrime) {
+  // the primes in turn: one of them does not divide det != 0
+  for (int p = 2;; p = NextPrimeAfter(p)) {
     T p_T(p);
     // Divisibility, not an exact division: over a ring "det / p" truncates
     // and would say that every prime divides the determinant. ResInt is
@@ -874,9 +874,6 @@ template <typename T> int ChooseNeighborPrime(T const &det) {
       return p;
     }
   }
-  std::cerr << "GENUS: no suitable neighboring prime found for det=" << det
-            << "\n";
-  throw TerminalException{1};
 }
 
 /*

@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TOO_LONG
+# define TOO_LONG_GENUS_ENUMERATION_ODD
+#endif
+
 #ifdef DEBUG
 # define DEBUG_GENUS_ENUMERATION_ODD
 #endif
@@ -166,11 +170,19 @@ void GenusOddOverlattices(MyMatrix<T> const &GramM,
     radical.push_back(x);
   }
   int r = static_cast<int>(radical.size());
-  if (r > 24) {
+  // the elements of the radical are masks of 64 bits
+  if (r > 63) {
     std::cerr << "GENUS_ODD: a radical mod 2 of dimension " << r
-              << ", too large to list\n";
+              << ", not done\n";
     throw TerminalException{1};
   }
+#ifdef TOO_LONG_GENUS_ENUMERATION_ODD
+  // 2^24 elements of the radical at most: the classes above M are left
+  // out, and the enumeration does not reach the mass (complete = false)
+  if (r > 24) {
+    return;
+  }
+#endif
   // The candidates: the nonzero x of the radical with x G x^T = 4 mod 8.
   auto norm_mod8 = [&](uint64_t x) -> int64_t {
     int64_t s = 0;

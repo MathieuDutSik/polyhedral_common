@@ -170,8 +170,11 @@ inline PolyQ ModMinimalPolynomial(ModMatrix const &X, T_small_prime p) {
     AppendModRow(flat, v);
     pw = ModMatrixProduct(pw, X, p);
   }
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
   std::cerr << "GROUP_NEIGHBOR: no minimal polynomial found\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 inline ModMatrix PolyOfMatrix(PolyQ const &f, ModMatrix const &X,
@@ -295,8 +298,11 @@ IrreducibleSubmodule(RowSpaceModP const &W, std::vector<ModMatrix> const &gens,
     // back to the ambient coordinates
     S = ComputeRowSpaceModP(ModMatrixProduct(ker, S.basis, p), p);
   }
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
   std::cerr << "GROUP_NEIGHBOR: no irreducible submodule found\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 /*

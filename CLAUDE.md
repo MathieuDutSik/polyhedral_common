@@ -142,9 +142,26 @@ be read or parsed, a matrix that is not of the expected kind) is not a
 programming error: it is detected and the exception thrown in the `.cpp`
 program that reads the input, before the library is called, or after a
 library function has reported the failure to it (a `std::optional`, a
-flag of the result). Likewise a computation that cannot be completed (a
-bound exceeded, a case not treated) is reported to the caller, which
-decides.
+flag of the result).
+
+A computation that cannot be completed is one of four kinds:
+- A search that cannot fail when the code is right (a prime not dividing
+  the determinant, a lattice with a given symbol, a minimal polynomial):
+  the failure is a programming error, under `SANITY_CHECK_<CONTEXT>`. A
+  function that ends after such a search ends with the message and the
+  throw under the guard, then `__builtin_unreachable();`. An iteration
+  count put there as a safety net goes under the guard too.
+- A bound on the time or the memory (a group of more than `max_group`
+  elements, 2^24 vectors to list): under `#ifdef TOO_LONG_<CONTEXT>` the
+  function returns early (an empty `std::optional`, a `too_long` flag of
+  the result, a weaker bound) and the caller decides; without it the
+  computation goes on, however long. Each header maps `TOO_LONG` onto its
+  contexts, as for `SANITY_CHECK`.
+- A numerical failure that cannot be corrected (a precision that cannot
+  be reached): a plain `TerminalException{1}`, no guard.
+- A case not done (the dyadic ramified Hermitian genus, more than 64
+  vectors in a bit mask, an overflow of `size_t`): a plain
+  `TerminalException{1}`, no guard, with a message naming the case.
 
 ### Nested preprocessor directives are indented
 

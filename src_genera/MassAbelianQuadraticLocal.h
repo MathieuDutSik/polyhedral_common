@@ -1785,8 +1785,11 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(NumberField<T> const &K) {
       return res;
     }
   }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   std::cerr << "ABQUAD: the automorphisms of K are not found\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 template <typename T>

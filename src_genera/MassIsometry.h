@@ -84,6 +84,9 @@ template <typename T> struct IsometryMassResult {
   bool local_correction_open = false;
   // a component of a type whose mass is not implemented
   bool unsupported_component = false;
+  // the group has more than IsometryMassBounds::max_group elements, with
+  // TOO_LONG_ISOMETRY_MASS: nothing computed
+  bool too_long = false;
   /*
     The mass of the genus of the pair. It is set only when it is proved:
     every component has its exact mass, with its local factors. When local
@@ -464,12 +467,20 @@ IsometryMassResult<T> GroupGenusMass(MyMatrix<T> const &A,
       }
     }
   }
-  std::vector<MyMatrix<T>> elts = GroupElementsClosure(ListP, bounds.max_group);
+  std::optional<std::vector<MyMatrix<T>>> elts =
+      GroupElementsClosure(ListP, bounds.max_group);
+  if (!elts) {
+    IsometryMassResult<T> res;
+    res.order = 0;
+    res.image_assumed = false;
+    res.too_long = true;
+    return res;
+  }
   std::vector<IsometryComponent<T>> components =
-      commuting ? AbelianGroupComponents<T, Tint>(A, elts)
-                : FiniteGroupComponents<T, Tint>(A, ListP, elts, os);
+      commuting ? AbelianGroupComponents<T, Tint>(A, *elts)
+                : FiniteGroupComponents<T, Tint>(A, ListP, *elts, os);
   return IsometryGenusMassComponents<T, Tint>(
-      A, static_cast<int>(elts.size()), components, bounds, os);
+      A, static_cast<int>(elts->size()), components, bounds, os);
 }
 
 template <typename T>
@@ -514,7 +525,8 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
      << ",\n  local_correction_open:="
      << GAP_logical(res.local_correction_open)
      << ",\n  unsupported_component:="
-     << GAP_logical(res.unsupported_component);
+     << GAP_logical(res.unsupported_component)
+     << ",\n  too_long:=" << GAP_logical(res.too_long);
   if (res.mass) {
     os << ",\n  mass:=" << *res.mass;
   }

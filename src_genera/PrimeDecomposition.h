@@ -74,8 +74,11 @@ inline KrylovData<T> KrylovMinimalPolynomial(MyMatrix<T> const &S) {
     }
     pw.push_back(w);
   }
+#ifdef SANITY_CHECK_PRIME_DECOMPOSITION
   std::cerr << "ABHERM: no minimal polynomial\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 /*

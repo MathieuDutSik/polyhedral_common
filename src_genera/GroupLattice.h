@@ -61,7 +61,7 @@ std::vector<Tint> GroupLatticePrimes(GroupLattice<T> const &M) {
   for (auto const &g : M.gens) {
     ListP.push_back(g.transpose());
   }
-  size_t order = GroupElementsAndInverses(ListP, 100000).first.size();
+  size_t order = GroupElementsAndInverses(ListP).first.size();
   std::vector<Tint> res;
   if (order > 1) {
     for (auto const &[q, e] : FactorsIntMap(Tint(static_cast<long>(order)))) {

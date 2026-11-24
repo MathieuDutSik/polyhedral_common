@@ -631,12 +631,20 @@ MyMatrix<T> TwoAdicLocalGram(std::vector<std::array<int, 5>> const &sym2,
       choice[i] = 0;
       i++;
     }
-    if (i == r || n_tried > 4000000) {
+    if (i == r) {
       break;
     }
+#ifdef SANITY_CHECK_GENUS_SYMBOL
+    if (n_tried > 4000000) {
+      break;
+    }
+#endif
   }
+#ifdef SANITY_CHECK_GENUS_SYMBOL
   std::cerr << "GSYM: no 2-adic lattice has the 2-adic symbol of the genus\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 //
@@ -770,9 +778,12 @@ std::vector<T> RationalDiagonalWithInvariants(int n, Tint const &d,
       }
     }
   }
+#ifdef SANITY_CHECK_GENUS_SYMBOL
   std::cerr << "GSYM: no rational quadratic form has the invariants of the "
                "genus (the oddity formula fails?)\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 //

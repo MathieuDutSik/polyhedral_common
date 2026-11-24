@@ -124,7 +124,7 @@ std::optional<int> ConductorExponent(GroupLattice<T> const &M, Tint const &p) {
     ListP.push_back(g.transpose());
   }
   std::vector<MyMatrix<T>> elts =
-      GroupElementsAndInverses(ListP, 100000).first;
+      GroupElementsAndInverses(ListP).first;
   MyMatrix<T> Span(static_cast<int>(elts.size()), n * n);
   for (size_t k = 0; k < elts.size(); k++) {
     for (int i = 0; i < n; i++) {

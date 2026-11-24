@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_GENUS_SPINOR
+#endif
+
 #ifdef DEBUG
 # define DEBUG_GENUS_SPINOR
 #endif
@@ -425,8 +429,11 @@ SpinorGenusData GenusSpinorData(GenusSymbol const &s,
 #endif
     return data;
   }
+#ifdef SANITY_CHECK_GENUS_SPINOR
   std::cerr << "GSPIN: no vector of the norm valuations found\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 // clang-format off

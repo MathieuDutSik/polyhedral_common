@@ -248,8 +248,11 @@ PrimitiveCharacter(DirichletGroup const &G, std::vector<int64_t> const &t) {
     }
     return {f, val};
   }
+#ifdef SANITY_CHECK_CYCLOTOMIC_ARITHMETIC
   std::cerr << "CYCLO: no conductor found\n";
   throw TerminalException{1};
+#endif
+  __builtin_unreachable();
 }
 
 /*

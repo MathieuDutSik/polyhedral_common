@@ -330,8 +330,14 @@ void process(std::string const &mode, std::string const &FileGram1,
             PairCentralizer<T, Tint, Tgroup>(A0, ListP, methods.automorphism,
                                              std::cerr)
                 .ListGen;
-        for (auto const &ov :
-             OddOverlatticeOrbits<T, Tint>(A0, ListP, ListGen)) {
+        std::optional<std::vector<OddOverlattice<T>>> odd =
+            OddOverlatticeOrbits<T, Tint>(A0, ListP, ListGen);
+        if (!odd) {
+          std::cerr << "GENUS_GlueIsometry: D(L_0)[2] is too large for the "
+                       "odd overlattices (TOO_LONG_ISOMETRY_GLUE_FACTORS)\n";
+          throw TerminalException{1};
+        }
+        for (auto const &ov : *odd) {
           MyMatrix<T> AL = ov.basis * A0 * ov.basis.transpose();
           if (GenusSymbolOfGram<T, Tint>(AL) != S_odd) {
             continue;

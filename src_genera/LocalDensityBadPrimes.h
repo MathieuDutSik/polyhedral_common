@@ -435,10 +435,12 @@ T RankOneDensityCounting(SiegelJordanBlocks const &q, PadicClass const &a,
       return next;
     }
     prev = next;
+#ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
     if (k > a.val + e_max + 40) {
       std::cerr << "LDBP: the rank one density did not stabilize\n";
       throw TerminalException{1};
     }
+#endif
   }
 }
 
