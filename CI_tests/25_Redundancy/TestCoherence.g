@@ -22,10 +22,11 @@ TestIdx:=function(i)
     local eFile, eFileGRP, eProg, eCommand, eFileIrred1, fProg, fCommand, U1, eFileIrred2, gProg2, gCommand2, U2, eFileIrred3, gProg3, gCommand3, U3, eFileIrred4, gProg4, gCommand4, U4;
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
+    RemoveFileIfExist(eFileGRP);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
     # The CPP output format is the native WriteGroup format, which is the
     # one that POLY_redundancyGroup can read back (GAP format cannot).
-    eCommand:=Concatenation(eProg, " rational ", eFile, " CPP ", eFileGRP);
+    eCommand:=Concatenation(eProg, " mpq_class ", eFile, " CPP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
     if IsExistingFile(eFileGRP)=false then
@@ -112,6 +113,7 @@ TestCtype5:=function()
         if TestIdx(i)=false then
             n_error:=n_error + 1;
         fi;
+        RemoveFileIfExist(Concatenation("TheCtype_5_", String(i), ".grp"));
     od;
     return n_error;
 end;
@@ -132,7 +134,7 @@ TestRedundancy:=function(eRec)
     RemoveFileIfExist(eFileIrred);
     #
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
-    eCommand:=Concatenation(eProg, " rational ", eRec.eFile, " CPP ", eFileGRP);
+    eCommand:=Concatenation(eProg, " mpq_class ", eRec.eFile, " CPP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
     if IsExistingFile(eFileGRP)=false then
