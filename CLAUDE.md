@@ -220,6 +220,23 @@ Nothing specific to a test case is written in the code: no hard-coded list
 of polynomials, lattices, primes or expected values in a `.cpp` or a header.
 Such data goes into the CI inputs.
 
+### Benchmark programs (`Bench_*`) are not tests
+
+A `Bench_*.cpp` program measures the costs of methods in order to fit the
+empirical parameters of a heuristic: which of two methods is predicted
+cheaper, a threshold, the constants of a cost model. It checks nothing, so
+the ban on `Test_` programs does not apply, and it is kept so that the
+parameters can be refitted when the methods or the arithmetics change.
+
+- It takes its lattices (or other cases) from input files, like any
+  program, and prints one line of measurements per case.
+- The code that uses the fitted parameters says which `Bench_` program and
+  which sample they come from, and what the fit gave on it. Example:
+  `InvariantFamilyCostBV` in `src_latt/LatticeInvariantFamily.h`, fitted
+  with `src_genera/Bench_InvariantCost.cpp`.
+- It is not run by the CI. Its measurements are wall-clock times, taken
+  under the machine's usual load.
+
 ## CI is calendar-scheduled, one workflow per day
 
 `.github/workflows/` follows a deliberately peculiar scheme that avoids saturating CI runners and keeps long-running test matrices spread out across the month. The rules:

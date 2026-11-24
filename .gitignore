@@ -140,6 +140,7 @@ src_genera/GENUS_*
 src_genera/GENUS_SpinorGenera
 src_genera/GENUS_GetGenusFromLattice
 src_genera/GENUS_MPI_Enumerate
+src_genera/Bench_InvariantCost
 src_group/POLY_HashWeightMatrixLimited
 src_indefinite/INDEF_*
 src_isotropy/LATT_*

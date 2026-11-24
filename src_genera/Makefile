@@ -1,4 +1,4 @@
-PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry GENUS_HermitianPieces GENUS_SpinorGenera GENUS_GetGenusFromLattice GENUS_GenusSymbols
+PROGRAM		= GENUS_Enumerate GENUS_LocalDensity GENUS_AlgebraicModularForms GENUS_IsometryMass GENUS_EnumerateIsometry GENUS_GlueIsometry GENUS_HermitianPieces GENUS_SpinorGenera GENUS_GetGenusFromLattice GENUS_GenusSymbols Bench_InvariantCost
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

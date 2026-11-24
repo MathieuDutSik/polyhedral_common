@@ -249,7 +249,7 @@ std::optional<size_t> InvariantFamilyBVSize(InvariantFamilyCache<Tint> &cache,
   The predicted costs in seconds of the BV invariant on N vectors and of the
   canonical form (heuristic) in rank n, fitted on 414 lattices of ranks 3 to
   24 (the largest DefLatDB genus of each rank, c02216, the Niemeier
-  lattices) with LATT_InvariantFamily cost: t_BV = 8.9e-7 N^1.65 and
+  lattices) with Bench_InvariantCost: t_BV = 8.9e-7 N^1.65 and
   t_can = 7.9e-6 n^2.83. Choosing the predicted cheaper one costs 3.9 s on
   that sample, against 3.7 s for the best choice, 8.1 s for the canonical
   form always and 248 s for BV always. The canonical form is cheaper beyond
