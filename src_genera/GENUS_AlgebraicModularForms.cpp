@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #ifdef ENABLE_FLINT_SUPPORT
-#include "NumberTheoryFlint.h"
+# include "NumberTheoryFlint.h"
 #endif
 #include "Group.h"
 #include "Permutation.h"

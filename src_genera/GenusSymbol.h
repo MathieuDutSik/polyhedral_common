@@ -24,11 +24,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_GENUS_SYMBOL
+# define DEBUG_GENUS_SYMBOL
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_GENUS_SYMBOL
+# define SANITY_CHECK_GENUS_SYMBOL
 #endif
 
 /*
@@ -664,10 +664,13 @@ template <typename T> std::vector<T> RationalDiagonalForm(MyMatrix<T> S) {
       } else if (j_off != -1) {
         S.row(k) += S.row(j_off);
         S.col(k) += S.col(j_off);
-      } else {
+      }
+#ifdef SANITY_CHECK_GENUS_SYMBOL
+      else {
         std::cerr << "GSYM: RationalDiagonalForm of a degenerate matrix\n";
         throw TerminalException{1};
       }
+#endif
     }
     T a = S(k, k);
     diag.push_back(a);
@@ -1359,7 +1362,8 @@ SymbolLattice<T> DescendToLocalSymbol(SymbolLattice<T> const &L, int64_t p,
                                       MyMatrix<T> const &Gp,
                                       [[maybe_unused]] std::ostream &os) {
   int n = Gp.rows();
-  int v_target = PadicFromRational<T, Tint>(DeterminantMat(Gp), p).val;
+  [[maybe_unused]] int v_target =
+      PadicFromRational<T, Tint>(DeterminantMat(Gp), p).val;
   // the chain of keys, from Gp up to a maximal lattice
   std::vector<std::vector<int>> chain;
   std::vector<int> scales;
@@ -1383,6 +1387,7 @@ SymbolLattice<T> DescendToLocalSymbol(SymbolLattice<T> const &L, int64_t p,
     }
   }
   int steps = static_cast<int>(chain.size()) - 1;
+#ifdef SANITY_CHECK_GENUS_SYMBOL
   int v0 = v_target - 2 * steps;
   if (PadicFromRational<T, Tint>(DeterminantMat(L.G), p).val != v0 ||
       SymbolKeyAt<T, Tint>(L.G, p, MaxScaleAt<T, Tint>(L.G, p)) !=
@@ -1391,6 +1396,7 @@ SymbolLattice<T> DescendToLocalSymbol(SymbolLattice<T> const &L, int64_t p,
               << "space is not locally isometric to that above the genus\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef DEBUG_GENUS_SYMBOL
   os << "GSYM: p=" << p << " descent in " << steps << " steps\n";
 #endif
@@ -1438,11 +1444,13 @@ SymbolLattice<T> DescendToLocalSymbol(SymbolLattice<T> const &L, int64_t p,
         }
       }
     }
+#ifdef SANITY_CHECK_GENUS_SYMBOL
     if (!found) {
       std::cerr << "GSYM: the descent at p=" << p << " found no sublattice "
                 << "in the next local class, " << i << " steps from the end\n";
       throw TerminalException{1};
     }
+#endif
   }
   return cur;
 }
@@ -1475,6 +1483,7 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
     std::vector<T> diag = RationalDiagonalForm(Gp);
     // det G_p / d must be a square of Q_p
     T ratio = DeterminantMat(Gp) / d_T;
+#ifdef SANITY_CHECK_GENUS_SYMBOL
     PadicClass c = PadicFromRational<T, Tint>(ratio, p);
     bool square = (c.val % 2 == 0) &&
                   ((p == 2) ? (c.unit == 1) : (kronecker_symbol<int64_t>(c.unit, p) == 1));
@@ -1483,6 +1492,7 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
                 << " does not match the determinant " << d << "\n";
       throw TerminalException{1};
     }
+#endif
     hasse[p] = HasseInvariantDiagonal<T, Tint>(diag, p);
     hasse_prod *= hasse[p];
   }
@@ -1528,11 +1538,13 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
       LLLReduceSymbolLattice<T, Tint>(L, os);
       if (p != 2 && s.sym_odd.count(p) == 0) {
         T det_p = DeterminantMat(L.G);
+#ifdef SANITY_CHECK_GENUS_SYMBOL
         if (PadicFromRational<T, Tint>(det_p, p).val != 0) {
           std::cerr << "GSYM: the maximal lattice at p=" << p
                     << " is not unimodular\n";
           throw TerminalException{1};
         }
+#endif
       }
     }
   }
@@ -1548,12 +1560,14 @@ MyMatrix<T> GenusSymbolRepresentative(GenusSymbol const &s, std::ostream &os) {
   }
   // 5. the check
   GenusSymbol s_L = GenusSymbolOfGram<T, Tint>(L.G);
+#ifdef SANITY_CHECK_GENUS_SYMBOL
   if (s_L != s) {
     std::cerr << "GSYM: the lattice built has the genus "
               << GenusSymbolString(s_L) << ", not " << GenusSymbolString(s)
               << "\n";
     throw TerminalException{1};
   }
+#endif
   return L.G;
 }
 

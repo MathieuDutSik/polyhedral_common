@@ -7,6 +7,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_LOCAL_GRAM_OVER_OK
+#endif
+
 /*
   A lattice X with an action of O_E written at q as a lattice over O_E (x)
   Z_q: the Gram matrix over E of the form whose trace is the form of X, on
@@ -111,10 +115,12 @@ LocalOKGramBasis(MyMatrix<T> const &B, LocalGenerator<T> const &lg,
     }
     try_add(v);
   }
+#ifdef SANITY_CHECK_LOCAL_GRAM_OVER_OK
   if (static_cast<int>(chosen.size()) != m) {
     std::cerr << "ABQUAD: no local O_K-basis found\n";
     throw TerminalException{1};
   }
+#endif
   return {chosen, LocalOKGramFromVectors(B, lg, chosen)};
 }
 

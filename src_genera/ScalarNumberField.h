@@ -15,6 +15,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_NUMBER_FIELD
+#endif
+
 /*
   The scalar type of the number fields: the elements of E = Q(theta) on
   the basis of the powers of theta (Q(zeta_d) on the powers of zeta, or a
@@ -141,10 +145,12 @@ template <typename T>
 inline ElemE<T> EZetaPower(int64_t t, NumberField<T> const &K) {
   if (K.d == 0) {
     // theta^t, t >= 0
+#ifdef SANITY_CHECK_NUMBER_FIELD
     if (t < 0) {
       std::cerr << "CYCLO: a negative power of theta\n";
       throw TerminalException{1};
     }
+#endif
     std::vector<T> c(std::max<int64_t>(t + 1, K.deg), T(0));
     c[t] = 1;
     return EReduce(c, K);
@@ -190,10 +196,12 @@ inline ElemE<T> EInv(ElemE<T> const &a, NumberField<T> const &K) {
   MyVector<T> e0 = ZeroVector<T>(K.deg);
   e0(0) = 1;
   std::optional<MyVector<T>> sol = SolutionMat(EMulMatrix(a, K), e0);
+#ifdef SANITY_CHECK_NUMBER_FIELD
   if (!sol) {
     std::cerr << "NUMBERFIELD: the inverse of zero\n";
     throw TerminalException{1};
   }
+#endif
   ElemE<T> x(K.deg);
   for (int i = 0; i < K.deg; i++) {
     x[i] = (*sol)(i);

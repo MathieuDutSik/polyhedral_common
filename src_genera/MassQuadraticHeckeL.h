@@ -14,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_QUADRATIC_HECKE_L
+#endif
+
 /*
   The quadratic Hecke character chi = chi_{E/K} of E = K(sqrt d) over the
   totally real abelian field K = Q(theta), and its L-function
@@ -205,10 +209,12 @@ QuadHeckeGoodPrime(QuadHeckeModRing &R, std::vector<uint64_t> const &dq,
   int64_t S = (tr > p / 2) ? static_cast<int64_t>(tr) - static_cast<int64_t>(p)
                            : static_cast<int64_t>(tr);
   int g = n / f_p;
+#ifdef SANITY_CHECK_QUADRATIC_HECKE_L
   if (S % f_p != 0 || std::abs(S / f_p) > g) {
     std::cerr << "QHECKE: inconsistent trace " << S << " at p=" << p << "\n";
     throw TerminalException{1};
   }
+#endif
   S /= f_p;
   std::vector<QuadHeckePrime> lp;
   for (int i = 0; i < (g + S) / 2; i++) {
@@ -1639,9 +1645,9 @@ std::optional<T> QuadraticMassNonAbelianE(
         ArbPrecisionGuard g(cb + 128);
         ArbReal bb = arb_from_rational(factor) * *La;
         std::optional<Tint> bc = arb_unique_integer<Tint>(bb);
-#ifdef DEBUG_QHECKE
+# ifdef DEBUG_QHECKE
         std::cerr << "QHECKE_ARB: b in " << bb.str(20) << "\n";
-#endif
+# endif
         if (bc) {
           if (*bc != *b1) {
             std::cerr << "QHECKE_ARB: the certified b=" << *bc

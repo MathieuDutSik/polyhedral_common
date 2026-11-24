@@ -24,6 +24,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ABELIAN_QUADRATIC_MASS
+#endif
+
 /*
   The quadratic masses over a totally real abelian field K, their local
   part (MassAbelianQuadratic.h for the global mass of a lattice): the
@@ -168,10 +172,12 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
   if (m % 2 == 0 && vd % 2 != 0) {
     N2 += 1 - m;
   }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (N2 % 2 != 0) {
     std::cerr << "ABQUAD: the exponent N is not integral\n";
     throw TerminalException{1};
   }
+#endif
   int64_t N = N2 / 2;
   T qpow = MyPow<T>(qf, (N >= 0 ? N : -N));
   return (N >= 0) ? T(qpow * f) : T(f / qpow);
@@ -180,10 +186,12 @@ inline T QuadLocalFactorOdd(std::vector<QuadJordanBlock> blocks,
 // The square class (1 or -1) in F_q[x] / g of a residue, q odd.
 template <typename T>
 inline int ResidueSquareClass(FqElt const &u, LocalPrimeK<T> const &P) {
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (u.is_zero()) {
     std::cerr << "ABQUAD: the square class of zero\n";
     throw TerminalException{1};
   }
+#endif
   return FqQuadraticCharacter(P.F, u);
 }
 
@@ -317,10 +325,12 @@ inline std::pair<int, int> QuadFormTypeChar2(FqMat const &Q, FiniteField const &
     while (j < comp.size() && FqBil(F, x, Bf, comp[j]).is_zero()) {
       j++;
     }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (j == comp.size()) {
       std::cerr << "ABQUAD: degenerate polar form\n";
       throw TerminalException{1};
     }
+#endif
     FqElt c = FqInv(F, FqBil(F, x, Bf, comp[j]));
     std::vector<FqElt> y = comp[j];
     for (auto &t : y) {
@@ -578,10 +588,12 @@ inline T LocalFactorCho(std::vector<std::vector<ElemE<T>>> const &H,
       exp2 += static_cast<int64_t>(sc) * (1 - m);
     }
   }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (exp2 % 2 != 0) {
     std::cerr << "ABQUAD: the exponent of Cho's factor is not integral\n";
     throw TerminalException{1};
   }
+#endif
   return qpow(exp2 / 2) * Hord / 2 / beta;
 }
 
@@ -741,10 +753,12 @@ inline std::vector<ElemE<T>> DiagonalizeK(KMat<T> F, NumberField<T> const &K) {
             break;
           }
         }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
         if (j < 0) {
           std::cerr << "ABQUAD: a degenerate form\n";
           throw TerminalException{1};
         }
+#endif
         // x_i <- x_i + c x_j, c = 1 / (2 F_ij)
         ElemE<T> c = EInv(F[i][j] * T(2), K);
         for (int u = 0; u < n; u++) {
@@ -1197,20 +1211,24 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
   using Tint = typename underlying_z_ring<T>::ring_type;
   NumberField<T> const &K = P.K;
   QuadKirschmerSymbol<T> S = KirschmerSymbolDyadic(G, P, F);
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (S.sL.size() != 1 || S.sL[0] != 0) {
     std::cerr << "ABQUAD: the lattice is not unimodular\n";
     throw TerminalException{1};
   }
+#endif
   int d = S.dims[0];
   int b = S.wL[0];
   int a = S.uL[0];
   T q = UniversalScalarConversion<T, typename underlying_z_ring<T>::ring_type>(P.qf);
   int e = P.e;
   auto qp = [&](T const &x) -> T {
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (GetDenominator_z(x) != 1) {
       std::cerr << "ABQUAD: a non integral exponent\n";
       throw TerminalException{1};
     }
+#endif
     return QPowRat(q, UniversalScalarConversion<int64_t, Tint>(GetNumerator_z(x)));
   };
   auto eps = [&](int c) -> int { return (c == QD_INF) ? 1 : -1; };
@@ -1282,10 +1300,12 @@ inline T LocalFactorUnimodularDyadic(KMat<T> const &G, LocalPrimeK<T> &P,
       }
     }
   } else {
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (a != 0) {
       std::cerr << "ABQUAD: odd unimodular with a != 0\n";
       throw TerminalException{1};
     }
+#endif
     int r = (d - 3) / 2;
     int w = WittInvariantDyadic(G, P, F);
     if (e == b) {
@@ -1341,10 +1361,12 @@ inline T LocalFactorDyadicRamified(KMat<T> const &H, LocalPrimeK<T> &P) {
         n_super++;
       }
     }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (n_super == 0) {
       std::cerr << "ABQUAD: no superlattice isometric to the next in the chain\n";
       throw TerminalException{1};
     }
+#endif
     f *= UniversalScalarConversion<T, int64_t>(n_sub) / UniversalScalarConversion<T, int64_t>(n_super);
   }
   return f;
@@ -1590,10 +1612,12 @@ inline std::optional<ElemE<T>> SqrtInK(ElemE<T> const &d, NumberField<T> const &
   }
   std::vector<T> poly = UniversalStdVectorScalarConversion<T, int64_t>(K.Phi);
   std::vector<T> th = real_roots_approximation(poly, eps);
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (static_cast<int>(th.size()) != n) {
     std::cerr << "ABQUAD: the field is not totally real\n";
     throw TerminalException{1};
   }
+#endif
   std::vector<T> sq;
   for (int j = 0; j < n; j++) {
     T v(0);
@@ -1709,10 +1733,12 @@ std::vector<ElemE<T>> AutomorphismsTotallyReal(NumberField<T> const &K) {
       eps /= 2;
     }
     std::vector<T> th = real_roots_approximation(poly, eps);
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (static_cast<int>(th.size()) != n) {
       std::cerr << "ABQUAD: the field is not totally real\n";
       throw TerminalException{1};
     }
+#endif
     T W2 = MyPow<T>(2, prec);
     std::vector<ElemE<T>> res;
     for (int j = 0; j < n; j++) {
@@ -1938,11 +1964,13 @@ std::optional<AbelianField> AbelianQuadraticExtensionFieldPrimes(
     }
     cands = next;
   }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
   if (cands.size() != 1) {
     std::cerr << "ABQUAD: " << cands.size()
               << " candidates for the abelian field E\n";
     throw TerminalException{1};
   }
+#endif
   return AbelianField{N, cands[0]};
 }
 

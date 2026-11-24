@@ -15,11 +15,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ORDER_LATTICE
+# define DEBUG_ORDER_LATTICE
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ORDER_LATTICE
+# define SANITY_CHECK_ORDER_LATTICE
 #endif
 
 /*
@@ -204,10 +204,12 @@ template <typename Tint> int64_t order_residue(Tint const &x, int64_t const &ell
 template <typename T> int64_t order_residue_rat(T const &x, int64_t const &ell) {
   int64_t num = order_residue(GetNumerator_z(x), ell);
   int64_t den = order_residue(GetDenominator_z(x), ell);
+#ifdef SANITY_CHECK_ORDER_LATTICE
   if (den == 0) {
     std::cerr << "AMF: a denominator is divisible by " << ell << "\n";
     throw TerminalException{1};
   }
+#endif
   return (num * InverseModPrime(den, ell)) % ell;
 }
 
@@ -332,11 +334,13 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
     MyMatrix<Tint> Id = IdentityMat<Tint>(n);
     MyMatrix<Tint> V1 = NullspaceMatMod(MyMatrix<Tint>(Omega - UniversalScalarConversion<Tint, int64_t>(P.r) * Id), UniversalScalarConversion<Tint, int64_t>(ell));
     MyMatrix<Tint> V2 = NullspaceMatMod(MyMatrix<Tint>(Omega - UniversalScalarConversion<Tint, int64_t>(r_conj) * Id), UniversalScalarConversion<Tint, int64_t>(ell));
+#ifdef SANITY_CHECK_ORDER_LATTICE
     if (V1.rows() != ring.m || V2.rows() != ring.m) {
       std::cerr << "AMF: the eigenspaces of omega mod " << ell << " have dimensions " << V1.rows() << ", "
                 << V2.rows() << " instead of " << ring.m << "\n";
       throw TerminalException{1};
     }
+#endif
     for (int j = 0; j < ring.m; j++) {
       for (int k = 0; k < n; k++) {
         Bas(j, k) = V1(j, k);
@@ -363,10 +367,12 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
         n_found++;
       }
     }
+#ifdef SANITY_CHECK_ORDER_LATTICE
     if (n_found != ring.m) {
       std::cerr << "AMF: no basis of L / ell L over F_q found\n";
       throw TerminalException{1};
     }
+#endif
   }
   ls.basis.resize(n * n);
   for (int i = 0; i < n; i++) {
@@ -375,10 +381,12 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
     }
   }
   std::optional<std::vector<int64_t>> opt = InverseMatModInt64(ls.basis, n, ell, true);
+#ifdef SANITY_CHECK_ORDER_LATTICE
   if (!opt) {
     std::cerr << "AMF: the adapted basis is not invertible mod " << ell << "\n";
     throw TerminalException{1};
   }
+#endif
   ls.basis_inv = *opt;
   return ls;
 }
@@ -769,10 +777,12 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
           done = true;
         }
       }
+#ifdef SANITY_CHECK_ORDER_LATTICE
       if (!done) {
         std::cerr << "AMF: the line cannot be lifted to h(x, x) = 0 mod ell\n";
         throw TerminalException{1};
       }
+#endif
     }
   } else {
     Tint hx = order_hermitian_norm(G, x);
@@ -792,10 +802,12 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
           done = true;
         }
       }
+#ifdef SANITY_CHECK_ORDER_LATTICE
       if (!done) {
         std::cerr << "AMF: L is not unimodular at " << ell << "\n";
         throw TerminalException{1};
       }
+#endif
     }
   }
 #ifdef SANITY_CHECK_ORDER_LATTICE
@@ -873,10 +885,12 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
         opt_y1 = y1;
       }
     }
+#ifdef SANITY_CHECK_ORDER_LATTICE
     if (!opt_y1) {
       std::cerr << "AMF: y -> h(y, x) is not onto O / ell\n";
       throw TerminalException{1};
     }
+#endif
     for (int64_t t = 1; t < ell; t++) {
       Tint coef = ell_T * UniversalScalarConversion<Tint, int64_t>(t);
       l_lift.push_back(MyVector<Tint>(x + coef * (*opt_y1)));

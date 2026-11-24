@@ -9,8 +9,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_UNITARY_INNER_FORM_MASS
+#endif
+
 #ifdef DEBUG
-#define DEBUG_UNITARY_INNER_FORM_MASS
+# define DEBUG_UNITARY_INNER_FORM_MASS
 #endif
 
 /*
@@ -56,11 +60,13 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
   int dim_u = n * n * c;
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(gens, k);
   std::vector<MyMatrix<T>> u = QuatIntegralCommutant<T, Tint>(B, O0, true);
+#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS
   if (static_cast<int>(u.size()) != dim_u) {
     std::cerr << "UNIT_MASS: the Lie lattice has rank " << u.size()
               << ", not " << dim_u << "\n";
     throw TerminalException{1};
   }
+#endif
   T disc_u = QuatTraceDiscriminant(u);
   std::vector<MyMatrix<T>> Lam = QuatIntegralCommutant<T, Tint>(B, O0, false);
   std::vector<MyMatrix<T>> Forms;
@@ -124,11 +130,14 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
       chi = -1;
     } else if (eK == 2 * ep) {
       chi = 0;
-    } else {
+    }
+#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS
+    else {
       std::cerr << "UNIT_MASS: the decomposition of " << p << " in K and K^+ "
                 << "does not fit\n";
       throw TerminalException{1};
     }
+#endif
     T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), fp);
     T res(1);
     for (int v = 0; v < gp; v++) {
@@ -202,10 +211,12 @@ std::optional<T> UnitaryInnerFormMass(MyMatrix<T> const &B,
   os << "UNIT_MASS: n=" << n << " c=" << c << " d_K=" << dK << " d_K+=" << dKp
      << " mass^2=" << m2 << "\n";
 #endif
+#ifdef SANITY_CHECK_UNITARY_INNER_FORM_MASS
   if (!mass) {
     std::cerr << "UNIT_MASS: the squared mass " << m2 << " is not a square\n";
     throw TerminalException{1};
   }
+#endif
   return mass;
 }
 

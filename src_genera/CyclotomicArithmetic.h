@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_CYCLOTOMIC_ARITHMETIC
+#endif
+
 /*
   Cyclotomic fields and Dirichlet characters: the cyclotomic polynomials,
   the group of the characters modulo d and their conductors, elements of
@@ -33,10 +37,12 @@ ExactMonicPolynomialDivision(std::vector<int64_t> num,
     }
   }
   for (int j = 0; j < dd; j++) {
+#ifdef SANITY_CHECK_CYCLOTOMIC_ARITHMETIC
     if (num[j] != 0) {
       std::cerr << "CYCLO: the division of polynomials is not exact\n";
       throw TerminalException{1};
     }
+#endif
   }
   return quo;
 }
@@ -338,10 +344,12 @@ inline T RationalRoot(T const &x, int r) {
   Tint den = GetDenominator_z(x);
   std::optional<Tint> rn = exact_integer_root(num, static_cast<size_t>(r));
   std::optional<Tint> rd = exact_integer_root(den, static_cast<size_t>(r));
+#ifdef SANITY_CHECK_CYCLOTOMIC_ARITHMETIC
   if (!rn || !rd) {
     std::cerr << "CYCLO: the product of the norms is not a power\n";
     throw TerminalException{1};
   }
+#endif
   T res = UniversalScalarConversion<T, Tint>(*rn);
   res /= UniversalScalarConversion<T, Tint>(*rd);
   return res;

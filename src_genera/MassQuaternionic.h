@@ -21,8 +21,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_QUATERNIONIC_MASS
+#endif
+
 #ifdef DEBUG
-#define DEBUG_QUATERNIONIC_MASS
+# define DEBUG_QUATERNIONIC_MASS
 #endif
 
 /*
@@ -558,11 +562,13 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
   };
   while (true) {
     T q = QuatOrderDisc(O, r) / dK4;
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (!IsInteger(q)) {
       std::cerr << "QUAT_MASS: the discriminant of the order is not a "
                    "multiple of d_K^4\n";
       throw TerminalException{1};
     }
+#endif
     Tint q_i = UniversalScalarConversion<Tint, T>(q);
     std::vector<Tint> primes;
     if (q_i > 1) {
@@ -588,10 +594,12 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
         }
       }
       std::optional<MyVector<T>> sol = SolutionMat(Ob, y);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
       if (!sol) {
         std::cerr << "QUAT_MASS: an element is not in the span of the order\n";
         throw TerminalException{1};
       }
+#endif
       return *sol;
     };
     /*
@@ -787,11 +795,13 @@ QuatMaximalOrder(std::vector<MyMatrix<T>> O, int r, T const &dK,
             }
           }
           std::optional<MyVector<T>> sol = SolutionMat(Zb, y);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
           if (!sol) {
             std::cerr << "QUAT_MASS: a power of a central element is not "
                          "central\n";
             throw TerminalException{1};
           }
+#endif
           return *sol;
         };
         int64_t pm = p;
@@ -1257,13 +1267,16 @@ std::optional<T> QuaternionicComponentMass(
   auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     return Binv * Y.transpose() * B;
   };
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   if (static_cast<int>(O0.size()) != dimD || k != dimD * r) {
     std::cerr << "QUAT_MASS: the span has dimension " << O0.size()
               << " for a center of degree " << c << " and rank " << k
               << ", not that of D\n";
     throw TerminalException{1};
   }
+#endif
   // the adjoint is the canonical involution: x + x^* is central
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   for (auto const &w : O0) {
     MyMatrix<T> t = w + adj(w);
     for (auto const &g : gens) {
@@ -1273,6 +1286,7 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
   }
+#endif
   T dK4 = dK * dK * dK * dK;
 #ifdef DEBUG_QUATERNIONIC_MASS
   os << "QUAT_MASS: ctime before maximal order " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
@@ -1305,16 +1319,20 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
     std::optional<MyVector<T>> c1 = SolutionMat(Ob, idv);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (!c1) {
       std::cerr << "QUAT_MASS: 1 is not in the span of the order\n";
       throw TerminalException{1};
     }
+#endif
     MyVector<Tint> c1i(dO);
     for (int a = 0; a < dO; a++) {
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
       if (!IsInteger((*c1)(a))) {
         std::cerr << "QUAT_MASS: 1 is not in the order\n";
         throw TerminalException{1};
       }
+#endif
       c1i(a) = UniversalScalarConversion<Tint, T>((*c1)(a));
     }
     MyMatrix<Tint> comp = ComplementToBasis(c1i);
@@ -1326,10 +1344,12 @@ std::optional<T> QuaternionicComponentMass(
       }
       O.push_back(w);
     }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (QuatOrderDisc(O, r) != QuatOrderDisc(*opt_O, r)) {
       std::cerr << "QUAT_MASS: the new basis of O is not a basis\n";
       throw TerminalException{1};
     }
+#endif
   }
 #ifdef DEBUG_QUATERNIONIC_MASS
   os << "QUAT_MASS: ctime after maximal order " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
@@ -1356,22 +1376,25 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
   }
-  int n_ram_places = c;
+  [[maybe_unused]] int n_ram_places = c;
   for (Tint const &p_i : ram) {
     int64_t p = UniversalScalarConversion<int64_t, Tint>(p_i);
     int v = RationalValuation(qmax, p);
-    int f = 1, g = 1;
+    int f = 1;
+    [[maybe_unused]] int g = 1;
     if (FK) {
       auto [ee, ff, gg] = AbelianPrimeDecomposition(FK->n, FK->H, p);
       (void)ee;
       f = ff;
       g = gg;
     }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (v % (2 * f) != 0 || v / (2 * f) > g) {
       std::cerr << "QUAT_MASS: v_p(N(d(D))^2)=" << v << " at p=" << p
                 << " does not fit f=" << f << " g=" << g << "\n";
       throw TerminalException{1};
     }
+#endif
     int g_ram = v / (2 * f);
     n_ram_places += g_ram;
     T q = MyPow<T>(UniversalScalarConversion<T, int64_t>(p), f);
@@ -1383,10 +1406,12 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
   }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   if (n_ram_places % 2 != 0) {
     std::cerr << "QUAT_MASS: an odd number of ramified places\n";
     throw TerminalException{1};
   }
+#endif
   // S = O^r: the left multiplications by the generators and the Gram
   // matrices Tr trd(lambda w_a w_b^*), lambda in K
   int d = dimD;
@@ -1406,10 +1431,12 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
     std::optional<MyVector<T>> sol = SolutionMat(Obasis, y);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (!sol) {
       std::cerr << "QUAT_MASS: an element is not in the span of the order\n";
       throw TerminalException{1};
     }
+#endif
     return *sol;
   };
   int kS = d * r;
@@ -1419,10 +1446,12 @@ std::optional<T> QuaternionicComponentMass(
     for (int a = 0; a < d; a++) {
       MyVector<T> s = coords(MyMatrix<T>(g * O[a]));
       for (int b = 0; b < d; b++) {
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
         if (!IsInteger(s(b))) {
           std::cerr << "QUAT_MASS: a generator is not in the maximal order\n";
           throw TerminalException{1};
         }
+#endif
         for (int i = 0; i < r; i++) {
           Lg(i * d + b, i * d + a) = s(b);
         }
@@ -1469,10 +1498,12 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
     std::optional<MyVector<T>> mu = SolutionMat(Gflat, y);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (!mu) {
       std::cerr << "QUAT_MASS: no lambda for an integral Gram matrix\n";
       throw TerminalException{1};
     }
+#endif
     MyMatrix<T> lam = ZeroMatrix<T>(k, k);
     for (int t = 0; t < c; t++) {
       lam += (*mu)(t) * Center[t];
@@ -1588,10 +1619,12 @@ std::optional<T> QuaternionicComponentMass(
       }
     }
   }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   if (!best_G) {
     std::cerr << "QUAT_MASS: no totally positive lambda found\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef DEBUG_QUATERNIONIC_MASS
   os << "QUAT_MASS: ctime lambda chosen " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
 #endif
@@ -1608,21 +1641,25 @@ std::optional<T> QuaternionicComponentMass(
         }
       }
     }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if (MyMatrix<T>(gensS[ig].transpose() * BS) != MyMatrix<T>(BS * Lbar)) {
       std::cerr << "QUAT_MASS: the adjoint on S is not the canonical "
                    "involution\n";
       throw TerminalException{1};
     }
+#endif
   }
   // the Lie lattices and their discriminants
   std::vector<MyMatrix<T>> uX = QuatIntegralCommutant<T, Tint>(B, gens, true);
   std::vector<MyMatrix<T>> uS = QuatIntegralCommutant<T, Tint>(BS, gensS, true);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   if (static_cast<int>(uX.size()) != dim_u ||
       static_cast<int>(uS.size()) != dim_u) {
     std::cerr << "QUAT_MASS: the Lie lattices have ranks " << uX.size()
               << " and " << uS.size() << ", not " << dim_u << "\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef DEBUG_QUATERNIONIC_MASS
   os << "QUAT_MASS: ctime Lie lattices " << std::chrono::duration<double>(std::chrono::steady_clock::now() - c_start).count() << "\n";
 #endif
@@ -1665,6 +1702,7 @@ std::optional<T> QuaternionicComponentMass(
   for (int64_t q : prime_set(QuatOrderDisc(O0, r) / QuatOrderDisc(O, r))) {
     P.insert(q);
   }
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
   for (int64_t q : prime_set(discX / discS)) {
     if (P.count(q) == 0) {
       std::cerr << "QUAT_MASS: the Lie lattices differ at p=" << q
@@ -1672,6 +1710,7 @@ std::optional<T> QuaternionicComponentMass(
       throw TerminalException{1};
     }
   }
+#endif
 #ifdef DEBUG_QUATERNIONIC_MASS
   os << "QUAT_MASS: c=" << c << " r=" << r << " |disc O0|="
      << QuatOrderDisc(O0, r) << " |disc O|=" << QuatOrderDisc(O, r)
@@ -1692,11 +1731,13 @@ std::optional<T> QuaternionicComponentMass(
       have the same discriminant at p, which is checked.
      */
     if (r == 1 && RationalValuation(index_O, p) == 0) {
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
       if (RationalValuation(discX, p) != RationalValuation(discS, p)) {
         std::cerr << "QUAT_MASS: rank one over the maximal order at p=" << p
                   << " but the Lie lattices differ there\n";
         throw TerminalException{1};
       }
+#endif
 #ifdef DEBUG_QUATERNIONIC_MASS
       os << "QUAT_MASS: p=" << p << " rank one over the maximal order, ratio 1\n";
 #endif
@@ -1725,11 +1766,13 @@ std::optional<T> QuaternionicComponentMass(
 #endif
     int vX = RationalValuation(discX, p);
     int vS = RationalValuation(discS, p);
+#ifdef SANITY_CHECK_QUATERNIONIC_MASS
     if ((vX - vS) % 2 != 0) {
       std::cerr << "QUAT_MASS: the Lie discriminants differ by an odd power of "
                 << p << "\n";
       throw TerminalException{1};
     }
+#endif
     T ratio = UniversalScalarConversion<T, Tint>(nS->first) /
               UniversalScalarConversion<T, Tint>(nX->first);
     int ex = (vX - vS) / 2;

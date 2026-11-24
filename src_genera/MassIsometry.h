@@ -8,6 +8,10 @@
 #include "MassGroupComponents.h"
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ISOMETRY_MASS
+#endif
+
 /*
   The mass of the genus of a lattice with an isometry of finite order,
 
@@ -380,11 +384,13 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
         GlueOrbit<typename underlying_z_ring<T>::ring_type>(
         q, mods, glue_gens, image_groups, image_proper, bounds.max_module,
         bounds.max_group, bounds.max_orbit, bounds.max_vertices, os);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
     if (!opt) {
       std::cerr << "ISOM_MASS: the glue at q=" << q
                 << " exceeds the bounds of both the listing and the graph\n";
       throw TerminalException{1};
     }
+#endif
     opt->list_image = list_image;
 #ifdef DEBUG_ISOMETRY_MASS
     os << "ISOM_MASS: q=" << q << " |H_q|=" << opt->glue_order

@@ -23,15 +23,15 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ALGEBRAIC_MODULAR_FORMS
+# define DEBUG_ALGEBRAIC_MODULAR_FORMS
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
+# define SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
 #endif
 
 #ifdef TIMINGS
-#define TIMINGS_ALGEBRAIC_MODULAR_FORMS
+# define TIMINGS_ALGEBRAIC_MODULAR_FORMS
 #endif
 
 /*
@@ -420,15 +420,19 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
               w[b] = sum;
             }
             std::optional<size_t> opt_idx = cl_j.ls_level.line_index(w);
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
             if (!opt_idx) {
               std::cerr << "AMF: a level line is sent to zero\n";
               throw TerminalException{1};
             }
+#endif
             int64_t orb2 = cl_j.orbit_of_line[*opt_idx];
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
             if (orb2 == -1) {
               std::cerr << "AMF: a level line is sent to a non isotropic line\n";
               throw TerminalException{1};
             }
+#endif
             count[{static_cast<size_t>(orbit_of_line_i[idx]), static_cast<size_t>(orb2)}]++;
           }
           for (auto &kv : count) {
@@ -441,10 +445,13 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
       }
       if (i == 0) {
         l_n_neighbor[ip] = n_nb;
-      } else if (l_n_neighbor[ip] != n_nb) {
+      }
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
+      else if (l_n_neighbor[ip] != n_nb) {
         std::cerr << "AMF: the classes do not have the same number of neighbors\n";
         throw TerminalException{1};
       }
+#endif
 #ifdef TIMINGS_ALGEBRAIC_MODULAR_FORMS
       os << "|AMF: class " << i << " prime " << P.name << ", " << orb.l_repr.size() << " orbits|=" << time << "\n";
 #endif
@@ -472,10 +479,12 @@ compute_algebraic_modular_forms(RealifiedRing<T, Tint> const &ring,
       entries[{res.l_offset[t.i] + t.o, res.l_offset[t.j] + t.o2}] += t.weight;
     }
     for (auto &kv : entries) {
+#ifdef SANITY_CHECK_ALGEBRAIC_MODULAR_FORMS
       if (!IsInteger(kv.second)) {
         std::cerr << "AMF: a Hecke matrix entry is not an integer\n";
         throw TerminalException{1};
       }
+#endif
       hm.entries[kv.first] = UniversalScalarConversion<int64_t, T>(kv.second);
     }
     res.l_hecke.push_back(hm);

@@ -11,7 +11,7 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_GENUS_SPINOR
+# define DEBUG_GENUS_SPINOR
 #endif
 
 /*

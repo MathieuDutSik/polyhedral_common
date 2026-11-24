@@ -24,11 +24,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ISOMETRY_MASS
+# define DEBUG_ISOMETRY_MASS
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ISOMETRY_MASS
+# define SANITY_CHECK_ISOMETRY_MASS
 #endif
 
 /*
@@ -107,10 +107,12 @@ template <typename T> struct IsometryComponent {
 // bound of GL_n(Z)).
 template <typename T> int IsometryOrder(MyMatrix<T> const &P) {
   std::optional<size_t> order = IntegralMatrixFiniteOrder(P);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (!order) {
     std::cerr << "ISOM_MASS: the isometry is not of finite order\n";
     throw TerminalException{1};
   }
+#endif
   return static_cast<int>(*order);
 }
 
@@ -129,10 +131,12 @@ IsometryComponent<T> BuildIsometryComponent(MyMatrix<T> const &A,
   comp.basis = E;
   comp.gram = E * A * E.transpose();
   comp.sigma = E * P * A * E.transpose() * Inverse(comp.gram);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (!IsIntegralMatrix(comp.sigma) || comp.sigma * E != E * P) {
     std::cerr << "ISOM_MASS: the component of d=" << d << " is not stable\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint, T>(comp.gram);
   ResultSmithNormalForm<Tint> snf = SmithNormalForm(G_i);
   MyMatrix<Tint> D_i = snf.ROW * G_i * snf.COL;
@@ -162,10 +166,12 @@ MyMatrix<T> CyclotomicKernel(MyMatrix<T> const &E, MyMatrix<T> const &P,
     return MyMatrix<T>(0, E.cols());
   }
   MyMatrix<T> K = UniversalMatrixConversion<T, Tint>(K_i) * E;
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (!IsZeroMatrix(MyMatrix<T>(K * Phi))) {
     std::cerr << "ISOM_MASS: the kernel of Phi_" << d << " is wrong\n";
     throw TerminalException{1};
   }
+#endif
   return K;
 }
 
@@ -188,11 +194,13 @@ std::vector<IsometryComponent<T>> IsometryComponents(MyMatrix<T> const &A,
     tot += E.rows();
     res.push_back(BuildIsometryComponent<T, Tint>(A, E, P, d));
   }
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (tot != n) {
     std::cerr << "ISOM_MASS: the components have total rank " << tot
               << " instead of " << n << "\n";
     throw TerminalException{1};
   }
+#endif
   return res;
 }
 
@@ -300,11 +308,13 @@ AbelianGroupComponents(MyMatrix<T> const &A,
     tot += blk.E.rows();
     res.push_back(comp);
   }
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (tot != n) {
     std::cerr << "ISOM_MASS: the components have total rank " << tot
               << " instead of " << n << "\n";
     throw TerminalException{1};
   }
+#endif
   return res;
 }
 

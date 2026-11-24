@@ -24,15 +24,15 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_GENUS_ENUMERATION_GROUP
+# define DEBUG_GENUS_ENUMERATION_GROUP
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_GENUS_ENUMERATION_GROUP
+# define SANITY_CHECK_GENUS_ENUMERATION_GROUP
 #endif
 
 #ifdef TIMINGS
-#define TIMINGS_GENUS_ENUMERATION_GROUP
+# define TIMINGS_GENUS_ENUMERATION_GROUP
 #endif
 
 /*
@@ -441,22 +441,26 @@ EigenvectorNeighborVector(EigenspaceData const &ed, std::vector<int> const &c,
   // e = v_p(2): the neighbor needs v_p((v, v)) >= e + 2, the isotropy
   // modulo p is v_p >= e + 1, and the valuation e + 1 is corrected.
   int e = (p == 2) ? 1 : 0;
-  bool is_pm1 = ed.is_real;
+  [[maybe_unused]] bool is_pm1 = ed.is_real;
   int val = (q == 0) ? e + 2 : IntegerValuation(q, p);
   if (val < e + 1) {
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     if (!is_pm1) {
       std::cerr << "GENUS_GROUP: an eigenvector of an eigenvalue != +-1 is "
                    "not isotropic\n";
       throw TerminalException{1};
     }
+#endif
     return {};
   }
   if (val == e + 1) {
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     if (!is_pm1) {
       std::cerr << "GENUS_GROUP: an eigenvector of an eigenvalue != +-1 is "
                    "not isotropic modulo p^2\n";
       throw TerminalException{1};
     }
+#endif
     /*
       v <- v - a p u with u an eigenvector modulo p^2 and (v, u) a unit,
       a = (q / p^{e+1}) / (2 (v, u) / p^e) modulo p: then
@@ -648,11 +652,13 @@ GenusNeighborPair(MyMatrix<Tint> const &G, std::vector<MyMatrix<T>> const &ListP
   std::vector<MyMatrix<T>> ListS;
   for (auto const &P : ListP) {
     MyMatrix<T> S = Bred * P * BredInv;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     if (!IsIntegralMatrix(S)) {
       std::cerr << "GENUS_GROUP: the neighbor is not stable under the "
                    "isometry\n";
       throw TerminalException{1};
     }
+#endif
     ListS.push_back(S);
   }
   return std::make_pair(rec.GramMatRed, ListS);
@@ -720,10 +726,12 @@ PairCentralizer(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
 // bound of GL_n(Z)).
 template <typename Tint> int FiniteMatrixOrderInt(MyMatrix<Tint> const &P) {
   std::optional<size_t> order = IntegralMatrixFiniteOrder(P);
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
   if (!order) {
     std::cerr << "GENUS_GROUP: the isometry is not of finite order\n";
     throw TerminalException{1};
   }
+#endif
   return static_cast<int>(*order);
 }
 
@@ -1073,15 +1081,19 @@ GroupNeighborPair(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   MyMatrix<T> B = UniversalMatrixConversion<T, Tint>(Bz) /
                   UniversalScalarConversion<T, T_small_prime>(p);
   MyMatrix<T> GramN = B * A * B.transpose();
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
   if (!IsIntegralMatrix(GramN)) {
     std::cerr << "GENUS_GROUP: the module neighbor is not integral\n";
     throw TerminalException{1};
   }
+#endif
   for (int i = 0; i < n; i++) {
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     if (!IsInteger(GramN(i, i) / T(2))) {
       std::cerr << "GENUS_GROUP: the module neighbor is not even\n";
       throw TerminalException{1};
     }
+#endif
   }
   LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(GramN, os);
   MyMatrix<T> Bred = UniversalMatrixConversion<T, Tint>(rec.Pmat) * B;
@@ -1089,10 +1101,12 @@ GroupNeighborPair(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &ListP,
   std::vector<MyMatrix<T>> ListS;
   for (auto const &P : ListP) {
     MyMatrix<T> S = Bred * P * BredInv;
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_GROUP
     if (!IsIntegralMatrix(S)) {
       std::cerr << "GENUS_GROUP: the module neighbor is not G-stable\n";
       throw TerminalException{1};
     }
+#endif
     ListS.push_back(S);
   }
   return {rec.GramMatRed, ListS};

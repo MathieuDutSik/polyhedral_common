@@ -7,6 +7,10 @@
 #include "MassQuadraticHeckeL.h"
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ABELIAN_QUADRATIC_MASS
+#endif
+
 /*
   The mass of a quadratic lattice over a totally real abelian field K
   (QuadraticMassAbelianLattice): the field and the discriminant of the
@@ -268,10 +272,12 @@ LocalImagePiAdic(MyMatrix<T> const &B,
   auto mod_pc = [&](T const &x) -> int64_t {
     Tint den = GetDenominator_z(x);
     Tint inv = mod_inv(ResInt(den, pc), pc);
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
     if (inv == 0) {
       std::cerr << "ABQUAD: a denominator divisible by p\n";
       throw TerminalException{1};
     }
+#endif
     Tint prod = GetNumerator_z(x) * inv;
     Tint v = ResInt(prod, pc);
     return UniversalScalarConversion<int64_t, Tint>(v);
@@ -330,10 +336,12 @@ LocalImagePiAdic(MyMatrix<T> const &B,
             break;
           }
         }
+#ifdef SANITY_CHECK_ABELIAN_QUADRATIC_MASS
         if (piv < 0) {
           std::cerr << "ABQUAD: a degenerate local form\n";
           throw TerminalException{1};
         }
+#endif
         std::swap(G[piv], G[col]);
         std::swap(Inv[piv], Inv[col]);
         ElemE<T> iv = EInv(G[col][col], K);

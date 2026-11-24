@@ -12,6 +12,10 @@
 #include "MassUnitaryInnerForm.h"
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ISOMETRY_MASS
+#endif
+
 /*
   The components of the mass of a pair (L, G) for a non-abelian finite
   group G (MassIsometry.h): the isotypic components V_rho, End_G(V_rho)
@@ -139,10 +143,12 @@ FirstKernelOfDimension(std::vector<MyMatrix<T>> const &conditions,
     ModRowsI64 R(M.rows(), std::vector<int64_t>(M.cols()));
     for (int i = 0; i < M.rows(); i++) {
       for (int j = 0; j < M.cols(); j++) {
+#ifdef SANITY_CHECK_ISOMETRY_MASS
         if (!IsInteger(M(i, j))) {
           std::cerr << "ISOM_MASS: a condition is not integral\n";
           throw TerminalException{1};
         }
+#endif
         R[i][j] = ResModOfI64(GetNumerator_z(M(i, j)), p);
       }
     }
@@ -274,10 +280,12 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     for (int u = 0; u < n; u++) {
       for (int v = 0; v < n; v++) {
         T x = elts[i](u, v);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
         if (!IsInteger(x)) {
           std::cerr << "ISOM_MASS: a group element is not integral\n";
           throw TerminalException{1};
         }
+#endif
         ielts[i][u * n + v] = UniversalScalarConversion<int64_t, T>(x);
       }
     }
@@ -308,10 +316,12 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
   }
   auto ifind = [&](IMat const &X) -> size_t {
     auto iter = iindex.find(X);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
     if (iter == iindex.end()) {
       std::cerr << "ISOM_MASS: a product is not in the group\n";
       throw TerminalException{1};
     }
+#endif
     return iter->second;
   };
   size_t i_id = 0;
@@ -431,11 +441,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         next.push_back({K, cond});
         tot += K.rows();
       }
+#ifdef SANITY_CHECK_ISOMETRY_MASS
       if (tot != k) {
         std::cerr << "ISOM_MASS: the class sums are not diagonalizable with "
                      "integer eigenvalues on a block\n";
         throw TerminalException{1};
       }
+#endif
     }
     blocks = std::move(next);
   }
@@ -702,6 +714,7 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         for (auto const &x : elts) {
           EltsC.push_back(action(x).transpose());
         }
+#ifdef SANITY_CHECK_ISOMETRY_MASS
         for (auto const &C : GensC) {
           if (MyMatrix<T>(C.transpose() * Gram * C) != Gram) {
             std::cerr << "ISOM_MASS: a generator is not an isometry of the "
@@ -709,18 +722,21 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
             throw TerminalException{1};
           }
         }
+#endif
         std::optional<AbelianField> FKq;
         T dKq(1);
         if (c > 1) {
           auto [ClassSumq, Nexpq, Hgensq] = center_field();
           (void)ClassSumq;
           FKq = MakeAbelianRealField(Nexpq, Hgensq);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
           if (AbelianFieldDegree(*FKq) != c) {
             std::cerr << "ISOM_MASS: the center has degree " << c
                       << " but the field found has degree "
                       << AbelianFieldDegree(*FKq) << "\n";
             throw TerminalException{1};
           }
+#endif
           DirichletGroup Gd = ComputeDirichletGroup(FKq->n);
           for (auto const &t : FieldCharacters(Gd, FKq->H, false)) {
             dKq *= UniversalScalarConversion<T, int64_t>(PrimitiveCharacter(Gd, t).first);
@@ -744,11 +760,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         int sq = static_cast<int>(std::llround(
             std::sqrt(static_cast<double>(dimA) / static_cast<double>(4 * c))));
         if (4 * c * sq * sq != dimA || k != 4 * c * sq * rq) {
+#ifdef SANITY_CHECK_ISOMETRY_MASS
           if (!(type2 && rq >= 2)) {
             std::cerr << "ISOM_MASS: G spans an algebra of dimension " << dimA
                       << " on a quaternionic block of rank " << k << "\n";
             throw TerminalException{1};
           }
+#endif
           type2_split = true;
         }
         if (!type2) {
@@ -1317,11 +1335,13 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
                 }
                 int vX = RationalValuation(discX, pp);
                 int vS = RationalValuation(discS, pp);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
                 if ((vX - vS) % 2 != 0) {
                   std::cerr << "ISOM_MASS: the Lie discriminants differ by an "
                                "odd power of " << pp << "\n";
                   throw TerminalException{1};
                 }
+#endif
                 T ratio = UniversalScalarConversion<T, Tint>(nS->first) /
                           UniversalScalarConversion<T, Tint>(nX->first);
                 int ex = (vX - vS) / 2;

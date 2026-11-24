@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_FINITE_FIELD
+#endif
+
 /*
   The finite fields F_q = F_p[x] / (mu), mu monic irreducible of degree f,
   q = p^f: the scalar type of the residue fields of the number fields and
@@ -57,14 +61,18 @@ private:
 };
 
 inline FiniteField MakeFiniteField(T_small_prime p, PolyQ const &mu_in) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (mu_in.q != p) {
     std::cerr << "FQ: the modulus is not a polynomial modulo " << p << "\n";
     throw TerminalException{1};
   }
+# ifdef SANITY_CHECK_FINITE_FIELD
+# endif
   if (mu_in.degree() < 1) {
     std::cerr << "FQ: the modulus has degree < 1\n";
     throw TerminalException{1};
   }
+#endif
   PolyQ mu = PolyMonicQ(mu_in);
   int f = mu.degree();
   uint64_t q = 1;
@@ -81,11 +89,13 @@ inline FiniteField MakePrimeField(T_small_prime p) {
 
 // the class of a modulo mu
 inline FqElt FqFromPoly(FiniteField const &F, PolyQ const &a) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (a.q != F.p) {
     std::cerr << "FQ: a polynomial modulo " << a.q << " in F_" << F.p
               << "^" << F.f << "\n";
     throw TerminalException{1};
   }
+#endif
   PolyQ r = a;
   if (r.degree() >= F.f) {
     r = r % F.mu;
@@ -138,10 +148,12 @@ inline FqElt FqMul(FiniteField const &F, FqElt const &a, FqElt const &b) {
 }
 
 inline FqElt FqInv(FiniteField const &F, FqElt const &a) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (a.is_zero()) {
     std::cerr << "FQ: the inverse of 0\n";
     throw TerminalException{1};
   }
+#endif
   FqElt res = FqFromPoly(F, PolyInverseModQ(FqToPoly(F, a), F.mu));
 #ifdef SANITY_CHECK_FINITE_FIELD
   if (FqMul(F, a, res) != FqOne(F)) {
@@ -172,10 +184,12 @@ inline T_residue FqTrace(FiniteField const &F, FqElt const &a) {
     t = FqAdd(F, t, x);
     x = FqFrobenius(F, x, 1);
   }
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (t.size() > 1) {
     std::cerr << "FQ: the trace is not in the prime field\n";
     throw TerminalException{1};
   }
+#endif
   return t.coeff(0);
 }
 
@@ -185,29 +199,35 @@ inline T_residue FqTrace(FiniteField const &F, FqElt const &a) {
   squares to the squares), with no exponent beyond p.
  */
 inline int FqQuadraticCharacter(FiniteField const &F, FqElt const &u) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (u.is_zero()) {
     std::cerr << "FQ: the quadratic character of 0\n";
     throw TerminalException{1};
   }
+#endif
   FqElt prod = FqOne(F);
   FqElt conj = u;
   for (int i = 0; i < F.f; i++) {
     prod = FqMul(F, prod, conj);
     conj = FqFrobenius(F, conj, 1);
   }
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (prod.size() != 1) {
     std::cerr << "FQ: the norm is not in F_p\n";
     throw TerminalException{1};
   }
+#endif
   return ResKronecker(prod[0], F.p);
 }
 
-inline void FqCheckCodes(FiniteField const &F) {
+inline void FqCheckCodes([[maybe_unused]] FiniteField const &F) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (F.q == 0) {
     std::cerr << "FQ: the field F_" << F.p << "^" << F.f
               << " is too large for the codes of its elements\n";
     throw TerminalException{1};
   }
+#endif
 }
 
 inline uint64_t FqEncode(FiniteField const &F, FqElt const &a) {
@@ -260,10 +280,12 @@ inline uint64_t FqCodeMulFast(FiniteField const &F, uint64_t x, uint64_t y) {
 }
 
 inline uint64_t FqCodeInvFast(FiniteField const &F, uint64_t x) {
+#ifdef SANITY_CHECK_FINITE_FIELD
   if (x == 0) {
     std::cerr << "FQ: the inverse of 0\n";
     throw TerminalException{1};
   }
+#endif
   if (F.f == 1) {
     return ResInv(x, F.p);
   }

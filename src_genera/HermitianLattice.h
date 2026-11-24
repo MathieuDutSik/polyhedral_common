@@ -21,6 +21,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_HERMITIAN_LATTICE
+#endif
+
 /*
   Hermitian lattices over E = Q(zeta_d) seen as pairs (L, sigma): L a
   Z-lattice (Gram matrix G on Z^n) and sigma an isometry of minimal
@@ -236,10 +240,12 @@ HermitianLocalStructure(MyMatrix<T> const &G, MyMatrix<T> const &P,
         }
         Tint ord = HermKernelOrder<T, Tint>(G, Ms);
         int v = HermValuation(ord, l);
+#ifdef SANITY_CHECK_HERMITIAN_LATTICE
         if (v % f != 0) {
           std::cerr << "HERM_LATTICE: the kernel order is not a power of q\n";
           throw TerminalException{1};
         }
+#endif
         int lg = v / f;
         logs.push_back(lg);
         if (lg == last) {

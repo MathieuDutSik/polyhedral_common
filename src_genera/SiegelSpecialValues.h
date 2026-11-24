@@ -15,7 +15,7 @@
 // clang-format on
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_SIEGEL_SPECIAL_VALUES
+# define SANITY_CHECK_SIEGEL_SPECIAL_VALUES
 #endif
 
 /*
@@ -143,10 +143,12 @@ PiRadical<T> operator*(PiRadical<T> const &x, PiRadical<T> const &y) {
 }
 
 template <typename T> PiRadical<T> PiRadicalInverse(PiRadical<T> const &x) {
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if (x.q == 0) {
     std::cerr << "SSV: inverse of a zero special value\n";
     throw TerminalException{1};
   }
+#endif
   return {T(1) / x.q, -x.pi_exp, T(1) / x.rad};
 }
 
@@ -173,17 +175,21 @@ template <typename T> PiRadical<T> RationalHalfPower(T const &x, int num) {
 // The rational value of x, which must have pi exponent 0 and a radical that
 // is the square of a rational.
 template <typename T> T PiRadicalToRational(PiRadical<T> const &x) {
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if (x.pi_exp != 0) {
     std::cerr << "SSV: the value is not rational, pi exponent " << x.pi_exp
               << "\n";
     throw TerminalException{1};
   }
+#endif
   std::optional<T> opt = UniversalSquareRoot(x.rad);
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if (!opt) {
     std::cerr << "SSV: the value is not rational, radical " << x.rad
               << " is not a square\n";
     throw TerminalException{1};
   }
+#endif
   return x.q * *opt;
 }
 
@@ -193,10 +199,12 @@ template <typename T> T PiRadicalToRational(PiRadical<T> const &x) {
 
 // Gamma(j/2) for j >= 1.
 template <typename T> PiRadical<T> GammaHalfInteger(int j) {
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if (j < 1) {
     std::cerr << "SSV: GammaHalfInteger needs j >= 1, got j=" << j << "\n";
     throw TerminalException{1};
   }
+#endif
   if (j % 2 == 0) {
     T fact(1);
     for (int i = 2; i < j / 2; i++) {
@@ -215,11 +223,13 @@ template <typename T> PiRadical<T> GammaHalfInteger(int j) {
 
 // zeta(k) for k >= 2 even: (-1)^{k/2+1} B_k (2 pi)^k / (2 k!).
 template <typename T> PiRadical<T> ZetaEvenValue(int k) {
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if (k < 2 || k % 2 != 0) {
     std::cerr << "SSV: ZetaEvenValue needs an even k >= 2, got k=" << k
               << "\n";
     throw TerminalException{1};
   }
+#endif
   std::vector<T> B = BernoulliNumbers<T>(k);
   T q = B[k];
   q *= MyPow<T>(T(2), k);
@@ -247,11 +257,13 @@ template <typename T> PiRadical<T> LQuadraticValue(int k, int64_t D) {
     return ZetaEvenValue<T>(k);
   }
   int delta = (D > 0) ? 0 : 1;
+#ifdef SANITY_CHECK_SIEGEL_SPECIAL_VALUES
   if ((k - delta) % 2 != 0 || k < 1) {
     std::cerr << "SSV: L(k, chi_D) at k=" << k << " D=" << D
               << " is not at a critical point of the right parity\n";
     throw TerminalException{1};
   }
+#endif
   int64_t f = (D < 0) ? -D : D;
   T f_T = UniversalScalarConversion<T, int64_t>(f);
   T q = GeneralizedBernoulli<T>(k, D) / T(2);

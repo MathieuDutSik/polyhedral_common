@@ -16,6 +16,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ABELIAN_HERMITIAN_MASS
+#endif
+
 /*
   Masses of Hermitian lattices over an abelian CM field E that need not be
   cyclotomic: E the subfield of Q(zeta_n) fixed by H (AbelianField), K
@@ -540,10 +544,12 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
           break;
         }
       }
+#ifdef SANITY_CHECK_ABELIAN_HERMITIAN_MASS
       if (piv < 0) {
         std::cerr << "ABHERM: degenerate Hermitian form\n";
         throw TerminalException{1};
       }
+#endif
       if (piv != c) {
         std::swap(G[piv], G[c]);
         for (auto &x : det) {
@@ -608,10 +614,12 @@ inline T AbelianLocalFactorDyadic(MyMatrix<T> const &B,
         Bc++;
       }
     }
+#ifdef SANITY_CHECK_ABELIAN_HERMITIAN_MASS
     if (A == 0 || Bc == 0) {
       std::cerr << "ABHERM: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
+#endif
     fac *= UniversalScalarConversion<T, int64_t>(A) /
            UniversalScalarConversion<T, int64_t>(Bc);
   }
@@ -874,11 +882,13 @@ HermitianMassAbelianLattice(MyMatrix<T> const &B,
                             AbelianField const &F) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   int deg = static_cast<int>(AbelianFieldDegree(F));
+#ifdef SANITY_CHECK_ABELIAN_HERMITIAN_MASS
   if (static_cast<int>(Omega.size()) != deg) {
     std::cerr << "ABHERM: " << Omega.size() << " basis elements for a field "
               << "of degree " << deg << "\n";
     throw TerminalException{1};
   }
+#endif
   int r = B.rows();
   int m = r / deg;
   if (m == 1) {

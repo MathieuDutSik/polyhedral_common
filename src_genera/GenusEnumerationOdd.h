@@ -13,11 +13,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_GENUS_ENUMERATION_ODD
+# define DEBUG_GENUS_ENUMERATION_ODD
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_GENUS_ENUMERATION_ODD
+# define SANITY_CHECK_GENUS_ENUMERATION_ODD
 #endif
 
 /*
@@ -58,11 +58,13 @@ MyMatrix<Tint> EvenSublatticeBasis(MyMatrix<T> const &GramMat) {
       break;
     }
   }
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_ODD
   if (j_odd < 0) {
     std::cerr << "GENUS_ODD: the form is even, it has no even sublattice of "
                  "index 2\n";
     throw TerminalException{1};
   }
+#endif
   // b(x, x) = sum_i a_ii x_i mod 2: the e_i with a_ii even, e_i + e_j for
   // the other i, and 2 e_j, with a_jj odd.
   MyMatrix<Tint> B = ZeroMatrix<Tint>(n, n);

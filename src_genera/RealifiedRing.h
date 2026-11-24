@@ -13,6 +13,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_REALIFIED_RING
+#endif
+
 /*
   A lattice over R = Z or R = O_K = Z[omega] (omega^2 = s omega - p, K
   imaginary quadratic) with a form h, realified: the vector (x_1, ..., x_m)
@@ -78,10 +82,12 @@ template <typename T, typename Tint> struct RealifiedRing {
       }
     }
     std::optional<std::pair<T, T>> opt = ring.gcd(l_x);
+#ifdef SANITY_CHECK_REALIFIED_RING
     if (!opt) {
       std::cerr << "RING: primitive, the gcd of the entries is not principal\n";
       throw TerminalException{1};
     }
+#endif
     MyVector<Tint> w(n());
     for (int j = 0; j < m; j++) {
       std::pair<T, T> y = ring.div({v(j), v(m + j)}, *opt);

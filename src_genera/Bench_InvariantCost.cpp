@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #ifdef ENABLE_FLINT_SUPPORT
-#include "NumberTheoryFlint.h"
+# include "NumberTheoryFlint.h"
 #endif
 #include "NumberTheory.h"
 #include "Group.h"

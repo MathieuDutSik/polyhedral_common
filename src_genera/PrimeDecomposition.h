@@ -14,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_PRIME_DECOMPOSITION
+#endif
+
 /*
   The local arithmetic of a number field E at a rational prime q, E acting
   on a Z-lattice X through the matrices of a Z-basis of O_E:
@@ -88,10 +92,12 @@ inline ElemE<T> ConjugateOfGenerator(MyMatrix<T> const &B,
   MyVector<T> w = Sstar.transpose() * v;
   // w = sum_i a_i v S^i
   std::optional<MyVector<T>> sol = SolutionMat(kd.basis, w);
+#ifdef SANITY_CHECK_PRIME_DECOMPOSITION
   if (!sol) {
     std::cerr << "PRIME_DECOMP: the conjugate of theta is not in Q(theta)\n";
     throw TerminalException{1};
   }
+#endif
   int deg = kd.basis.rows();
   ElemE<T> conj(deg);
   for (int i = 0; i < deg; i++) {
@@ -453,10 +459,12 @@ inline FqElt LocalResidue(ElemE<T> const &x, LocalPrimeK<T> &P) {
   T_residue inv = ResInv(ResModOf(QuoInt(d, qk), q_u), q_u);
   std::vector<T_residue> res;
   for (auto const &c : z) {
+#ifdef SANITY_CHECK_PRIME_DECOMPOSITION
     if (ResInt(c, qk) != 0) {
       std::cerr << "ABQUAD: the residue of a non integral element\n";
       throw TerminalException{1};
     }
+#endif
     res.push_back(ResMul(ResModOf(QuoInt(c, qk), q_u), inv, q_u));
   }
   return FqFromPoly(P.F, PolyQ(q_u, std::move(res)));
@@ -683,12 +691,14 @@ PrimeLocalGenerators(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega
         v(k) = 1;
         try_add(v);
       }
+#ifdef SANITY_CHECK_PRIME_DECOMPOSITION
       if (static_cast<int>(chosen.size()) != m) {
         std::cerr << "PRIME_DECOMP: no local basis at a prime over the common index "
                      "divisor "
                   << q << "\n";
         throw TerminalException{1};
       }
+#endif
       res.push_back({lg, g, e_ram, chosen});
     }
   }

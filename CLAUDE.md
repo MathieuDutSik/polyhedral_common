@@ -128,6 +128,36 @@ A check that is too expensive to run routinely (for example one that runs severa
 #endif
 ```
 
+### Where `TerminalException` is thrown
+
+A `throw TerminalException{1}` in the library code (the headers) signals a
+programming error, so it is almost always inside a `#ifdef
+SANITY_CHECK_<CONTEXT>` block, as above: the check of an invariant that
+holds when the code is right. Each header maps the general `SANITY_CHECK`
+onto its contexts (`#ifdef SANITY_CHECK` then `# define
+SANITY_CHECK_<CONTEXT>`), so that `-DSANITY_CHECK` turns them all on.
+
+An incorrect input (a value of a namelist out of range, a file that cannot
+be read or parsed, a matrix that is not of the expected kind) is not a
+programming error: it is detected and the exception thrown in the `.cpp`
+program that reads the input, before the library is called, or after a
+library function has reported the failure to it (a `std::optional`, a
+flag of the result). Likewise a computation that cannot be completed (a
+bound exceeded, a case not treated) is reported to the caller, which
+decides.
+
+### Nested preprocessor directives are indented
+
+Inside a conditional block, the directives are indented by one space
+after the `#` per level, the include guard not counting:
+```cpp
+#ifdef SANITY_CHECK
+# ifdef DEBUG
+#  define DEBUG_GENUS_ENUMERATION
+# endif
+#endif
+```
+
 ### `#ifdef TIMINGS_<CONTEXT>`
 For wall-clock measurement. Prints elapsed times around the operation being measured. Should rely on the in-tree timing helpers (`HumanTime`, `MicrosecondTime`, etc.) so output is consistent. Example:
 ```cpp

@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_LOCAL_JORDAN
+#endif
+
 /*
   The Jordan splittings of a Gram matrix over a number field at a prime P,
   the valuation v_P given by a PrimeValuation: a symmetric bilinear form
@@ -201,10 +205,12 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
         }
       }
     }
+#ifdef SANITY_CHECK_LOCAL_JORDAN
     if (bi < 0) {
       std::cerr << "LOCAL_JORDAN: degenerate Gram matrix\n";
       throw TerminalException{1};
     }
+#endif
     if (bi != bj && !hermitian && !dyadic) {
       // the small off-diagonal entry moved to the diagonal
       add_mult(bi, bj, EZetaPower(0, K));

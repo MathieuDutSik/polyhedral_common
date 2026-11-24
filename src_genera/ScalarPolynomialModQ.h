@@ -13,6 +13,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_POLYQ
+#endif
+
 /*
   Polynomials with coefficients modulo a prime q (PolyQ) and with integer
   coefficients (PolyZ): the ring operations, division, gcd and inverses
@@ -142,10 +146,12 @@ inline PolyQ PolyScaleQ(PolyQ const &a, T_residue s) {
 inline std::pair<PolyQ, PolyQ> PolyDivModQ(PolyQ const &a, PolyQ const &b) {
   PolyCheckSameQ(a, b);
   T_small_prime q = a.q;
+#ifdef SANITY_CHECK_POLYQ
   if (b.is_zero()) {
     std::cerr << "POLYQ: division by zero\n";
     throw TerminalException{1};
   }
+#endif
   if (a.size() < b.size()) {
     return {PolyQ(q), a};
   }
@@ -200,10 +206,12 @@ inline PolyQ PolyInverseModQ(PolyQ const &a, PolyQ const &b) {
     s1 = s2;
   }
   // r0 is a nonzero constant
+#ifdef SANITY_CHECK_POLYQ
   if (r0.size() != 1) {
     std::cerr << "POLYQ: the polynomials are not coprime\n";
     throw TerminalException{1};
   }
+#endif
   return PolyScaleQ(s0, ResInv(r0[0], q)) % b;
 }
 

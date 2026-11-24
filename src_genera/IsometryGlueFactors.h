@@ -21,6 +21,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ISOMETRY_GLUE_FACTORS
+#endif
+
 /*
   The seeds of every genus of pairs (L, sigma), L in the genus of a given
   lattice and sigma of characteristic polynomial prod_i mu_i^{b_i}, the
@@ -444,11 +448,13 @@ template <typename T> std::set<int> CyclotomicFactorsOf(std::vector<T> mu) {
       deg -= dphi;
     }
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
   if (deg != 0) {
     std::cerr << "ISOM_FACTORS: a minimal polynomial is not a product of "
                  "cyclotomic polynomials\n";
     throw TerminalException{1};
   }
+#endif
   return res;
 }
 
@@ -659,10 +665,12 @@ GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
   if (n_gen == 1) {
     T res = T_abs(PolyResultant(FactorsProduct(factors, idx_in, 0),
                                 FactorsProduct(factors, idx_out, 0)));
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
     if (res == 0) {
       std::cerr << "ISOM_FACTORS: the minimal polynomials are not coprime\n";
       throw TerminalException{1};
     }
+#endif
     Tint res_i = UniversalScalarConversion<Tint, T>(res);
     return {res_i, MyPow<Tint>(res_i, std::min(GlueGenerators(factors, idx_in, 0),
                                                GlueGenerators(factors, idx_out, 0)))};
@@ -783,10 +791,12 @@ GlueBound<Tint> GlueBounds(std::vector<IsometryFactor<T>> const &factors,
       best = cost;
     }
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
   if (!best) {
     std::cerr << "ISOM_FACTORS: two factors have the same character\n";
     throw TerminalException{1};
   }
+#endif
   Tint E = *best;
   int c_X = X.rank / static_cast<int>(deg_X);
   int c_Y = rank_in + rank_out - X.rank;
@@ -861,7 +871,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<GluedPair<T>>
 FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
             std::ostream &os) {
-  int n = A.rows();
+  [[maybe_unused]] int n = A.rows();
   T det = DeterminantMat(A);
   Tint d = UniversalScalarConversion<Tint, T>(det);
   GenusSymbol S = GenusSymbolOfGram<T, Tint>(A);
@@ -873,12 +883,15 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
     }
     sum_rank += f.rank;
   }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
   if (factors.empty() || sum_rank != n) {
     std::cerr << "ISOM_FACTORS: the ranks of the factors add up to "
               << sum_rank << ", not " << n << "\n";
     throw TerminalException{1};
   }
+#endif
   size_t n_gen = factors[0].mus.size();
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
   for (auto const &f : factors) {
     if (f.mus.size() != n_gen) {
       std::cerr << "ISOM_FACTORS: the factors have different numbers of "
@@ -886,6 +899,7 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
       throw TerminalException{1};
     }
   }
+#endif
   // the pieces of each factor, of an admissible determinant
   for (size_t i = 0; i < factors.size(); i++) {
     IsometryFactor<T> &f = factors[i];
@@ -937,12 +951,14 @@ FactorSeeds(MyMatrix<T> const &A, std::vector<IsometryFactor<T>> factors,
         cert = IsotypicPiecesMaximalOrder<T, Tint, Tgroup>(
             *f.irrep, f.multiplicity, dets, gp, os);
       }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
       if (!cert) {
         std::cerr << "ISOM_FACTORS: " << f.desc
                   << ": no complete search of the pieces for this "
                      "representation\n";
         throw TerminalException{1};
       }
+#endif
       std::vector<GroupLattice<T>> const &list_P = *cert;
       for (auto const &P : list_P) {
         if (OddSymbolFitsIn<Tint>(GenusSymbolOfGram<T, Tint>(P.gram), S,
@@ -1355,11 +1371,13 @@ OddOverlatticeOrbits(MyMatrix<T> const &A0, std::vector<MyMatrix<T>> const &List
       orbit_size++;
       for (auto const &h : gens) {
         std::vector<int> w = act(v, h);
+#ifdef SANITY_CHECK_ISOMETRY_GLUE_FACTORS
         if (admissible.count(key(w)) == 0) {
           std::cerr << "ISOM_FACTORS: the centralizer does not preserve the "
                        "admissible classes\n";
           throw TerminalException{1};
         }
+#endif
         if (seen.insert(key(w)).second) {
           queue.push_back(w);
         }

@@ -21,7 +21,7 @@
 using T_character = int64_t;
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
+# define SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
 #endif
 
 // SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES_EXTENSIVE (not switched on by
@@ -353,10 +353,12 @@ T RankOneDensityOdd(SiegelJordanBlocks const &q, PadicClass const &a) {
   T_small_prime p = q.p;
   std::map<int, std::pair<int, T_residue>> levels;
   for (auto const &b : q.blocks) {
+#ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
     if (b.kind != SiegelBlockKind::Unit) {
       std::cerr << "LDBP: a binary block at an odd prime\n";
       throw TerminalException{1};
     }
+#endif
     auto &lv = levels[b.e];
     if (lv.first == 0) {
       lv.second = 1;
@@ -791,10 +793,12 @@ template <typename T, typename Tint>
 std::optional<T> UnitChainDensity(MyMatrix<T> const &S,
                                   std::vector<PadicClass> const &DT, T_small_prime p,
                                   BadPrimeDensityCache<T> &cache) {
+#ifdef SANITY_CHECK_LOCAL_DENSITY_BAD_PRIMES
   if (p == 2) {
     std::cerr << "LDBP: the unit chain is for odd primes\n";
     throw TerminalException{1};
   }
+#endif
   std::vector<PadicClass> D = DT;
   std::vector<PadicClass> DS = OddDiagonalClasses<T, Tint>(S, p);
   std::vector<PadicClass> chain;

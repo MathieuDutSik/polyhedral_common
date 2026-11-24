@@ -16,11 +16,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_GROUP_NEIGHBOR_MOD_P
+# define DEBUG_GROUP_NEIGHBOR_MOD_P
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
+# define SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
 #endif
 
 /*
@@ -408,12 +408,14 @@ IrreducibleTypes(int n, std::vector<ModMatrix> const &gens,
               << " isotypic dim=" << Iso.basis.rows()
               << " isotropic=" << tp.isotypic_isotropic << "\n";
 #endif
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
     if (Iso.basis.rows() != k * static_cast<int>(tp.Phi.size())) {
       std::cerr << "GROUP_NEIGHBOR: the isotypic part has dimension "
                 << Iso.basis.rows() << " instead of " << k * tp.Phi.size()
                 << "\n";
       throw TerminalException{1};
     }
+#endif
     found = Concatenate(found, Iso.basis);
     res.push_back(tp);
     RowSpaceModP Found = ComputeRowSpaceModP(found, p);
@@ -483,10 +485,12 @@ ActionOnHom(IrreducibleType const &tp, std::vector<ModMatrix> const &theta_pow,
   for (size_t i = 0; i < m; i++) {
     std::optional<ModVector> sol = SolveRowsModP(
         basis, FlattenModMatrix(ModMatrixProduct(tp.Phi[i], h, p)), p);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
     if (!sol) {
       std::cerr << "GROUP_NEIGHBOR: h does not preserve Hom_G(S0, L/pL)\n";
       throw TerminalException{1};
     }
+#endif
     for (size_t j = 0; j < m; j++) {
       std::vector<T_residue> cf(tp.f);
       for (int a = 0; a < tp.f; a++) {
@@ -609,10 +613,12 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   for (int i = 0; i < k; i++) {
     for (int j = 0; j < k; j++) {
       T_residue v = bil(St, i, St, j, p2);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
       if (v % p != 0) {
         std::cerr << "GROUP_NEIGHBOR: the submodule is not isotropic\n";
         throw TerminalException{1};
       }
+#endif
       beta(i, j) = v / p;
     }
   }
@@ -621,10 +627,12 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   if (p == 2) {
     for (int i = 0; i < k; i++) {
       T_residue v = bil(St, i, St, i, 8);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
       if (v % 4 != 0) {
         std::cerr << "GROUP_NEIGHBOR: the submodule is not singular\n";
         throw TerminalException{1};
       }
+#endif
       gamma[i] = v / 4;
     }
   }
@@ -633,11 +641,13 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
   RowSpaceModP Sperp = ComputeRowSpaceModP(LeftNullspaceModP(AS, p), p);
   ModMatrix Eperp = EquivariantProjector(Sperp, ListElt, ListEltInv, p);
   RowSpaceModP T = ComplementOfProjector(Eperp, p);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
   if (T.basis.rows() != k) {
     std::cerr << "GROUP_NEIGHBOR: the complement of S^perp has dimension "
               << T.basis.rows() << " instead of " << k << "\n";
     throw TerminalException{1};
   }
+#endif
   // M(i, l) = b(s_i, tau_l), invertible
   ModMatrix M(k, k);
   for (int i = 0; i < k; i++) {
@@ -676,10 +686,12 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
           row[a] = Sg(i, a);
         }
         std::optional<ModVector> r = SolveRowsModP(S.basis, row, 2);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
         if (!r) {
           std::cerr << "GROUP_NEIGHBOR: S is not G-stable\n";
           throw TerminalException{1};
         }
+#endif
         for (int l = 0; l < k; l++) {
           R(i, l) = (*r)[l];
         }
@@ -706,10 +718,12 @@ LiftIsotropicSubmodule(ModMatrix const &S_rows, ModMatrix const &A,
     }
     // x Mt = rhs, i.e. sum_l x_l M(i, l) = rhs_i
     std::optional<ModVector> x = SolveRowsModP(Mt, rhs, p);
+#ifdef SANITY_CHECK_GROUP_NEIGHBOR_MOD_P
     if (!x) {
       std::cerr << "GROUP_NEIGHBOR: S and T are not in duality\n";
       throw TerminalException{1};
     }
+#endif
     for (int l = 0; l < k; l++) {
       for (int c = 0; c < n; c++) {
         T_residue add = p * ResMul((*x)[l], T.basis(l, c), p);

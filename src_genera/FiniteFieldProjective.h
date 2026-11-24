@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_GENUS_ENUMERATION
+#endif
+
 /*
   Projective spaces over F_p and over F_q (ScalarFiniteField.h), indexed without
   being enumerated, on the elements and on their integer codes through the

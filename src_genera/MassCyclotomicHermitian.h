@@ -28,8 +28,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_CYCLOTOMIC_HERMITIAN_MASS
+#endif
+
 #ifdef DEBUG
-#define DEBUG_CYCLOTOMIC_HERMITIAN_MASS
+# define DEBUG_CYCLOTOMIC_HERMITIAN_MASS
 #endif
 
 /*
@@ -509,10 +513,12 @@ ComputeHermitianLocalGram(MyMatrix<T> const &B,
       chosen.push_back(k);
     }
   }
+#ifdef SANITY_CHECK_CYCLOTOMIC_HERMITIAN_MASS
   if (static_cast<int>(chosen.size()) != m) {
     std::cerr << "CYCLO: no O_P-basis found\n";
     throw TerminalException{1};
   }
+#endif
   // h(x_i, x_j) = sum_t b(zeta^t x_i, x_j) zeta_t^v, zeta_t^v = sum_s
   // Tinv(t, s) zeta^s
   std::vector<MyMatrix<T>> Spow{Id};
@@ -854,10 +860,12 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
           break;
         }
       }
+#ifdef SANITY_CHECK_CYCLOTOMIC_HERMITIAN_MASS
       if (piv < 0) {
         std::cerr << "CYCLO: degenerate Hermitian form\n";
         throw TerminalException{1};
       }
+#endif
       if (piv != c) {
         std::swap(G[piv], G[c]);
         for (auto &x : det) {
@@ -925,10 +933,12 @@ HermitianLocalFactorDyadic(MyMatrix<T> const &B,
         Bc++;
       }
     }
+#ifdef SANITY_CHECK_CYCLOTOMIC_HERMITIAN_MASS
     if (A == 0 || Bc == 0) {
       std::cerr << "CYCLO: a step of the chain has no isometric neighbor\n";
       throw TerminalException{1};
     }
+#endif
     f *= UniversalScalarConversion<T, int64_t>(A) /
            UniversalScalarConversion<T, int64_t>(Bc);
   }

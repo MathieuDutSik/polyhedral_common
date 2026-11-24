@@ -8,6 +8,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_RATIONAL_FUNCTIONS
+#endif
+
 // Univariate polynomials and rational functions over T
 
 template <typename T> struct UnivariatePolynomial {
@@ -114,10 +118,12 @@ T PolyEvaluate(UnivariatePolynomial<T> const &P, T const &x) {
 template <typename T>
 UnivariatePolynomial<T> PolyExactDivision(UnivariatePolynomial<T> const &A,
                                           UnivariatePolynomial<T> const &B) {
+#ifdef SANITY_CHECK_RATIONAL_FUNCTIONS
   if (B.is_zero()) {
     std::cerr << "SSER: polynomial division by zero\n";
     throw TerminalException{1};
   }
+#endif
   UnivariatePolynomial<T> R = A;
   UnivariatePolynomial<T> Q;
   int dB = B.degree();
@@ -134,10 +140,12 @@ UnivariatePolynomial<T> PolyExactDivision(UnivariatePolynomial<T> const &A,
     }
     R.normalize();
   }
+#ifdef SANITY_CHECK_RATIONAL_FUNCTIONS
   if (!R.is_zero()) {
     std::cerr << "SSER: a division that should be exact left a remainder\n";
     throw TerminalException{1};
   }
+#endif
   Q.normalize();
   return Q;
 }

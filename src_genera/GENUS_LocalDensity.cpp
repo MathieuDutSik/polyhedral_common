@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #ifdef ENABLE_FLINT_SUPPORT
-#include "NumberTheoryFlint.h"
+# include "NumberTheoryFlint.h"
 #endif
 #include "LocalDensity.h"
 #include "Mass.h"

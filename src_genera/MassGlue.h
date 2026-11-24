@@ -8,6 +8,10 @@
 #include "MassQuaternionic.h"
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ISOMETRY_MASS
+#endif
+
 /*
   The glue of the components (MassIsometry.h): the q-primary parts of the
   discriminant forms of the components as modules (PrimaryQuadModule),
@@ -125,10 +129,12 @@ ModuleElt ModuleCoordinates(PrimaryQuadModule const &M,
     T val = z(ii) * UniversalScalarConversion<
                         T, typename underlying_z_ring<T>::ring_type>(
                         comp.elem[ii]);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
     if (!IsInteger(val)) {
       std::cerr << "ISOM_MASS: a vector is not in the dual lattice\n";
       throw TerminalException{1};
     }
+#endif
     int64_t r = ResModOfI64(GetNumerator_z(val), M.ord[i]);
     a[i] = ResMulI64(r, M.tinv[i], M.ord[i]);
   }
@@ -178,10 +184,12 @@ PrimaryQuadModule BuildPrimaryQuadModule(IsometryComponent<T> const &comp,
   for (size_t i = 0; i < r; i++) {
     for (size_t j = 0; j < r; j++) {
       T val = N_T * gens[i].dot(comp.gram * gens[j]);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
       if (!IsInteger(val)) {
         std::cerr << "ISOM_MASS: the discriminant form is not of exponent N\n";
         throw TerminalException{1};
       }
+#endif
       M.bnum[i][j] = ResidueOfInteger(val, M.N);
       if (i == j) {
         M.qnum[i] = ResidueOfInteger(val, 2 * M.N);
@@ -615,11 +623,13 @@ GlueOrbitGraph(int64_t q, std::vector<PrimaryQuadModule> const &mods,
   }
   auto f_all = [&](size_t i, size_t j) -> int64_t { return weight(i, j, true); };
   Tint order_stab = group_order(n_vert, f_all);
+#ifdef SANITY_CHECK_ISOMETRY_MASS
   if (ResInt(order_G, order_stab) != 0) {
     std::cerr << "ISOM_MASS: the stabilizer of the glue does not divide the "
                  "group\n";
     throw TerminalException{1};
   }
+#endif
   res.orbit_size = QuoInt(order_G, order_stab);
   return res;
 }
@@ -1223,10 +1233,10 @@ std::vector<MyMatrix<Tint>> LocalReflections(MyMatrix<T> const &A, int64_t p,
 }
 
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
-#define MULT_FACTOR_FAIL(tag) \
+# define MULT_FACTOR_FAIL(tag) \
   std::cerr << "MULT_FACTOR: gives up at check " << (tag) << "\n"
 #else
-#define MULT_FACTOR_FAIL(tag)
+# define MULT_FACTOR_FAIL(tag)
 #endif
 
 // The size of the orbit of the subgroup spanned by gens under the

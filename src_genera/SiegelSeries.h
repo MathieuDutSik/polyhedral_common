@@ -17,7 +17,7 @@
 // clang-format on
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_SIEGEL_SERIES
+# define SANITY_CHECK_SIEGEL_SERIES
 #endif
 
 /*
@@ -76,10 +76,12 @@ inline PadicClass PadicMul(PadicClass const &x, PadicClass const &y,
 }
 
 inline PadicClass PadicFromInt64(int64_t x, T_small_prime p) {
+#ifdef SANITY_CHECK_SIEGEL_SERIES
   if (x == 0) {
     std::cerr << "SSER: PadicFromInt64 called on zero\n";
     throw TerminalException{1};
   }
+#endif
   int64_t p_s = static_cast<int64_t>(p);
   int val = 0;
   while (x % p_s == 0) {
@@ -92,10 +94,12 @@ inline PadicClass PadicFromInt64(int64_t x, T_small_prime p) {
 // The class of a non-zero rational, from its numerator and denominator.
 template <typename T, typename Tint>
 PadicClass PadicFromRational(T const &x, T_small_prime p) {
+#ifdef SANITY_CHECK_SIEGEL_SERIES
   if (x == 0) {
     std::cerr << "SSER: PadicFromRational called on zero\n";
     throw TerminalException{1};
   }
+#endif
   Tint num = UniversalScalarConversion<Tint, T>(GetNumerator(x));
   Tint den = UniversalScalarConversion<Tint, T>(GetDenominator(x));
   Tint p_T(static_cast<long>(p));
@@ -324,10 +328,12 @@ std::pair<int, int> FindMinOrderEntry(MyMatrix<T> const &S, int64_t p) {
       }
     }
   }
+#ifdef SANITY_CHECK_SIEGEL_SERIES
   if (first) {
     std::cerr << "SSER: Jordan decomposition of a zero matrix\n";
     throw TerminalException{1};
   }
+#endif
   bool want_diag = (p != 2);
   for (auto const &[v, i, j] : list) {
     if (v == min_val && ((i == j) == want_diag)) {
@@ -623,19 +629,23 @@ SiegelJordanBlocks JordanBlocks2(MyMatrix<T> const &S) {
 //
 
 inline int CheckedHalf(int a) {
+#ifdef SANITY_CHECK_SIEGEL_SERIES
   if (a % 2 != 0) {
     std::cerr << "SSER: an exponent of Katsurada's recursion is not "
                  "integral\n";
     throw TerminalException{1};
   }
+#endif
   return a / 2;
 }
 
-inline void CheckNonNegative(int a) {
+inline void CheckNonNegative([[maybe_unused]] int a) {
+#ifdef SANITY_CHECK_SIEGEL_SERIES
   if (a < 0) {
     std::cerr << "SSER: a negative power of X in Katsurada's recursion\n";
     throw TerminalException{1};
   }
+#endif
 }
 
 template <typename T>

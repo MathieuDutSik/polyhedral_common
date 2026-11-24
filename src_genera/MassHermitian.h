@@ -15,8 +15,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_HERMITIAN_MASS
+#endif
+
 #ifdef DEBUG
-#define DEBUG_HERMITIAN_MASS
+# define DEBUG_HERMITIAN_MASS
 #endif
 
 /*
@@ -191,10 +195,12 @@ std::optional<T> HermitianGenusMass(RealifiedRing<T, Tint> const &ring, [[maybe_
   // the discriminant class
   ImagQuadRing<T> iq = ring.quad();
   std::pair<T, T> det_h = DeterminantOverK(iq, HermitianGramStandard(ring));
+#ifdef SANITY_CHECK_HERMITIAN_MASS
   if (det_h.second != 0) {
     std::cerr << "HMASS: the determinant of h is not rational\n";
     throw TerminalException{1};
   }
+#endif
   T d = det_h.first;
   if ((m * (m - 1) / 2) % 2 == 1) {
     d = -d;

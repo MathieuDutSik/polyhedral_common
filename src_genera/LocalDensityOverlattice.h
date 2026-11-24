@@ -20,11 +20,11 @@
 // clang-format on
 
 #ifdef TIMINGS
-#define TIMINGS_LOCAL_DENSITY_OVERLATTICE
+# define TIMINGS_LOCAL_DENSITY_OVERLATTICE
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
+# define SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
 #endif
 
 //
@@ -272,10 +272,12 @@ LocalSymbolKeyModular(MyMatrix<int64_t> const &Gram, T_small_prime p,
       }
       A(i, i) = ResAdd(A(i, i), A(j, i), M);
       bj = bi;
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
       if (ResValuation(A(i, i), p, K) != e) {
         std::cerr << "LDOV: the diagonal pivot has the wrong valuation\n";
         throw TerminalException{1};
       }
+#endif
     }
     if (bi == bj) {
       int i = bi;
@@ -757,10 +759,12 @@ ElementaryOverlatticeClasses(MyMatrix<T> const &R, int64_t p) {
         free_col[i] = c;
       }
     }
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
     if (free_col[i] < 0) {
       std::cerr << "LDOV: kernel basis without a free column\n";
       throw TerminalException{1};
     }
+#endif
   }
   std::map<std::pair<int, std::vector<int>>, size_t> index;
   std::vector<ElementaryOverlatticeClass<T>> classes;
@@ -1204,10 +1208,12 @@ HermiteNormalFormInt64(std::vector<std::vector<int64_t>> M, int m) {
     }
     row++;
   }
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
   if (row != m) {
     std::cerr << "LDOV: HermiteNormalFormInt64 expects a full rank matrix\n";
     throw TerminalException{1};
   }
+#endif
   std::vector<int64_t> key;
   for (int i = 0; i < m; i++) {
     for (int j = i; j < m; j++) {
@@ -1450,10 +1456,12 @@ ComputeGenusDensityDataFull(MyMatrix<T> const &Tgram,
   data.odd = ComputeGenusDensityData<T, Tint>(Tgram);
   if (data.odd.detT % 2 == 0) {
     data.two_adic = ComputeOverlatticeGenusData<T, Tint>(Tgram, 2, cache);
+#ifdef SANITY_CHECK_LOCAL_DENSITY_OVERLATTICE
     if (!data.two_adic) {
       std::cerr << "LDOV: the gluing at p = 2 gave a lattice of odd rank\n";
       throw TerminalException{1};
     }
+#endif
   }
   return data;
 }

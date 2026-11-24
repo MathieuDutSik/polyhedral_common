@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_RESIDUE_ARITHMETIC
+#endif
+
 /*
   TRANSITIONAL. The signed residue helpers and the matrices of residues as
   rows of int64_t, under the names *I64, for the headers of src_genera not
@@ -83,10 +87,12 @@ inline int64_t ResInvI64(int64_t a, int64_t m) {
     s0 = s1;
     s1 = s2;
   }
+#ifdef SANITY_CHECK_RESIDUE_ARITHMETIC
   if (r0 != 1) {
     std::cerr << "RESIDUE: " << a << " is not invertible modulo " << m << "\n";
     throw TerminalException{1};
   }
+#endif
   return ResModI64(s0, m);
 }
 

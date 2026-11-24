@@ -12,7 +12,7 @@
 // clang-format on
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ROOT_FREE_MASS
+# define SANITY_CHECK_ROOT_FREE_MASS
 #endif
 
 /*

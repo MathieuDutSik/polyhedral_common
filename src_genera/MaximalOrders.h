@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_MAXIMAL_ORDERS
+#endif
+
 /*
   Maximal orders of the semisimple Q-algebras given by matrices (an order
   as a Z-basis of k x k rational matrices closed under the product), a
@@ -243,10 +247,12 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
       }
     }
     std::optional<MyVector<T>> s = SolutionMat(F, y);
+#ifdef SANITY_CHECK_MAXIMAL_ORDERS
     if (!s) {
       std::cerr << "MAX_ORDER: a product is not in the algebra\n";
       throw TerminalException{1};
     }
+#endif
     return *s;
   };
   // the structure constants on O0: e_i e_j = sum_l C0[i][j](l) e_l
@@ -329,10 +335,12 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
       auto reduce = [&](MyVector<T> const &y) -> MyVector<T> {
         MyVector<T> cy = in_basis(y, Boinv);
         for (int l = 0; l < n; l++) {
+#ifdef SANITY_CHECK_MAXIMAL_ORDERS
           if (!IsInteger(cy(l))) {
             std::cerr << "MAX_ORDER: the order is not closed\n";
             throw TerminalException{1};
           }
+#endif
           cy(l) = UniversalScalarConversion<T, T_residue>(
               ResModOf(GetNumerator_z(cy(l)), pu));
         }
@@ -353,10 +361,12 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
         }
         MyVector<T> cy = in_basis(y, Boinv);
         for (int l = 0; l < n; l++) {
+#ifdef SANITY_CHECK_MAXIMAL_ORDERS
           if (!IsInteger(cy(l))) {
             std::cerr << "MAX_ORDER: the order is not closed\n";
             throw TerminalException{1};
           }
+#endif
           Frob(i, l) = ResModOf(GetNumerator_z(cy(l)), pu);
         }
       }
@@ -391,10 +401,12 @@ std::vector<MyMatrix<T>> CommutativeMaximalOrder(std::vector<MyMatrix<T>> const 
           }
           MyVector<T> c = in_basis(mult(row(i), yt), BIinv);
           for (int l = 0; l < n; l++) {
+#ifdef SANITY_CHECK_MAXIMAL_ORDERS
             if (!IsInteger(c(l))) {
               std::cerr << "MAX_ORDER: O I is not in I\n";
               throw TerminalException{1};
             }
+#endif
             Cond(i, t * n + l) = ResModOf(GetNumerator_z(c(l)), pu);
           }
         }

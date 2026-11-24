@@ -16,8 +16,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+#endif
+
 #ifdef DEBUG
-#define DEBUG_ALBERT_TYPE_TWO_MASS
+# define DEBUG_ALBERT_TYPE_TWO_MASS
 #endif
 
 /*
@@ -206,10 +210,12 @@ std::optional<T> RankOneHermitianMassOverK(MyMatrix<T> const &BM,
   }
   NumberField<T> const &K = Kd->first;
   ElemE<T> const &d = Kd->second;
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (SqrtInK(d, K)) {
     std::cerr << "ALB2_MASS: K(mu) is not a field\n";
     throw TerminalException{1};
   }
+#endif
   std::optional<AbelianField> FE;
   {
     // the primes ramified in E: a rational D with K(sqrt d) = K(sqrt D)
@@ -302,21 +308,25 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
                                           std::ostream &os) {
   int k = B.rows();
   int c = FK ? static_cast<int>(AbelianFieldDegree(*FK)) : 1;
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (k != 4 * c) {
     std::cerr << "ALB2_MASS: X has rank " << k << ", not 4 c = " << 4 * c
               << "\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<T> Binv = Inverse(B);
-  auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
+  [[maybe_unused]] auto adj = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     return Binv * Y.transpose() * B;
   };
   // the multiplier ring of X in D, and the maximal order for Ram(D)
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(Dspan, k);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (static_cast<int>(O0.size()) != 4 * c) {
     std::cerr << "ALB2_MASS: D has dimension " << O0.size() << "\n";
     throw TerminalException{1};
   }
+#endif
   std::optional<std::vector<MyMatrix<T>>> opt_O =
       QuatMaximalOrder<T, Tint>(O0, 1, dK, bounds.quat, os);
   if (!opt_O) {
@@ -340,11 +350,13 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
       auto [ee, ff, gg] = decomposition(p);
       (void)ee;
       int v = RationalValuation(discD, p);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
       if (v % (2 * ff) != 0 || v / (2 * ff) > gg) {
         std::cerr << "ALB2_MASS: v_p(N(d(D))^2)=" << v << " at p=" << p
                   << " does not fit f=" << ff << " g=" << gg << "\n";
         throw TerminalException{1};
       }
+#endif
       ram.insert(p);
       g_ram[p] = v / (2 * ff);
     }
@@ -355,23 +367,29 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
   }
   // the D-linear endomorphisms and the skew-adjoint mu among them
   std::vector<MyMatrix<T>> uX = QuatIntegralCommutant<T, Tint>(B, O0, true);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (static_cast<int>(uX.size()) != c) {
     std::cerr << "ALB2_MASS: the skew-adjoint D-linear maps have rank "
               << uX.size() << ", not " << c << "\n";
     throw TerminalException{1};
   }
+#endif
   MyMatrix<T> const &mu = uX[0];
   MyMatrix<T> mu2 = mu * mu;
   T delta0 = -mu2(0, 0);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (adj(mu) != MyMatrix<T>(-mu)) {
     std::cerr << "ALB2_MASS: mu is not skew-adjoint\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (c == 1 && (mu2 != MyMatrix<T>(-delta0 * IdentityMat<T>(k)) ||
                  delta0 <= 0)) {
     std::cerr << "ALB2_MASS: mu^2 is not a negative scalar\n";
     throw TerminalException{1};
   }
+#endif
   // O_E (generators on X, 1 first) and the mass of the maximal compact
   std::vector<MyMatrix<T>> OE;
   T massT;
@@ -379,20 +397,24 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
   if (c == 1) {
     // E = Q(sqrt(-d)), d the squarefree part of delta0 (an integer: mu
     // is integral on X)
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (!IsInteger(delta0)) {
       std::cerr << "ALB2_MASS: mu^2 is not integral\n";
       throw TerminalException{1};
     }
+#endif
     Tint delta_i = UniversalScalarConversion<Tint, T>(delta0);
     Tint d_i = SquarefreePart(delta_i);
     int64_t d = UniversalScalarConversion<int64_t, Tint>(d_i);
     Tint s2 = delta_i / d_i;
     Tint s_i = UniversalScalarConversion<Tint, double>(
         std::round(std::sqrt(UniversalScalarConversion<double, Tint>(s2))));
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (s_i * s_i != s2) {
       std::cerr << "ALB2_MASS: delta / d is not a square\n";
       throw TerminalException{1};
     }
+#endif
     massT = RankOneHermitianMassAbelian<T>(ImaginaryQuadraticField(d));
     // sqrt(-d) = mu / s and the generator omega of O_E
     MyMatrix<T> sqrtmd = mu / UniversalScalarConversion<T, Tint>(s_i);
@@ -406,11 +428,13 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
     std::vector<MyMatrix<T>> gE = O0;
     gE.push_back(mu);
     std::vector<MyMatrix<T>> LamE = QuatIntegralCommutant<T, Tint>(B, gE, false);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (static_cast<int>(LamE.size()) != 2 * c) {
       std::cerr << "ALB2_MASS: E has rank " << LamE.size() << ", not "
                 << 2 * c << "\n";
       throw TerminalException{1};
     }
+#endif
     OE = CommutativeMaximalOrder<T, Tint>(LamE, k);
     // M = O_E x, a Hermitian lattice of rank one over E, as the quadratic
     // lattice of rank two over K whose discriminant field is E. Its
@@ -516,10 +540,12 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
         }
         std::optional<MyVector<T>> sol =
             SolutionMat(MyMatrix<T>(Pm.transpose()), col);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
         if (!sol) {
           std::cerr << "ALB2_MASS: O_K does not preserve O_E x\n";
           throw TerminalException{1};
         }
+#endif
         for (int j = 0; j < nE; j++) {
           Zm(j, i) = (*sol)(j);
         }
@@ -571,10 +597,12 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
   MyMatrix<T> BS = P.transpose() * B * P;
   auto to_S = [&](MyMatrix<T> const &Y) -> MyMatrix<T> {
     MyMatrix<T> Z = Pinv * Y * P;
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (!IsIntegralMatrix(Z)) {
       std::cerr << "ALB2_MASS: an element does not preserve S = O_E X\n";
       throw TerminalException{1};
     }
+#endif
     return Z;
   };
   std::vector<MyMatrix<T>> O0S;
@@ -613,21 +641,25 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
     }
     ld.FormsT = forms(Bz, WT);
     std::vector<MyMatrix<T>> u = QuatIntegralCommutant<T, Tint>(Bz, gens, true);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (static_cast<int>(u.size()) != c) {
       std::cerr << "ALB2_MASS: a Lie lattice of rank " << u.size() << "\n";
       throw TerminalException{1};
     }
+#endif
     ld.disc_u = QuatTraceDiscriminant(u);
     return ld;
   };
   LatticeData dX = make_data(B, O0, mu);
   LatticeData dS = make_data(BS, O0S, muS);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (static_cast<int>(dS.LamT.size()) != 2 * c ||
       static_cast<int>(dX.LamT.size()) != 2 * c) {
     std::cerr << "ALB2_MASS: the commutant of D and mu has rank "
               << dX.LamT.size() << ", " << dS.LamT.size() << ", not 2\n";
     throw TerminalException{1};
   }
+#endif
   // the primes of the numerator and of the denominator of x
   auto prime_set = [&](T const &x) -> std::set<int64_t> {
     std::set<int64_t> Sp;
@@ -683,31 +715,37 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
     int a_p = 0;
     {
       Tint q = *aX;
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
       if (q % *bX != 0) {
         std::cerr << "ALB2_MASS: at p=" << p << " the image in T does not "
                   << "divide that in N\n";
         throw TerminalException{1};
       }
+#endif
       q /= *bX;
       while (q > 1 && q % 2 == 0) {
         q /= 2;
         a_p++;
       }
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
       if (q != 1 || a_p > g_good) {
         std::cerr << "ALB2_MASS: at p=" << p << " the stabilizers in N and T "
                   << "have images " << *aX << " and " << *bX << " for "
                   << g_good << " primes outside Ram(D)\n";
         throw TerminalException{1};
       }
+#endif
     }
     // [T(O_{E,p}) : K_T(X_p)] = vol_T(S_p) / vol_T(X_p)
     int vX = RationalValuation(dX.disc_u, p);
     int vS = RationalValuation(dS.disc_u, p);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if ((vX - vS) % 2 != 0) {
       std::cerr << "ALB2_MASS: the Lie discriminants differ by an odd power "
                    "of " << p << "\n";
       throw TerminalException{1};
     }
+#endif
     T index_T = UniversalScalarConversion<T, Tint>(*bS) /
                 UniversalScalarConversion<T, Tint>(*bX);
     int ex = (vX - vS) / 2;
@@ -715,11 +753,13 @@ std::optional<T> AlbertTypeTwoRankOneMass(MyMatrix<T> const &B,
     for (int i = 0; i < (ex >= 0 ? ex : -ex); i++) {
       index_T = (ex >= 0) ? T(index_T * p_T) : T(index_T / p_T);
     }
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
     if (!IsInteger(index_T) || index_T < 1) {
       std::cerr << "ALB2_MASS: [T(O_E) : K_T(X)] = " << index_T << " at p="
                 << p << "\n";
       throw TerminalException{1};
     }
+#endif
     T factor = index_T;
     for (int i = a_p; i < g_good; i++) {
       factor *= 2;
@@ -962,10 +1002,12 @@ ReducedNormsModP(std::vector<MyMatrix<T>> const &O0,
   // W = e X / p X, by the columns of e
   RowSpaceModP W = ComputeRowSpaceModP(ModMatrix(e->transpose()), p);
   int w = W.basis.rows();
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (2 * w != k) {
     std::cerr << "ALB2_MASS: the idempotent has rank " << w << "\n";
     throw TerminalException{1};
   }
+#endif
   std::vector<T_residue> res;
   for (auto const &g64 : image_gens) {
     ModMatrix g = ModMatrixOfModRowsI64(g64, k);
@@ -1037,16 +1079,20 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
                                              AlbertTypeTwoMassBounds const &bounds,
                                              std::ostream &os) {
   int k = B.rows();
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (k != 4 * r || r < 2) {
     std::cerr << "ALB2_MASS: X of rank " << k << " for r=" << r << "\n";
     throw TerminalException{1};
   }
+#endif
   int dim_u = r * (2 * r - 1);
   std::vector<MyMatrix<T>> O0 = QuatIntegralPoints<T, Tint>(Dspan, k);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (O0.size() != 4) {
     std::cerr << "ALB2_MASS: D has dimension " << O0.size() << "\n";
     throw TerminalException{1};
   }
+#endif
   std::optional<std::vector<MyMatrix<T>>> opt_O =
       QuatMaximalOrder<T, Tint>(O0, r, T(1), bounds.quat, os);
   if (!opt_O) {
@@ -1066,11 +1112,13 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
     return {};
   }
   std::vector<MyMatrix<T>> u = QuatIntegralCommutant<T, Tint>(B, O0, true);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (static_cast<int>(u.size()) != dim_u) {
     std::cerr << "ALB2_MASS: the Lie lattice has rank " << u.size()
               << ", not " << dim_u << "\n";
     throw TerminalException{1};
   }
+#endif
   T disc_u = QuatTraceDiscriminant(u);
   std::vector<MyMatrix<T>> Lam = QuatIntegralCommutant<T, Tint>(B, O0, false);
   std::vector<MyMatrix<T>> Forms;
@@ -1096,24 +1144,30 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
         continue;
       }
       std::optional<T> nrd = RationalSquareRoot<T, Tint>(det);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
       if (!nrd) {
         std::cerr << "ALB2_MASS: det_X of a skew element is not a square\n";
         throw TerminalException{1};
       }
+#endif
       T discs = (r % 2 == 0) ? *nrd : T(-*nrd);
       Tint num = GetNumerator_z(discs) * GetDenominator_z(discs);
       Df = FundamentalDiscriminantOf<Tint>(num);
     }
   }
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (Df == 0) {
     std::cerr << "ALB2_MASS: no invertible skew-adjoint element found\n";
     throw TerminalException{1};
   }
+# ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+# endif
   if ((Df > 0) != (r % 2 == 0)) {
     std::cerr << "ALB2_MASS: the discriminant " << Df << " has the wrong sign "
               << "for r=" << r << "\n";
     throw TerminalException{1};
   }
+#endif
   // the bad primes
   auto prime_set = [&](T const &x) -> std::set<int64_t> {
     std::set<int64_t> Sp;
@@ -1171,11 +1225,14 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
       for (T_residue x : *nrds) {
         if (x == static_cast<T_residue>(p - 1)) {
           idx = 2;
-        } else if (x != 1) {
+        }
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
+        else if (x != 1) {
           std::cerr << "ALB2_MASS: a reduced norm " << x << " modulo " << p
                     << "\n";
           throw TerminalException{1};
         }
+#endif
       }
     }
     TamagawaLocalData<T> ld;
@@ -1215,10 +1272,12 @@ std::optional<T> AlbertTypeTwoOrthogonalMass(MyMatrix<T> const &B,
   // the square of mass_{N^0}: L(r, chi)^2 enters squared already
   T m2 = TamagawaMassSquared<T>(T(2), Lprod, Vinf, dim_u, loc) * L2;
   std::optional<T> m0 = RationalSquareRoot<T, Tint>(m2);
+#ifdef SANITY_CHECK_ALBERT_TYPE_TWO_MASS
   if (!m0) {
     std::cerr << "ALB2_MASS: the squared mass " << m2 << " is not a square\n";
     throw TerminalException{1};
   }
+#endif
   T mass = *m0;
   for (int i = 0; i < nB; i++) {
     mass *= T(2);

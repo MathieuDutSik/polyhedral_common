@@ -9,7 +9,7 @@
 // clang-format on
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_LOCAL_DENSITY
+# define SANITY_CHECK_LOCAL_DENSITY
 #endif
 
 /*

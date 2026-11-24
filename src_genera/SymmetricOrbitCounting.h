@@ -14,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_SYMMETRIC_ORBIT_COUNTING
+#endif
+
 //
 // Counting for several non-unit columns: orbit class functions on Sym_j
 //
@@ -225,10 +229,12 @@ SymmetricOrbitTransitions(SymmetricOrbits &so, int e, T_residue u) {
         }
       }
       auto it = so.index.find(SymmetricOrbitKey(M, j, so.p, so.k, mod));
+#ifdef SANITY_CHECK_SYMMETRIC_ORBIT_COUNTING
       if (it == so.index.end()) {
         std::cerr << "LDBP: a symmetric matrix outside the listed orbits\n";
         throw TerminalException{1};
       }
+#endif
       H[C][it->second]++;
     }
   }

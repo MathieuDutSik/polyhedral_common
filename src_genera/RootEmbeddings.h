@@ -14,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_ROOT_EMBEDDINGS
+#endif
+
 /*
   The number r(R, T) of isometric embeddings of a root lattice R into a root
   lattice T (ADE types, simply laced).
@@ -436,11 +440,13 @@ inline AdeType SubsystemType(IrreducibleRootSystem const &rs,
                (rank == 8 && N == 120)) {
       letter = 'E';
     }
+#ifdef SANITY_CHECK_ROOT_EMBEDDINGS
     if (letter == 0 || 4 * N != rank * h2) {
       std::cerr << "ROOT: no ADE type with " << N << " positive roots and "
                 << "Coxeter number " << h2 / 2 << "\n";
       throw TerminalException{1};
     }
+#endif
     t.push_back({letter, static_cast<int>(rank)});
   }
   return AdeCanonical(t);

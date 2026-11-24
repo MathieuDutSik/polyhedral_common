@@ -16,8 +16,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_GENUS_ENUMERATION_MPI
+#endif
+
 #ifdef DEBUG
-#define DEBUG_GENUS_ENUMERATION_MPI
+# define DEBUG_GENUS_ENUMERATION_MPI
 #endif
 
 /*
@@ -348,10 +352,13 @@ GenusEnumerationMPI(boost::mpi::communicator &comm,
         int val;
         comm.recv(src, tag_final, val);
         final = true;
-      } else {
+      }
+#ifdef SANITY_CHECK_GENUS_ENUMERATION_MPI
+      else {
         std::cerr << "GENUS_MPI: unexpected tag " << tag << "\n";
         throw TerminalException{1};
       }
+#endif
     }
     // the mass report
     if (result.accumulated_mass != last_reported) {

@@ -24,8 +24,12 @@
 #include <vector>
 // clang-format on
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
+#endif
+
 #ifdef DEBUG
-#define DEBUG_MULTIPLICITY_LOCAL_FACTOR
+# define DEBUG_MULTIPLICITY_LOCAL_FACTOR
 #endif
 
 /*
@@ -114,10 +118,12 @@ inline LiftSystem MakeLiftSystem(ModRowsI64 const &g, ModRowsI64 const &A, int64
       if (r < 0) {
         r += pj1;
       }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (r % pj != 0) {
         std::cerr << "MULT_FACTOR: g is not a solution modulo p^j\n";
         throw TerminalException{1};
       }
+#endif
       Ered[a][b] = static_cast<int64_t>(r / pj);
     }
   }
@@ -171,10 +177,12 @@ inline std::vector<int64_t> LiftRhs(ModRowsI64 const &g, ModRowsI64 const &A, in
       if (r < 0) {
         r += pj1;
       }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (r % pj != 0) {
         std::cerr << "MULT_FACTOR: g is not a solution modulo p^j\n";
         throw TerminalException{1};
       }
+#endif
       Ered[a][b] = static_cast<int64_t>(r / pj);
     }
   }
@@ -788,10 +796,12 @@ JordanBasisModPW(ModRowsI64 const &A, int64_t p, int W) {
     }
     // p = 2, a 2 x 2 block on (ia, ib): [[x, y], [y, z]] / 2^vmin is
     // [[0, 1], [1, 0]] modulo 2
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
     if (ia == ib) {
       std::cerr << "JORDAN: no pivot found\n";
       throw TerminalException{1};
     }
+#endif
     swap_idx(ia, start);
     if (ib == start) {
       ib = ia;
@@ -825,11 +835,13 @@ JordanBasisModPW(ModRowsI64 const &A, int64_t p, int W) {
           sacc = (sacc + static_cast<__int128>(P[k][a]) * ResModI64(A[k][l], pW) % pW * P[l][b]) % pW;
         }
       }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (ResModI64(static_cast<int64_t>(sacc), pW) != M[a][b]) {
         std::cerr << "JORDAN: P^T A P differs from the reduced matrix at " << a
                   << "," << b << "\n";
         throw TerminalException{1};
       }
+#endif
     }
   }
   return {P, levels};
@@ -1499,11 +1511,13 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
           }
         }
       }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (!affine_r && j >= 2) {
         std::cerr << "MULT_FACTOR: the residual is not affine at j=" << j
                   << "\n";
         throw TerminalException{1};
       }
+#endif
       if (affine_r) {
         // sum_i c_i (r_i - r_0) = -r_0
         ModRowsI64 aug;
@@ -1597,10 +1611,12 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
       return {};
     }
     std::optional<ModRowsI64> h = newton(project(*sol, target));
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
     if (!h) {
       std::cerr << "MULT_FACTOR: Newton did not converge\n";
       throw TerminalException{1};
     }
+#endif
     return h;
   };
   // the affine space {x : fixed_k x = rhs_k}, the fixed_k linear forms
@@ -1983,6 +1999,7 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
             sacc = (sacc + static_cast<__int128>(u[a]) * modM(A[a][b], Mk)) % Mk;
           }
         }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
         if (sacc % pM != 0) {
           std::cerr << "MULT_FACTOR: a pairing is not divisible by its level, p="
                     << p << " j=" << j << " b=" << b << " M=" << M << " levels";
@@ -2000,13 +2017,16 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
           std::cerr << "\n";
           throw TerminalException{1};
         }
+#endif
         row[b] = static_cast<int64_t>((sacc / pM) % p);
       }
       __int128 bm = modM(bval, Mk);
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (bm % pM != 0) {
         std::cerr << "MULT_FACTOR: an entry of A is not divisible by its level\n";
         throw TerminalException{1};
       }
+#endif
       fixed.push_back(row);
       rhs.push_back(static_cast<int64_t>((bm / pM) % p));
     };
@@ -2453,10 +2473,12 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
           if (over) {
             return {};
           }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
           if (!lf) {
             std::cerr << "MULT_FACTOR: an element of the layer does not lift\n";
             throw TerminalException{1};
           }
+#endif
           gens.push_back(*lf);
         }
         ord.layer_exp += W0.size();
@@ -2529,10 +2551,12 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsCore
           reps.push_back(coef);
         }
       }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (RankModPrimeI64(liftable_coefs, p) != liftable_coefs.size()) {
         std::cerr << "MULT_FACTOR: the layer elements found are dependent\n";
         throw TerminalException{1};
       }
+#endif
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
       std::cerr << "MULT_FACTOR: layer " << j << " codimension "
                 << reps.size() << "\n";
@@ -2761,6 +2785,7 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsSear
   }
   ModRowsI64 Be2 = matmul(matmul(Pinv, Be, pW), transpose(Pinv), pW);
   // the levels: A'_ab divisible by p^{max(l_a, l_b)}
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
   for (size_t a = 0; a < m; a++) {
     for (size_t b = 0; b < m; b++) {
       int64_t pl = 1;
@@ -2792,6 +2817,7 @@ inline std::optional<std::vector<ModRowsI64>> LocalOrthogonalImageGeneratorsSear
       }
     }
   }
+#endif
 #ifdef DEBUG_MULTIPLICITY_LOCAL_FACTOR
   std::cerr << "MULT_FACTOR: A' modulo p^3:";
   for (size_t a = 0; a < m; a++) {
@@ -3030,10 +3056,12 @@ LocalStabilizerImage(ModRowsI64 const &A_in, std::vector<ModRowsI64> const &basi
         if (r < 0) {
           r += pj1;
         }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
         if (r % pj != 0) {
           std::cerr << "MULT_FACTOR: not a solution modulo p^j\n";
           throw TerminalException{1};
         }
+#endif
         row[dim] = ResModI64(-static_cast<int64_t>(r / pj), p);
         aug.push_back(row);
       }

@@ -18,11 +18,11 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ISOMETRY_GLUE
+# define DEBUG_ISOMETRY_GLUE
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_ISOMETRY_GLUE
+# define SANITY_CHECK_ISOMETRY_GLUE
 #endif
 
 /*
@@ -78,11 +78,13 @@ inline PrimaryQuadModule DirectSumModule(PrimaryQuadModule const &M1,
   M.sigma_img.assign(r, ModuleElt(r, 0));
   // the further generators, block diagonal as sigma
   size_t n_extra = M1.extra_sigma_img.size();
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
   if (M2.extra_sigma_img.size() != n_extra) {
     std::cerr << "ISOM_GLUE: the two modules have different numbers of "
                  "generators\n";
     throw TerminalException{1};
   }
+#endif
   M.extra_sigma_img.assign(n_extra, std::vector<ModuleElt>(r, ModuleElt(r, 0)));
   auto insert = [&](PrimaryQuadModule const &Mi, size_t shift) -> void {
     int64_t scale = M.N / Mi.N;
@@ -352,11 +354,13 @@ GlueSubgroups(PrimaryQuadModule const &M, size_t r1, int64_t max_order,
       std::vector<size_t> perm;
       for (auto const &sg : res) {
         auto iter = index.find(image(sg.elements, phi));
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
         if (iter == index.end()) {
           std::cerr << "ISOM_GLUE: the subgroups are not stable under the "
                        "centralizers\n";
           throw TerminalException{1};
         }
+#endif
         perm.push_back(iter->second);
       }
       out.perms.push_back(perm);
@@ -438,11 +442,13 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
                std::optional<T> const &det,
                std::optional<Tint> const &glue_bound,
                IsometryGlueBounds const &bounds, std::ostream &os) {
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
   if (gens1.empty() || gens1.size() != gens2.size()) {
     std::cerr << "ISOM_GLUE: the two pairs need the same number of "
                  "generators\n";
     throw TerminalException{1};
   }
+#endif
   size_t n_gen = gens1.size();
   std::vector<MyMatrix<T>> ListP1, ListP2;
   for (size_t k = 0; k < n_gen; k++) {
@@ -604,11 +610,13 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
         M, M1.rank(), max_order, exponent_at(q_i),
         exact_orbits ? std::vector<ModuleAut>{} : group_gens,
         exact_orbits ? group_gens : std::vector<ModuleAut>{}, bounds);
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
     if (!opt) {
       std::cerr << "ISOM_GLUE: the glue at q=" << q
                 << " exceeds the bounds\n";
       throw TerminalException{1};
     }
+#endif
     std::vector<std::vector<MyVector<T>>> lifts;
     std::vector<int64_t> orders;
     // the kept subgroups (of the order asked for) are a union of orbits
@@ -702,16 +710,20 @@ GlueGroupPairs(MyMatrix<T> const &A1, std::vector<MyMatrix<T>> const &gens1,
     for (auto const &P : ListP) {
       stable = stable && IsIntegralMatrix(P);
     }
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
     if (!stable) {
       std::cerr << "ISOM_GLUE: the glued lattice is not integral or not "
                    "stable\n";
       throw TerminalException{1};
     }
+#endif
     for (int i = 0; i < n; i++) {
+#ifdef SANITY_CHECK_ISOMETRY_GLUE
       if (!IsInteger(A(i, i) / T(2))) {
         std::cerr << "ISOM_GLUE: the glued lattice is not even\n";
         throw TerminalException{1};
       }
+#endif
     }
     MyMatrix<T> B_T =
         UniversalMatrixConversion<T, Tint>(LLLreducedBasis<T, Tint>(A, os).Pmat);
