@@ -47,7 +47,7 @@ jobs:
           pwd
           echo "After compilation of redundancy code"
 
-          cd CI_tests/25_Redundancy
+          cd CI_tests/25A_Redundancy
           ../../gap.sh < TestCoherence.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2

@@ -19,7 +19,7 @@ The "GitHub CI" times are those of the last successful scheduled run:
 "build and run" is the test step (most workflows compile inside it), the
 whole job adds the installation of the dependencies (nauty, GAP, ...).
 
-* `01_RatIntAutomorphy` -- `ci_01A_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
+* `01A_RatIntAutomorphy` -- `ci_01A_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
   GitHub CI: build 8 min, run 2 min, whole job 12 min, 2026-11-01.
 * `01B_NonSymmetricStabilizers` -- `ci_01B_direct_matrix_stabilizer`: The stabilizer of a matrix given directly, which need not be symmetric (GRP_DirectMatrix_Stabilizer: Paley tournaments, circulants with distinct values, matrices with all entries distinct, the Petersen graph), and the automorphism group of a configuration of vectors for a non-symmetric Gram matrix (GRP_LinPolytope_Automorphism_GramMat, including more than 1000 vectors, where the heuristic scheme runs). The group orders are known and each generator is checked in GAP.
   Local run: build 7 min, run 1 min (`TestNonSymmetricStabilizers.g`), 2026-11-24.
@@ -94,9 +94,9 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 2 min, whole job 4 min, 2026-09-23.
 * `23B_SimpleDualDesc` -- `ci_23B_simple_dual_desc`: This is for the code for computing the dual description of polyhedral cones.
   Local run: build shared with `12B`, run 30 min (`TestSimpleDualDesc.g`), 2026-11-24.
-* `24_GroupSimplification` -- `ci_24_group_simplification`: Group Simplification.
+* `24A_GroupSimplification` -- `ci_24_group_simplification`: Group Simplification.
   GitHub CI: build and run 6 min, whole job 10 min, 2026-10-24.
-* `25_Redundancy` -- `ci_25_redundancy`: Redundancy tests.
+* `25A_Redundancy` -- `ci_25A_redundancy`: Redundancy tests.
   Local run: build 20 s, run 33 min (`TestCoherence.g`), peak memory 4.2 GB, 2026-11-24.
 * `26A_CTYPE_AdjSch` -- `ci_26A_enum_ctype`: Computation of the Ctypes in dimension 5 with the adjacency scheme.
   GitHub CI: build and run 32 s, whole job 3 min, 2026-09-26.
