@@ -302,6 +302,64 @@ ListIsMinimalCovering:=[
   rec(file:="octa3.ext", is_covering:=false, is_minimal:=false, n_cuttable:=0)
 ];
 
+# The covering radius along a Minkowski path: the exact pieces of
+# 1 / mu((1 - lambda) P1 + lambda P2), and at a few values of lambda the
+# covering radius of the Minkowski combination computed independently by
+# POLYNORM_Covering, from the sums of the vertices.
+TestCoveringPath:=function(eRec)
+    local res, test, lambda, EXT1, EXT2, EXT, v1, v2, FileK, res_cov, ePiece, g;
+    Print("Covering path of ", eRec.file1, " and ", eRec.file2, "\n");
+    res:=RunProgramGAP("POLYNORM_CoveringPath", Concatenation("gmp ", eRec.file1, " ", eRec.file2, " GAP stdout"));
+    if res=fail then
+        return false;
+    fi;
+    if res<>eRec.pieces then
+        Print("pieces=", res, "\n");
+        return false;
+    fi;
+    test:=true;
+    EXT1:=ReadMatrixFile(eRec.file1);
+    EXT2:=ReadMatrixFile(eRec.file2);
+    for lambda in eRec.ListLambda
+    do
+        EXT:=[];
+        for v1 in EXT1
+        do
+            for v2 in EXT2
+            do
+                Add(EXT, (1 - lambda) * v1 + lambda * v2);
+            od;
+        od;
+        FileK:=Filename(DirectoryTemporary(), "K.ext");
+        WriteMatrixFile(FileK, Set(EXT));
+        res_cov:=RunProgramGAP("POLYNORM_Covering", Concatenation("gmp ", FileK, " GAP stdout"));
+        RemoveFile(FileK);
+        ePiece:=First(res, x->x.alpha <= lambda and lambda <= x.beta);
+        g:=ePiece.s0 + ePiece.s1 * lambda;
+        if res_cov=fail or res_cov.mu * g <> 1 then
+            Print("At lambda=", lambda, " the pieces give 1/mu=", g, "\n");
+            test:=false;
+        fi;
+    od;
+    return test;
+end;
+
+# Two rectangles, for which mu = max(1/a, 1/b) for the sides a, b, and the
+# tiling parallelograms of Section 3 of Codenotti, Freyer, Krivokuca, with
+# their two local maxima of 1/mu.
+ListCoveringPath:=[
+  rec(file1:="path_box_A.ext", file2:="path_box_B.ext",
+      pieces:=[rec(alpha:=0, beta:=1/2, s0:=1/2, s1:=3/2),
+               rec(alpha:=1/2, beta:=1, s0:=2, s1:=-3/2)],
+      ListLambda:=[1/3, 1/2, 4/5]),
+  rec(file1:="path_cfk_P1.ext", file2:="path_cfk_P2.ext",
+      pieces:=[rec(alpha:=0, beta:=7/24, s0:=1, s1:=1/14),
+               rec(alpha:=7/24, beta:=1/2, s0:=7/6, s1:=-1/2),
+               rec(alpha:=1/2, beta:=17/24, s0:=2/3, s1:=1/2),
+               rec(alpha:=17/24, beta:=1, s0:=15/14, s1:=-1/14)],
+      ListLambda:=[1/10, 7/24, 2/5, 1/2, 17/24, 9/10])
+];
+
 # All the cases are run, so that every failure is reported.
 ListResult:=Concatenation(List(ListPackingCovering, TestPackingCovering),
                           List(ListCertify, TestCertify),
@@ -309,7 +367,8 @@ ListResult:=Concatenation(List(ListPackingCovering, TestPackingCovering),
                           List(ListBetkeHenk, TestBetkeHenk),
                           List(ListMaxKissing, TestMaxKissing),
                           List(ListMinimalCovering, TestMinimalCovering),
-                          List(ListIsMinimalCovering, TestIsMinimalCovering));
+                          List(ListIsMinimalCovering, TestIsMinimalCovering),
+                          List(ListCoveringPath, TestCoveringPath));
 test:=ForAll(ListResult, x->x);
 Print("test=", test, "\n");
 CI_Decision_Reset();

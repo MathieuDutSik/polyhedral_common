@@ -97,6 +97,12 @@ faster); every result is exact.
     criterion of Corollary 2.5 of the paper above, much cheaper than the
     search of a minimal polytope. See "Minimal covering polytopes" below.
 
+  * **POLYNORM_CoveringPath** `[arith] [FileP1] [FileP2] [OutFormat] [OutFile]`
+    computes exactly the function `lambda -> 1 / mu((1 - lambda) P1 + lambda
+    P2)` on `[0,1]`, which is continuous and piecewise affine: its affine
+    pieces and break points, every piece being proved. See "The covering
+    radius along a Minkowski path" below.
+
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
 
@@ -273,6 +279,46 @@ sanity checks on, Apple M-series):
 | `(3/2) conv(+-e_i)`, `n = 3` | 12 vertices, 14 facets, volume 5/4, not a tile | 20 s |
 | `conv(0, 2e_i, (2,2,1), (1,2,2), (2,1,2))` | 15 vertices, 23 facets, volume 7/6, not a tile | 110 s |
 
+The covering radius along a Minkowski path
+------------------------------------------
+
+For `K_lambda = (1 - lambda) P1 + lambda P2`, the facet normals `c_i` of
+`P1 + P2` describe `K_lambda` for every `lambda` in `[0,1]`, with the right
+hand sides `h_i(lambda)` affine in `lambda` (support functions add). With
+`q = p / mu` and `s = 1 / mu`, a point `p` uncovered at level `mu` is
+`for all z there is i with c_i.q - s c_i.z >= h_i(lambda)`, which is linear
+in `(q, s, lambda)`, and `g(lambda) = 1 / mu(K_lambda)` is the minimum of
+`s` over this disjunctive set `G`. A hole pinned by `n + 1` pairs gives `(q,
+s)` affine in `lambda`, hence an affine piece of `g`, valid on an interval
+computed exactly. So `g` is continuous and piecewise affine, while `mu` is
+piecewise of the form `1 / (a + b lambda)`.
+
+`POLYNORM_CoveringPath` computes the pieces of the deepest holes at 0 and 1
+(by a branch and bound over `(q, s, lambda)` with `lambda` fixed), takes
+their minimum `U`, an upper bound on `g`, and certifies each linear stretch
+`s_H` of `U` by a branch and bound over `(q, s, lambda)` with `lambda` in
+the stretch, minimizing `s - s_H(lambda)` over `G`: no point of negative
+value proves `g = s_H` there, and a point of negative value is a hole whose
+pieces lower `U`. Finitely many hole systems exist, so this terminates; all
+the numbers are rational and exact. The holes are taken at vertices of the
+linear programs, so that their tight pairs pin them.
+
+On the parallelograms of Section 3 of Codenotti, Freyer and Krivokuca,
+`P1 = {a (1,0) + b (1/2,1)}` and `P2 = {a (1,1) + b (-3/2,-1/2)}`, `0 <= a, b
+<= 1`, both lattice tiles:
+
+| `lambda` | `1 / mu` | `mu` |
+|---|---|---|
+| `[0, 7/24]` | `1 + lambda/14` | `1` to `48/49` |
+| `[7/24, 1/2]` | `7/6 - lambda/2` | `48/49` to `12/11` |
+| `[1/2, 17/24]` | `2/3 + lambda/2` | `12/11` to `48/49` |
+| `[17/24, 1]` | `15/14 - lambda/14` | `48/49` to `1` |
+
+the two local maxima and the local minimum of `1 / mu` that the paper
+describes (6 s). The facet cones of the covering radius code are bilinear
+in `(q, lambda)` and are not used, so the children of a branching overlap:
+two boxes in dimension 3 take 166 s.
+
 Files
 -----
 
@@ -292,4 +338,6 @@ Files
     admissibility branch and bound.
   * `PolyNorm_MinimalCovering.h`: the deepest covering cut and the
     reduction to a minimal covering polytope.
+  * `PolyNorm_CoveringPath.h`: the covering radius of `(1 - lambda) P1 +
+    lambda P2` as an exact piecewise affine function of `lambda`.
   * The CI test is `CI_tests/25B_PolyNorm/TestPolyNorm.g`.
