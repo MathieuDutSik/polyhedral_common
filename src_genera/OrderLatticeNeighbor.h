@@ -76,8 +76,9 @@
     lifts x + pi s b for s in F_ell (as in Hecke, Kirschmer's method).
   They are unimodular at ell when L is, and in the genus of L. At a dyadic
   ramified prime the lattice M + P^{-1} x need not be in the genus of L (the
-  dyadic Hermitian genus depends on the norm ideal), and those primes are
-  refused, as Hecke excludes them from its neighbors.
+  dyadic Hermitian genus depends on the norm ideal: over Q(sqrt -2), Hecke's
+  neighbors of I_2 at (sqrt -2) leave its genus), and those primes are
+  refused, as Hecke excludes them from its genus enumeration.
  */
 
 // The number types are T (a field, mpq_class or fmpq_class) and Tint (its
