@@ -7,101 +7,90 @@
 #include "two_dim_lorentzian.h"
 // clang-format on
 
+// The algorithms of Section 8 of Allcock, "An alternative to Vinberg's
+// algorithm", on the 2-dimensional Lorentzian forms a x^2 + 2 b x y + c y^2
+// listed in an input file, the results being written in GAP format.
+
+template <typename T> MyMatrix<T> GetGram(int a, int b, int c) {
+  MyMatrix<T> G(2, 2);
+  G(0, 0) = a;
+  G(0, 1) = b;
+  G(1, 0) = b;
+  G(1, 1) = c;
+  return G;
+}
+
 int main(int argc, char *argv[]) {
   maybe_install_gmp_pool();
   HumanTime time;
   try {
-    if (argc != 5) {
-      std::cerr << "LORENTZ_TwoDimAnisotropic_Allcock a b c M\n";
+    if (argc != 4) {
+      std::cerr << "LORENTZ_TwoDimAnisotropic_Allcock [Mode] [FileIn] "
+                   "[FileOut]\n";
+      std::cerr << "\n";
+      std::cerr << "Mode anisotropic: FileIn has the number of cases, then "
+                   "one line a b c M per\n";
+      std::cerr << "  anisotropic form a x^2 + 2 b x y + c y^2. For each, the "
+                   "positive vector r0 of\n";
+      std::cerr << "  GetPositiveVector, and the generator g and the list R "
+                   "of AnisotropicComplete\n";
+      std::cerr << "  (Algorithm 8.7) for the norm bound M.\n";
+      std::cerr << "Mode first_next: FileIn has the number of cases, then "
+                   "one line a b c x y N per\n";
+      std::cerr << "  form. For each, get_first_next_vector from r0 = (x,y) "
+                   "for the norm N.\n";
+      std::cerr << "FileOut: the GAP readable list of the results\n";
       throw TerminalException{1};
     }
     using T = mpq_class;
     using Tint = mpz_class;
-    //
-    int a = ParseScalar<int>(argv[1]);
-    int b = ParseScalar<int>(argv[2]);
-    int c = ParseScalar<int>(argv[3]);
-    int M = ParseScalar<int>(argv[4]);
-    T a_T = a;
-    T b_T = b;
-    T c_T = c;
-    T M_T = M;
-    std::cerr << "Working with the quadratic form\n";
-    std::cerr << "q = " << a << " x^2 + 2 * " << b << " x y + " << c
-              << " y^2\n";
-    std::cerr << "M = " << M << "\n";
-    std::cerr << "\n";
-    T discriminant = b * b - a * c;
-    if (discriminant <= 0) {
-      std::cerr << "discriminant = " << discriminant << "\n";
+    std::string Mode = argv[1];
+    std::string FileIn = argv[2];
+    std::string FileOut = argv[3];
+    std::ifstream is(FileIn);
+    int n_case;
+    is >> n_case;
+    std::ofstream os(FileOut);
+    os << "return [";
+    for (int i_case = 0; i_case < n_case; i_case++) {
+      if (i_case > 0)
+        os << ",\n";
+      if (Mode == "anisotropic") {
+        int a, b, c, M;
+        is >> a >> b >> c >> M;
+        MyMatrix<T> G = GetGram<T>(a, b, c);
+        MyVector<Tint> r0 = GetPositiveVector<T, Tint>(G);
+        std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>>
+            opt = AnisotropicComplete<T, Tint>(G, T(M));
+        os << "rec(r0:=" << StringVectorGAP(r0);
+        if (opt) {
+          os << ", g:=" << StringMatrixGAP(opt->first)
+             << ", R:=" << StringMatrixGAP(MatrixFromVectorFamily(opt->second));
+        }
+        os << ")";
+        continue;
+      }
+      if (Mode == "first_next") {
+        int a, b, c, x, y, N;
+        is >> a >> b >> c >> x >> y >> N;
+        MyMatrix<T> G = GetGram<T>(a, b, c);
+        MyVector<Tint> r0(2);
+        r0(0) = x;
+        r0(1) = y;
+        std::optional<MyVector<Tint>> opt =
+            get_first_next_vector<T, Tint>(G, r0, T(N));
+        if (opt) {
+          os << "rec(v:=" << StringVectorGAP(*opt) << ")";
+        } else {
+          os << "rec()";
+        }
+        continue;
+      }
+      std::cerr << "Mode=" << Mode << " but allowed modes are anisotropic and "
+                   "first_next\n";
       throw TerminalException{1};
     }
-    //
-    MyVector<Tint> r(2);
-    auto set_r = [&]() -> void {
-      if (a_T > 0) {
-        r(0) = 1;
-        r(1) = 0;
-        return;
-      }
-      if (b_T > 0) {
-        r(0) = 0;
-        r(1) = 1;
-        return;
-      }
-      std::cerr
-          << "More cases need to be covered if test were to be exhaustive\n";
-      throw TerminalException{1};
-    };
-    set_r();
-    std::cerr << "r = " << r(0) << "," << r(1) << "\n";
-    //
-    // A very basic algorithm for computing
-    MyVector<Tint> l(2);
-    auto set_l = [&]() -> void {
-      int shift = 1;
-      while (true) {
-        for (int i = -shift; i <= shift; i++)
-          for (int j = -shift; j <= shift; j++) {
-            l(0) = i;
-            l(1) = j;
-            MyMatrix<Tint> eMat = MatrixFromVectorFamily<Tint>({r, l});
-            if (DeterminantMat(eMat) > 0) {
-              T eNorm = a_T * T(i * i) + 2 * b_T * T(i * j) + c_T * T(j * j);
-              if (eNorm < M_T)
-                return;
-            }
-          }
-        shift++;
-      }
-    };
-    set_l();
-    std::cerr << "l = " << l(0) << "," << l(1) << "\n";
-    //
-    MyMatrix<T> G(2, 2);
-    G(0, 0) = a_T;
-    G(0, 1) = b_T;
-    G(1, 0) = b_T;
-    G(1, 1) = c_T;
-    //    std::optional<std::pair<MyMatrix<Tint>,std::vector<MyVector<Tint>>>>
-    //    pair_opt = Anisotropic(G, M_T, r, l);
-    std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>>
-        pair_opt = AnisotropicComplete<T, Tint>(G, M_T);
-    if (pair_opt) {
-      std::cerr << "g =\n";
-      WriteMatrix(std::cerr, pair_opt->first);
-      std::cerr << "|R| = " << pair_opt->second.size() << "\n";
-      std::cerr << "R =";
-      for (auto &eVect : pair_opt->second) {
-        Tint x = eVect(0);
-        Tint y = eVect(1);
-        T norm = a_T * x * x + 2 * b_T * x * y + c_T * y * y;
-        std::cerr << " [" << x << "," << y << "] : " << norm;
-      }
-      std::cerr << "\n";
-    } else {
-      std::cerr << "No solution were found\n";
-    }
+    os << "];\n";
     std::cerr << "Normal end of LORENTZ_TwoDimAnisotropic_Allcock\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_TwoDimAnisotropic_Allcock\n";

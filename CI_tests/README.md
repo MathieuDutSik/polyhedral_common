@@ -81,7 +81,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
 * `19A_IndefiniteComp` -- `ci_19A_indefinite_comp`: Stabilizers, equivalences and orbits of indefinite forms, on flint.
   GitHub CI: build and run 1.8 h, whole job 1.8 h, 2026-11-19.
 * `19B_AlgebraicModularForms` -- `ci_19B_algebraic_modular_forms`: Hecke matrices of algebraic modular forms.
-* `20_Reflective` -- `ci_20_reflective`: Allcock's edgewalk: reflective Lorentzian lattices and their isometries, on flint.
+* `20_Reflective` -- `ci_20_reflective`: Allcock's edgewalk: reflective Lorentzian lattices, their isometries, the 2-dimensional case.
   GitHub CI: build and run 45 min, whole job 48 min, 2026-11-20.
 * `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.
   GitHub CI: build and run 2 min, whole job 5 min, 2026-11-21.

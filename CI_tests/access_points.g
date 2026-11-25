@@ -3554,3 +3554,24 @@ get_hermitian_enumeration:=function(field, symbol, mass)
     RemoveFile(FileE);
     return U;
 end;
+
+# The algorithms of Section 8 of Allcock on the 2-dimensional Lorentzian
+# forms of the file FileCases, in the mode "anisotropic" or "first_next" of
+# LORENTZ_TwoDimAnisotropic_Allcock: the list of the result records.
+two_dim_lorentzian_cases:=function(Mode, FileCases)
+    local TmpDir, FileO, FileE, eProg, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileO:=Filename(TmpDir, "TwoDim.out");
+    FileE:=Filename(TmpDir, "TwoDim.err");
+    RemoveFileIfExist(FileO);
+    eProg:=GetBinaryFilename("LORENTZ_TwoDimAnisotropic_Allcock");
+    list_arg:=[Mode, FileCases, FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;

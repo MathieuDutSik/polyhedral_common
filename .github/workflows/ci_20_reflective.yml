@@ -66,3 +66,15 @@ jobs:
           fi
           cd ../..
           echo "After the isometry tests"
+
+      - name: Test the algorithms of 2-dimensional Lorentzian lattices
+        run: |
+          cd CI_tests/20_Reflective
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestTwoDim.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the 2-dimensional tests"
