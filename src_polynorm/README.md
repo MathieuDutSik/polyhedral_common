@@ -315,9 +315,14 @@ On the parallelograms of Section 3 of Codenotti, Freyer and Krivokuca,
 | `[17/24, 1]` | `15/14 - lambda/14` | `48/49` to `1` |
 
 the two local maxima and the local minimum of `1 / mu` that the paper
-describes (6 s). The facet cones of the covering radius code are bilinear
-in `(q, lambda)` and are not used, so the children of a branching overlap:
-two boxes in dimension 3 take 166 s.
+describes (0.4 s; two boxes in dimension 3 take 13 s). The facet cones of
+the covering radius code are bilinear in `(q, lambda)`; instead the child
+`(z, i)` of a branching requires the slack `phi_i = c_i.(q - s z) -
+h_i(lambda)` to be the largest, which is linear and makes the children
+disjoint (it divided the number of nodes by 30 to 50). A point of `G` found
+is pinned before its pieces are taken: it moves, at fixed `lambda` and
+without increasing `s`, along the kernel of its contacts until a new one
+appears, until they have rank `n + 1`.
 
 Files
 -----

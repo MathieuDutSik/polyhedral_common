@@ -344,8 +344,8 @@ TestCoveringPath:=function(eRec)
     return test;
 end;
 
-# Two rectangles, for which mu = max(1/a, 1/b) for the sides a, b, and the
-# tiling parallelograms of Section 3 of Codenotti, Freyer, Krivokuca, with
+# Two rectangles and two boxes of dimension 3, for which mu = max(1/a, 1/b,
+# ...) for the sides a, b, ..., and the tiling parallelograms of Section 3 of Codenotti, Freyer, Krivokuca, with
 # their two local maxima of 1/mu.
 ListCoveringPath:=[
   rec(file1:="path_box_A.ext", file2:="path_box_B.ext",
@@ -357,7 +357,12 @@ ListCoveringPath:=[
                rec(alpha:=7/24, beta:=1/2, s0:=7/6, s1:=-1/2),
                rec(alpha:=1/2, beta:=17/24, s0:=2/3, s1:=1/2),
                rec(alpha:=17/24, beta:=1, s0:=15/14, s1:=-1/14)],
-      ListLambda:=[1/10, 7/24, 2/5, 1/2, 17/24, 9/10])
+      ListLambda:=[1/10, 7/24, 2/5, 1/2, 17/24, 9/10]),
+  rec(file1:="path_box3_A.ext", file2:="path_box3_B.ext",
+      pieces:=[rec(alpha:=0, beta:=1/3, s0:=1/2, s1:=3/2),
+               rec(alpha:=1/3, beta:=2/3, s0:=1, s1:=0),
+               rec(alpha:=2/3, beta:=1, s0:=2, s1:=-3/2)],
+      ListLambda:=[1/4, 1/2, 5/6])
 ];
 
 # All the cases are run, so that every failure is reported.

@@ -59,13 +59,13 @@
   The algorithm. A branch and bound over (q, s, lambda), lambda in an
   interval I, minimizes a linear function s - s_H(lambda) over G: at the
   optimum of a node, a lattice point z with q - s z interior to K_lambda is
-  branched on, one child (z, i) per facet. The optimum of a node is a
-  vertex of its region, whose active rows are the bounds on lambda and
-  tight pairs, so a point of G found this way is a hole pinned by its tight
-  pairs: they have rank n+1 in (q, s). (The deepest holes found by
-  PolyNorm_Covering.h need not be pinned: for a tile every boundary point
-  is a deepest hole, and the facet cones of its linear programs are not
-  tight pairs.)
+  branched on, one child (z, i) per facet, the child i requiring that the
+  facet i has the largest slack, phi_i >= phi_j for all j with phi_j =
+  c_j.(q - s z) - h_j(lambda). These rows are linear, so the children
+  partition the space as the facet cones of PolyNorm_Covering.h do there
+  (those cones are bilinear in (q, lambda) here). A point of G found is
+  then pinned by PolyNorm_PathPin, which does not increase s, so that its
+  contacts have rank n+1 in (q, s).
   --- g(lambda_0) is the minimum of s with I = {lambda_0}. Every system of
       n+1 tight pairs of the hole found with independent rows gives a
       piece, kept on its validity interval around lambda_0. The minimum U
@@ -81,10 +81,6 @@
   region since mu is bounded on [0,1]) and each failed certificate adds a
   piece below U at lambda*, hence a new one, so the algorithm terminates, with
   all the pieces and break points rational and every step exact.
-
-  The facet cones used by PolyNorm_Covering.h to make the children disjoint
-  are bilinear in (q, lambda), so the children here overlap: the search is
-  correct but explores more nodes.
 
   The lower bound s >= s_lo = 1 / (2 mu_0) keeps the linear programs
   bounded and is never active at a point of G:
@@ -567,6 +563,158 @@ PolyNorm_PathPieces(PolyNormPathData<T> const &data,
   return ListPiece;
 }
 
+// A pinned point of G at the same lambda with a value of s at most that of
+// x, a point of G. While the (q, s) parts of the rows of the contacts (the
+// tight pairs with q - s z in K_lambda) have rank less than n+1, the point
+// moves along a direction d of their kernel with d_s <= 0. Every contact
+// stays one, so that the point stays in G, and the move stops at the
+// first new contact, or where q reaches the boundary of K_lambda (a
+// contact with z = 0): the new row has a nonzero product with d, so the
+// rank increases, and at most n+1 moves are made.
+template <typename T, typename Tint>
+MyVector<T> PolyNorm_PathPin(PolyNormPathData<T> const &data,
+                             MyVector<T> const &x_input, std::ostream &os) {
+  int n = data.n;
+  int m = data.m;
+  MyVector<T> x = x_input;
+  T lambda = x(n + 1);
+  std::vector<PolyNormPathPair<T, Tint>> NoPair;
+  while (true) {
+    PolyNormPathHole<T, Tint> hole =
+        PolyNorm_PathHole<T, Tint>(data, x, NoPair, os);
+    int n_tight = hole.ListTight.size();
+    MyMatrix<T> R(n_tight, n + 1);
+    for (int r = 0; r < n_tight; r++) {
+      PolyNormPathPair<T, Tint> const &P = hole.ListTight[r];
+      T cz(0);
+      for (int k = 0; k < n; k++) {
+        R(r, k) = data.C(P.i, k);
+        cz += data.C(P.i, k) * P.z_T(k);
+      }
+      R(r, n) = -cz;
+    }
+    if (n_tight > 0 && RankMat(R) == n + 1) {
+      return x;
+    }
+    MyVector<T> d(n + 1);
+    if (n_tight == 0) {
+      d = ZeroVector<T>(n + 1);
+      d(0) = 1;
+    } else {
+      MyMatrix<T> NSP = NullspaceMat(TransposedMat(R));
+      d = GetMatrixRow(NSP, 0);
+    }
+    if (d(n) > 0) {
+      d = -d;
+    }
+#ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
+    if (n_tight > 0 && !IsZeroVector(MyVector<T>(R * d))) {
+      std::cerr << "POLYNORM_COVERINGPATH: The direction is not in the "
+                << "kernel of the contacts\n";
+      throw TerminalException{1};
+    }
+#endif
+    // The largest step keeping q in K_lambda and s >= s_lo.
+    std::optional<T> t_max;
+    auto update = [&](T const &t) -> void {
+      if (!t_max || t < *t_max) {
+        t_max = t;
+      }
+    };
+    for (int i = 0; i < m; i++) {
+      T cq(0), cd(0);
+      for (int k = 0; k < n; k++) {
+        cq += data.C(i, k) * x(k);
+        cd += data.C(i, k) * d(k);
+      }
+      if (cd > 0) {
+        update((PolyNorm_PathH(data, i, lambda) - cq) / cd);
+      }
+    }
+    if (d(n) < 0) {
+      update((x(n) - data.s_lo) / (-d(n)));
+    }
+#ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
+    if (!t_max || *t_max <= 0) {
+      std::cerr << "POLYNORM_COVERINGPATH: The pinning step is not positive "
+                << "and finite\n";
+      throw TerminalException{1};
+    }
+#endif
+    // The lattice points z with q(t) - s(t) z in K_lambda for some t in
+    // [0, t_max]: c_i.z >= (c_i.q(t) - h_i) / s(t), monotone in t.
+    auto r_val = [&](int i, T const &t) -> T {
+      T val = -PolyNorm_PathH(data, i, lambda);
+      for (int k = 0; k < n; k++) {
+        val += data.C(i, k) * (x(k) + t * d(k));
+      }
+      return val / (x(n) + t * d(n));
+    };
+    MyMatrix<T> FAC(m, n + 1);
+    for (int i = 0; i < m; i++) {
+      T r0 = r_val(i, T(0));
+      T r1 = r_val(i, *t_max);
+      FAC(i, 0) = -std::min(r0, r1);
+      for (int k = 0; k < n; k++) {
+        FAC(i, k + 1) = data.C(i, k);
+      }
+    }
+    T t_step = *t_max;
+    for (auto &z : GetListIntegralPoint<T, Tint>(FAC, os)) {
+      MyVector<T> z_T = UniversalVectorConversion<T, Tint>(z);
+      // phi_i(t) = A_i + B_i t; the point leaves G for z when all the
+      // phi_i become negative, on the open interval (lo, hi).
+      std::optional<T> lo, hi;
+      bool empty = false;
+      for (int i = 0; i < m; i++) {
+        T cz(0), cq(0), cd(0);
+        for (int k = 0; k < n; k++) {
+          cz += data.C(i, k) * z_T(k);
+          cq += data.C(i, k) * x(k);
+          cd += data.C(i, k) * d(k);
+        }
+        T A = cq - x(n) * cz - PolyNorm_PathH(data, i, lambda);
+        T B = cd - d(n) * cz;
+        if (B > 0) {
+          T val = -A / B;
+          if (!hi || val < *hi) {
+            hi = val;
+          }
+        } else if (B < 0) {
+          T val = -A / B;
+          if (!lo || val > *lo) {
+            lo = val;
+          }
+        } else if (A >= 0) {
+          empty = true;
+          break;
+        }
+      }
+      if (empty || (lo && hi && *lo >= *hi)) {
+        continue;
+      }
+#ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
+      if ((!lo || *lo < 0) && (!hi || *hi > 0)) {
+        std::cerr << "POLYNORM_COVERINGPATH: The point to pin is not in G\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (lo && *lo >= 0 && *lo < t_step) {
+        t_step = *lo;
+      }
+    }
+#ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
+    if (t_step <= 0) {
+      std::cerr << "POLYNORM_COVERINGPATH: The pinning step is zero\n";
+      throw TerminalException{1};
+    }
+#endif
+    for (int k = 0; k <= n; k++) {
+      x(k) += t_step * d(k);
+    }
+  }
+}
+
 // The branch and bound over (q, s, lambda) in G with lambda in [la, lb]
 // that minimizes s - s0 - s1 lambda. Its two uses:
 // --- the evaluation of g at lambda_0: la = lb = lambda_0, s0 = s1 = 0, and
@@ -607,7 +755,7 @@ template <typename T, typename Tint> struct PolyNormPathSolver {
   // The rows of a node over the variables (q, s, lambda): b + a.x >= 0.
   MyMatrix<T>
   NodeInequalities(std::vector<PolyNormPathPair<T, Tint>> const &Node) const {
-    int n_row = 3 + m + Node.size();
+    int n_row = 3 + m + Node.size() * m;
     MyMatrix<T> ListIneq = ZeroMatrix<T>(n_row, n + 3);
     int pos = 0;
     // lambda - la >= 0, lb - lambda >= 0, s - s_lo >= 0
@@ -640,6 +788,23 @@ template <typename T, typename Tint> struct PolyNormPathSolver {
       ListIneq(pos, n + 1) = -cz;
       ListIneq(pos, n + 2) = -data.d(P.i);
       pos++;
+      // phi_i - phi_j >= 0 for j != i, phi_j = c_j.q - s c_j.z - h_j(lambda):
+      // the facet i has the largest slack, so that the children of a
+      // branching partition the space.
+      for (int j = 0; j < m; j++) {
+        if (j == P.i) {
+          continue;
+        }
+        T czj(0);
+        for (int k = 0; k < n; k++) {
+          czj += data.C(j, k) * P.z_T(k);
+          ListIneq(pos, k + 1) = data.C(P.i, k) - data.C(j, k);
+        }
+        ListIneq(pos, 0) = data.h1(j) - data.h1(P.i);
+        ListIneq(pos, n + 1) = czj - cz;
+        ListIneq(pos, n + 2) = data.d(j) - data.d(P.i);
+        pos++;
+      }
     }
     return ListIneq;
   }
@@ -664,83 +829,6 @@ template <typename T, typename Tint> struct PolyNormPathSolver {
     MyVector<T> const &x = *eSol.DirectSolution;
     T value = x(n) - s0 - s1 * x(n + 1);
     return std::pair<MyVector<T>, T>{x, value};
-  }
-
-  // Whether the point x of G is pinned: its tight pairs, with the bounds
-  // on lambda that are active, have rank n+2 in (q, s, lambda).
-  bool IsPinned(MyVector<T> const &x,
-                std::vector<PolyNormPathPair<T, Tint>> const &Node) const {
-    PolyNormPathHole<T, Tint> hole =
-        PolyNorm_PathHole<T, Tint>(data, x, Node, os);
-    std::vector<MyVector<T>> ListRow;
-    for (auto &P : hole.ListTight) {
-      MyVector<T> row(n + 2);
-      T cz(0);
-      for (int k = 0; k < n; k++) {
-        row(k) = data.C(P.i, k);
-        cz += data.C(P.i, k) * P.z_T(k);
-      }
-      row(n) = -cz;
-      row(n + 1) = -data.d(P.i);
-      ListRow.push_back(row);
-    }
-    if (x(n + 1) == la || x(n + 1) == lb) {
-      MyVector<T> row = ZeroVector<T>(n + 2);
-      row(n + 1) = 1;
-      ListRow.push_back(row);
-    }
-    if (ListRow.empty()) {
-      return false;
-    }
-    MyMatrix<T> M(ListRow.size(), n + 2);
-    for (size_t r = 0; r < ListRow.size(); r++) {
-      for (int k = 0; k < n + 2; k++) {
-        M(r, k) = ListRow[r](k);
-      }
-    }
-    return RankMat(M) == n + 2;
-  }
-
-  // A vertex of the optimal face of the node: the minimum of a generic
-  // linear function over the points of the node of value at most value.
-  // It is unique, hence a vertex, and the region of the node being bounded,
-  // it exists.
-  MyVector<T>
-  VertexOfOptimalFace(std::vector<PolyNormPathPair<T, Tint>> const &Node,
-                      T const &value) {
-    n_lp++;
-    MyMatrix<T> ListIneq0 = NodeInequalities(Node);
-    int n_row = ListIneq0.rows();
-    MyMatrix<T> ListIneq(n_row + 1, n + 3);
-    for (int r = 0; r < n_row; r++) {
-      for (int k = 0; k < n + 3; k++) {
-        ListIneq(r, k) = ListIneq0(r, k);
-      }
-    }
-    // value + s0 + s1 lambda - s >= 0
-    for (int k = 0; k < n + 3; k++) {
-      ListIneq(n_row, k) = 0;
-    }
-    ListIneq(n_row, 0) = value + s0;
-    ListIneq(n_row, n + 1) = -1;
-    ListIneq(n_row, n + 2) = s1;
-    // The weights 1/p for distinct primes p on q and lambda.
-    std::vector<int> ListPrime{2,  3,  5,  7,  11, 13, 17, 19, 23, 29,
-                               31, 37, 41, 43, 47, 53, 59, 61, 67, 71};
-    MyVector<T> ToBeMinimized = ZeroVector<T>(n + 3);
-    for (int k = 0; k <= n; k++) {
-      int idx = (k < n) ? k + 1 : n + 2;
-      ToBeMinimized(idx) = T(1) / T(ListPrime[k % ListPrime.size()]);
-    }
-    LpSolution<T> eSol = SIMPLEX_LinearProgramming(ListIneq, ToBeMinimized, os);
-#ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
-    if (!eSol.DirectSolution || !eSol.DualSolution) {
-      std::cerr << "POLYNORM_COVERINGPATH: The optimal face LP has no "
-                << "optimum\n";
-      throw TerminalException{1};
-    }
-#endif
-    return *eSol.DirectSolution;
   }
 
   bool IsPruned(T const &value) const {
@@ -794,29 +882,23 @@ template <typename T, typename Tint> struct PolyNormPathSolver {
       }
     }
     if (!branch) {
-      // (q, s, lambda) is in G. The point recorded must be a pinned hole:
-      // otherwise a vertex of the optimal face of the node is taken, which
-      // is either in G and pinned or has a violating lattice point.
-      if (!IsPinned(x, Node)) {
-        MyVector<T> x_vert = VertexOfOptimalFace(Node, value);
+      // (q, s, lambda) is in G. The point recorded is pinned, which does
+      // not increase its value.
+      MyVector<T> x_pin = PolyNorm_PathPin<T, Tint>(data, x, os);
+      T value_pin = x_pin(n) - s0 - s1 * x_pin(n + 1);
 #ifdef SANITY_CHECK_POLYNORM_COVERINGPATH
-        T value_vert = x_vert(n) - s0 - s1 * x_vert(n + 1);
-        if (value_vert != value || x_vert == x) {
-          std::cerr << "POLYNORM_COVERINGPATH: The vertex of the optimal "
-                    << "face is not pinned or not of the same value, x="
-                    << StringVector(x) << " x_vert=" << StringVector(x_vert)
-                    << " value=" << value << " value_vert=" << value_vert
-                    << "\n";
-          throw TerminalException{1};
-        }
+      if (value_pin > value) {
+        std::cerr << "POLYNORM_COVERINGPATH: The pinning increased the "
+                  << "value\n";
+        throw TerminalException{1};
+      }
 #endif
-        n_node--;
-        Process(Node, x_vert, value);
+      if (best && value_pin >= *best) {
         return;
       }
-      best = value;
-      x_best = x;
-      Node_best = Node;
+      best = value_pin;
+      x_best = x_pin;
+      Node_best.clear();
 #ifdef DEBUG_POLYNORM_COVERINGPATH
       os << "POLYNORM_COVERINGPATH: point of G of value " << value
          << " at lambda=" << lambda << "\n";
