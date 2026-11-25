@@ -575,7 +575,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
       MyMatrix<T> M_sel =
           AddFirstZeroColumn(SelectColumn(M, eSelect.ListColSelect));
       MyVector<T> V_sel =
-          AddFirstZeroCoordinate(MyVector<T>(V(eSelect.ListColSelect)));
+          AddFirstZeroCoordinate(SelectColumnVector(V, eSelect.ListColSelect));
       LpSolution<T> eSol = SIMPLEX_LinearProgramming(M_sel, V_sel, os);
       if (!eSol.DualSolution || !eSol.DirectSolution) {
         return false;
