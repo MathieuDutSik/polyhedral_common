@@ -36,7 +36,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 44 min, whole job 47 min, 2026-11-04.
 * `05A_DirectVolumePolytope` -- `ci_05A_direct_volume`: Computation of the volume of polytopes.
   GitHub CI: build and run 20 s, whole job 3 min, 2026-11-05.
-* `05B_CddSkeletons` -- `ci_05B_cdd_skeletons`: CDD skeletons (DualDescriptionAdjacencies).
+* `05B_DoubleDescriptionSkeletons` -- `ci_05B_cdd_skeletons`: CDD skeletons (DualDescriptionAdjacencies).
   GitHub CI: build and run 23 s, whole job 3 min, 2026-10-05.
 * `06A_GeometricallyUnique` -- `ci_06A_geometrically_unique`: Interior point of a polytope invariant under its transformations.
   Local run: build 10 s, run 2 min (`ProcessEntries.g`), 2026-11-25.
@@ -87,7 +87,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 2 min, whole job 5 min, 2026-11-21.
 * `21B_GroupIndividualization` -- `ci_21B_group_individualization`: Automorphism groups of point sets by individualization.
   GitHub CI: build and run 1 min, whole job 4 min, 2026-10-21.
-* `22_CommonG_IsoDelaunay` -- `ci_22_commong_isodelaunay`: CommonGramMat iso-Delaunay (rigid lattices and stars).
+* `22A_CommonG_IsoDelaunay` -- `ci_22_commong_isodelaunay`: CommonGramMat iso-Delaunay (rigid lattices and stars).
   GitHub CI: build and run 20 min, whole job 27 min, 2026-11-22.
 * `23A_IntegralPoints` -- `ci_23A_integral_points`: Compute the integral points of some polytope.
   GitHub CI: build and run 2 min, whole job 4 min, 2026-09-23.

@@ -46,7 +46,7 @@ jobs:
           pwd
           echo "After compilation of LATT_Canonicalize"
 
-          cd CI_tests/22_CommonG_IsoDelaunay
+          cd CI_tests/22A_CommonG_IsoDelaunay
           ../../gap.sh < TestCommonGIsoDelaunay.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the expected file" >&2
