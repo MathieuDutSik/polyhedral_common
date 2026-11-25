@@ -204,6 +204,14 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q,
 }
 
 // For rank 1 this is trivial
+// A definite form has no isotropic vector. The algorithms of dimension 5
+// and more assume the form indefinite, where an isotropic vector exists.
+template <typename T>
+bool is_indefinite_form(MyMatrix<T> const &M, std::ostream &os) {
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(M, os);
+  return DiagInfo.nbPlus > 0 && DiagInfo.nbMinus > 0;
+}
+
 template <typename T>
 std::optional<MyVector<T>> FindIsotropicRankOne(MyMatrix<T> const &M) {
   if (M(0, 0) != 0)
@@ -302,6 +310,9 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M,
   if (n == 2) {
     return FindIsotropicRankTwo(M);
   }
+  if (!is_indefinite_form(M, os)) {
+    return {};
+  }
   if (n == 3) {
     return TernaryIsotropicVector(M, os);
   }
@@ -334,6 +345,9 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
   // For low dimension, no point using LLL stuff.
   if (n <= 2) {
     return FindIsotropicExact(M, os);
+  }
+  if (!is_indefinite_form(M, os)) {
+    return {};
   }
   // Trying to solve by using the iterated Indefinite-LLL.
   std::optional<MyVector<T>> optA = FindIsotropic_LLL_nfixed(M, os);
@@ -415,8 +429,9 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream &os) {
     if (n == 4) {
       return quaternary_has_isotropic_vector(M, os);
     }
-    // By Meyer theorem, for n > 4 there is an isotropic vector
-    return true;
+    // By Meyer theorem, for n > 4 an indefinite form has an isotropic
+    // vector, and a definite one has none.
+    return is_indefinite_form(M, os);
   };
   bool test = get_val();
 #ifdef TIMINGS_ISOTROPIC

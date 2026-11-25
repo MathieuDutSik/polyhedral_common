@@ -94,12 +94,18 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat, std::ostream &os) {
 template <typename T, typename Tint, typename Ttest>
 std::optional<MyVector<Tint>>
 TestIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect,
-                          MyMatrix<T> const &M, T const &CritNorm,
-                          bool const &StrictIneq,
+                          int const &scal, MyMatrix<T> const &M,
+                          T const &CritNorm, bool const &StrictIneq,
                           [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   MyVector<Tint> V_ret(n);
+  Ttest scal_t(scal);
   for (auto &eV : ListVect) {
+    // The candidate is the rounding of scal times the direction eV.
+    for (int i = 0; i < n; i++) {
+      Ttest val = scal_t * eV(i);
+      V_ret(i) = UniversalNearestScalarInteger<Tint, Ttest>(val);
+    }
     auto is_ok_vector = [&]() -> bool {
       T eNorm = EvaluationQuadForm<T, Tint>(M, V_ret);
       if (StrictIneq) {
@@ -182,8 +188,9 @@ GetPositiveDirections_eigen(MyMatrix<T> const &M) {
   for (int i = 0; i < n; i++) {
     if (ListEig(i) > 0) {
       MyVector<double> V(n);
+      // The eigenvectors are the columns of eig.eigenvectors().
       for (int j = 0; j < n; j++) {
-        V(j) = ListVect(i, j);
+        V(j) = ListVect(j, i);
       }
       ListEigVect.push_back(V);
     }
