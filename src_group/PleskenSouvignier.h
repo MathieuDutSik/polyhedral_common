@@ -122,20 +122,44 @@
   matrices of the sums have to agree as well. Not implemented: the
   Bacher polynomials (Section 6), an additional invariant for the
   remaining hard cases, pluggable into ps_cand the same way.
+
+  The polytope mode (option polytope of the automorphism search): the
+  family is a finite set V of vectors, the vertices of a polytope or the
+  rays of a cone, and the group searched is the one of the g in GL_n(Z)
+  with V g = V and g M g^T = M. The rows are then taken as they are: no
+  antipodal pairing (-v is in the family only when it is a row itself),
+  no sign normalization, and no -Id in the group. The forms do not
+  determine V, so requirement (2) is replaced by a check at the leaves
+  that the matrix maps every row to a row. The linear automorphisms of a
+  polytope are covered by giving V in a Z-basis of the lattice it spans
+  (every linear automorphism preserves that lattice, so it is integral
+  there) with M the form S^{-1}, S = V^T V, scaled to an integral one:
+  g^T S g = S for V g = P V. See LinPolytope_Automorphism_PleskenSouvignier
+  in PolytopePleskenSouvignier.h.
  */
 
 // One vector per antipodal pair, sign-normalized so that the first
 // non-zero coordinate is positive. A point of the search is a signed
-// 1-based index: +k is row k-1 of V, -k its negative.
+// 1-based index: +k is row k-1 of V, -k its negative. In the polytope
+// mode (antipodal false) the rows are kept as given and the indices are
+// all positive.
 template <typename Tint> struct PleskenSouvignierVectorSet {
   int n;
   int m;
+  bool antipodal = true;
   MyMatrix<Tint> V;
   std::unordered_map<MyVector<Tint>, int> Map;
   // The signed index of w, or 0 when w is not in the family. A 0 from a
   // vector that an automorphism produced means the family is not
   // invariant, which the callers treat as an input error.
   int find_point(MyVector<Tint> const &w) const {
+    if (!antipodal) {
+      auto iter = Map.find(w);
+      if (iter == Map.end()) {
+        return 0;
+      }
+      return iter->second + 1;
+    }
     int len = w.size();
     int ipos = 0;
     while (ipos < len && w(ipos) == 0) {
@@ -162,12 +186,14 @@ template <typename Tint> struct PleskenSouvignierVectorSet {
 
 template <typename Tint>
 PleskenSouvignierVectorSet<Tint>
-PleskenSouvignierBuildVectorSet(MyMatrix<Tint> const &SHVhalf) {
+PleskenSouvignierBuildVectorSet(MyMatrix<Tint> const &SHVhalf,
+                                bool antipodal = true) {
   int m = SHVhalf.rows();
   int n = SHVhalf.cols();
   PleskenSouvignierVectorSet<Tint> VS;
   VS.n = n;
   VS.m = m;
+  VS.antipodal = antipodal;
   VS.V = MyMatrix<Tint>(m, n);
   for (int j = 0; j < m; j++) {
     int ipos = 0;
@@ -180,7 +206,7 @@ PleskenSouvignierBuildVectorSet(MyMatrix<Tint> const &SHVhalf) {
       throw TerminalException{1};
     }
 #endif
-    Tint sign = (SHVhalf(j, ipos) > 0) ? Tint(1) : Tint(-1);
+    Tint sign = (!antipodal || SHVhalf(j, ipos) > 0) ? Tint(1) : Tint(-1);
     for (int i = 0; i < n; i++) {
       VS.V(j, i) = sign * SHVhalf(j, i);
     }
@@ -188,7 +214,8 @@ PleskenSouvignierBuildVectorSet(MyMatrix<Tint> const &SHVhalf) {
   }
 #ifdef SANITY_CHECK_PLESKEN_SOUVIGNIER
   if (static_cast<int>(VS.Map.size()) != m) {
-    std::cerr << "PS: the vector family has duplicated antipodal pairs\n";
+    std::cerr << "PS: the vector family has duplicated vectors (or "
+              << "antipodal pairs, outside the polytope mode)\n";
     throw TerminalException{1};
   }
 #endif
@@ -365,7 +392,7 @@ int ps_possible(PleskenSouvignierContext<Tint> const &ctx,
       continue;
     }
     bool okp = true;
-    bool okm = true;
+    bool okm = ctx.VS.antipodal;
     for (int iMat = 0; iMat < nbMat && (okp || okm); iMat++) {
       for (int k = 0; k < I; k++) {
         Tint const &sc = Scal[iMat](j, ctx.per[k]);
@@ -570,6 +597,18 @@ template <typename Tint> int ps_normalize_sign(MyVector<Tint> &v) {
   return -1;
 }
 
+// The sign that sign-normalizes a tuple of the vector sums (see
+// ps_normalize_sign). In the polytope mode the vectors are not paired
+// with their negatives, so the tuples are compared as they are and every
+// vector enters the sum of its class with the sign 1.
+template <typename Tint>
+int ps_tuple_sign(MyVector<Tint> &tup, bool antipodal) {
+  if (!antipodal) {
+    return 1;
+  }
+  return ps_normalize_sign(tup);
+}
+
 // The identity-prefix vector-sum data of every level (Section 5): the
 // tuples come straight out of the W tables, the products with a basis
 // vector being single entries.
@@ -603,7 +642,7 @@ void ps_init_vector_sums(PleskenSouvignierContext<Tint> &ctx, int depth,
           pos++;
         }
       }
-      int sign = ps_normalize_sign(tup);
+      int sign = ps_tuple_sign(tup, ctx.VS.antipodal);
       int idx;
       auto iter = lev.TupleMap.find(tup);
       if (iter == lev.TupleMap.end()) {
@@ -691,7 +730,7 @@ bool ps_vector_sum_check(PleskenSouvignierContext<Tint> const &Ci,
         pos++;
       }
     }
-    int sign = ps_normalize_sign(tup);
+    int sign = ps_tuple_sign(tup, Co.VS.antipodal);
     auto iter = lev.TupleMap.find(tup);
     if (iter == lev.TupleMap.end()) {
       return false;
@@ -773,6 +812,9 @@ template <typename Tint> struct PSContextOptions {
   std::optional<PSBasisData<Tint>> basis_data;
   // The fingerprint, when already known.
   std::optional<PSFingerprint> fingerprint;
+  // The polytope mode (see the header): no antipodal pairing, and the
+  // leaves are checked to map the family to itself.
+  bool polytope = false;
 };
 
 template <typename Tint>
@@ -812,7 +854,7 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
     throw TerminalException{1};
   }
 #endif
-  ctx.VS = PleskenSouvignierBuildVectorSet(SHVhalf);
+  ctx.VS = PleskenSouvignierBuildVectorSet(SHVhalf, !options.polytope);
   int n = ctx.VS.n;
   int m = ctx.VS.m;
   int nbMat = ListMat.size();
@@ -844,8 +886,11 @@ PleskenSouvignierContext<Tint> PleskenSouvignierBuildContext(
   ctx.nsg.assign(n, 0);
   ctx.orders.assign(n, 1);
   ctx.depth = 0;
-  // -Id preserves every bilinear form and every antipodal family.
-  ctx.g[0].push_back(-IdentityMat<Tint>(n));
+  // -Id preserves every bilinear form and every antipodal family, but
+  // not the family of the polytope mode.
+  if (ctx.VS.antipodal) {
+    ctx.g[0].push_back(-IdentityMat<Tint>(n));
+  }
   if (with_fingerprint) {
     ctx.bas = basis_data ? basis_data->bas : ps_select_basis(ctx);
     ctx.Fmat.clear();
@@ -951,7 +996,7 @@ bool ps_cand(PleskenSouvignierContext<Tint> const &Ci,
   }
   for (int j = 0; j < m; j++) {
     bool okp = true;
-    bool okm = true;
+    bool okm = Co.VS.antipodal;
     for (int iMat = 0; iMat < nbMat; iMat++) {
       if (Co.Lengths(j, iMat) != Ci.Fmat[iMat](Ci.per[I], Ci.per[I])) {
         okp = false;
@@ -1045,6 +1090,47 @@ MyMatrix<Tint> ps_matgen(PleskenSouvignierContext<Tint> const &Ci,
                          std::vector<int> const &x) {
   std::optional<MyMatrix<Tint>> opt = ps_matgen_opt(Ci, Co, x);
   return unfold_opt(opt, "the assignment should give an integral matrix");
+}
+
+/*
+  Whether the complete assignment x of an automorphism search is an
+  automorphism. With an antipodal family the products against the basis
+  make the matrix preserve the forms, and the family, defined by the
+  forms, follows, so only the integrality is tested (and not even that
+  with a unimodular basis). In the polytope mode the family is not
+  defined by the forms, and every row has to be mapped to a row; the
+  integral matrix is invertible since it preserves the definite form, so
+  the rows are then permuted.
+ */
+template <typename Tint>
+bool ps_leaf_automorphism(PleskenSouvignierContext<Tint> const &ctx,
+                          std::vector<int> const &x) {
+  if (ctx.VS.antipodal && ctx.Bden == 1) {
+    return true;
+  }
+  std::optional<MyMatrix<Tint>> opt = ps_matgen_opt(ctx, ctx, x);
+  if (!opt) {
+    return false;
+  }
+  if (ctx.VS.antipodal) {
+    return true;
+  }
+  MyMatrix<Tint> const &X = *opt;
+  int n = ctx.n();
+  MyVector<Tint> w(n);
+  for (int j = 0; j < ctx.VS.m; j++) {
+    for (int i = 0; i < n; i++) {
+      Tint sum(0);
+      for (int k = 0; k < n; k++) {
+        sum += ctx.VS.V(j, k) * X(k, i);
+      }
+      w(i) = sum;
+    }
+    if (ctx.VS.find_point(w) == 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /*
@@ -1345,8 +1431,9 @@ bool ps_aut_extend(PleskenSouvignierContext<Tint> const &ctx, int step,
     if (step == n - 1) {
       // A complete product-matching assignment; with a unimodular basis
       // it is integral by construction, otherwise the rational
-      // solutions are discarded here.
-      if (ctx.Bden == 1 || ps_matgen_opt(ctx, ctx, x).has_value()) {
+      // solutions are discarded here, and in the polytope mode the
+      // matrices that do not map the family to itself.
+      if (ps_leaf_automorphism(ctx, x)) {
         return true;
       }
       continue;
@@ -1433,7 +1520,7 @@ void ps_auto(PleskenSouvignierContext<Tint> &ctx, std::ostream &os) {
           found = ps_aut_extend(ctx, step + 1, x, cand_next);
         }
       } else {
-        found = (ctx.Bden == 1) || ps_matgen_opt(ctx, ctx, x).has_value();
+        found = ps_leaf_automorphism(ctx, x);
       }
       if (!found) {
         std::vector<int> oc = ps_orbit(ctx, {im}, H);
@@ -1762,6 +1849,8 @@ template <typename Tint> struct PSAutomorphismOptions {
   std::optional<std::pair<MyMatrix<Tint>, Tint>> adjdet0;
   // The searched basis and its inverse data, when already known.
   std::optional<PSBasisData<Tint>> basis_data;
+  // The polytope mode (see the header).
+  bool polytope = false;
 };
 
 template <typename Tint, typename Tgroup>
@@ -1783,35 +1872,39 @@ PleskenSouvignierAutomResult<Tint, Tgroup> PleskenSouvignierAutomorphism(
   if constexpr (!std::is_same_v<Tint, int64_t>) {
     // The certified int64 fast path: the preanalysis proves that no
     // operation of the search can overflow, so the engine runs on raw
-    // machine integers with no per-operation check.
-    PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMat, SHVhalf, adjdet0);
-    std::optional<PSBasisData<Tint>> bd =
-        ps_basis_data_for_int64(ListMat, SHVhalf, adjdet0, bounds, os);
-    if (ps_certify_int64(bounds, os)) {
-      std::vector<MyMatrix<int64_t>> ListMat64 =
-          UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat);
-      MyMatrix<int64_t> SHVhalf64 =
-          UniversalMatrixConversion<int64_t, Tint>(SHVhalf);
-      std::optional<PSBasisData<int64_t>> bd64;
-      if (bd) {
-        bd64 = ps_basis_data_to_int64(*bd);
+    // machine integers with no per-operation check. Not in the polytope
+    // mode: its leaf check multiplies the family by a matrix that is not
+    // known to be an automorphism, which the certificate does not bound.
+    if (!options.polytope) {
+      PSInt64Bounds<Tint> bounds = ps_int64_bounds(ListMat, SHVhalf, adjdet0);
+      std::optional<PSBasisData<Tint>> bd =
+          ps_basis_data_for_int64(ListMat, SHVhalf, adjdet0, bounds, os);
+      if (ps_certify_int64(bounds, os)) {
+        std::vector<MyMatrix<int64_t>> ListMat64 =
+            UniversalStdVectorMatrixConversion<int64_t, Tint>(ListMat);
+        MyMatrix<int64_t> SHVhalf64 =
+            UniversalMatrixConversion<int64_t, Tint>(SHVhalf);
+        std::optional<PSBasisData<int64_t>> bd64;
+        if (bd) {
+          bd64 = ps_basis_data_to_int64(*bd);
+        }
+        PleskenSouvignierAutomResult<int64_t, Tgroup> res64 =
+            PleskenSouvignierAutomorphism<int64_t, Tgroup>(
+                ListMat64, SHVhalf64,
+                PSAutomorphismOptions<int64_t>{
+                    .depth = options.depth,
+                    .adjdet0 = ps_adjdet_to_int64(adjdet0),
+                    .basis_data = bd64},
+                os);
+        PleskenSouvignierAutomResult<Tint, Tgroup> res;
+        res.ListGen =
+            UniversalStdVectorMatrixConversion<Tint, int64_t>(res64.ListGen);
+        res.ListOrbitSize = std::move(res64.ListOrbitSize);
+        res.order = res64.order;
+        res.depth_used = res64.depth_used;
+        res.nodes_used = res64.nodes_used;
+        return res;
       }
-      PleskenSouvignierAutomResult<int64_t, Tgroup> res64 =
-          PleskenSouvignierAutomorphism<int64_t, Tgroup>(
-              ListMat64, SHVhalf64,
-              PSAutomorphismOptions<int64_t>{
-                  .depth = options.depth,
-                  .adjdet0 = ps_adjdet_to_int64(adjdet0),
-                  .basis_data = bd64},
-              os);
-      PleskenSouvignierAutomResult<Tint, Tgroup> res;
-      res.ListGen =
-          UniversalStdVectorMatrixConversion<Tint, int64_t>(res64.ListGen);
-      res.ListOrbitSize = std::move(res64.ListOrbitSize);
-      res.order = res64.order;
-      res.depth_used = res64.depth_used;
-      res.nodes_used = res64.nodes_used;
-      return res;
     }
   }
   bool adaptive = !options.depth;
@@ -1820,7 +1913,8 @@ PleskenSouvignierAutomResult<Tint, Tgroup> PleskenSouvignierAutomorphism(
       PSContextOptions<Tint>{.with_fingerprint = true,
                              .depth = options.depth,
                              .adjdet0 = adjdet0,
-                             .basis_data = options.basis_data},
+                             .basis_data = options.basis_data,
+                             .polytope = options.polytope},
       os);
   int d = ctx.depth;
   while (true) {
