@@ -91,6 +91,12 @@ faster); every result is exact.
     the vertices; the output says whether `Q` is proved minimal. See
     "Minimal covering polytopes" below.
 
+  * **POLYNORM_IsMinimalCovering** `[arith] [FileEXT] [OutFormat] [OutFile]`
+    decides whether `P` is minimal covering and, when it is covering, lists
+    the vertices that can be cut keeping the covering. It is the local
+    criterion of Corollary 2.5 of the paper above, much cheaper than the
+    search of a minimal polytope. See "Minimal covering polytopes" below.
+
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
 
@@ -227,6 +233,16 @@ in `K` with `<x,u> >= s`, and for every other lattice point `z`, either
 some facet `j`, in the cone of `j`. A node is solved when no lattice point
 of `x* - K` violates its bound. Since `h` is not continuous, only the nodes
 whose region has a nonempty interior count (a second linear program).
+
+Whether a covering polytope `K` is minimal is decided locally (Corollary
+2.5 of the paper): at each vertex `v`, some direction `d` entering `K` at
+`v` must leave `K` at every point `v - z` with `z != 0` a lattice point and
+`v - z` in `K`, that is `ell_i(d) < 0` for the facets `i` through `v` and,
+for each `z`, `ell_j(d) > 0` for some facet `j` through `v - z`. A depth
+first search over the choices of `j`, each partial system checked by a
+linear program, decides it; when some `v - z` is interior to `K` the vertex
+can be cut at once. This is what `POLYNORM_IsMinimalCovering` does, and
+what certifies the results of the grid method.
 
 The method `reduction` applies at each step the reduction of smallest
 volume among the removal of a vertex, the deepest translate of a facet and

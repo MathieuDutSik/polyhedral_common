@@ -1,7 +1,7 @@
 PROGRAM		= POLYNORM_Packing POLYNORM_Covering \
 		  POLYNORM_OptimalLattice POLYNORM_LatticeCertify \
 		  POLYNORM_BetkeHenk POLYNORM_MaxKissing \
-		  POLYNORM_MinimalCoveringPolytope
+		  POLYNORM_MinimalCoveringPolytope POLYNORM_IsMinimalCovering
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

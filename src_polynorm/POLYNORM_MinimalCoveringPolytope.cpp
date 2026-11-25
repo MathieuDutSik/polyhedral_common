@@ -47,8 +47,8 @@ void ComputeMinimalCovering(std::string const &FileEXT,
     os << "Grid method: " << res.n_round << " rounds, last grid (1/"
        << res.N_last << ") Z^n with " << res.n_point << " candidate points, "
        << res.n_drop << " points dropped, " << res.n_covering_test
-       << " covering tests, " << res.n_node << " nodes and " << res.n_lp
-       << " linear programs for the vertex cuts\n";
+       << " covering tests, " << res.n_lp
+       << " linear programs for the local tests of the vertices\n";
     if (res.is_tile) {
       os << "The polytope has volume 1, it is a lattice tile\n";
     }

@@ -267,13 +267,49 @@ ListMinimalCovering:=[
   rec(file:="octa3.ext", method:="grid", is_covering:=false)
 ];
 
+# The local test of minimality: whether the polytope is covering, whether
+# it is minimal, and how many vertices can be cut.
+TestIsMinimalCovering:=function(eRec)
+    local res;
+    Print("Is minimal covering ", eRec.file, "\n");
+    res:=RunProgramGAP("POLYNORM_IsMinimalCovering", Concatenation("gmp ", eRec.file, " GAP stdout"));
+    if res=fail then
+        return false;
+    fi;
+    if res.is_covering<>eRec.is_covering or res.is_minimal<>eRec.is_minimal
+       or Length(res.ListCuttable)<>eRec.n_cuttable then
+        Print("is_covering=", res.is_covering, " is_minimal=", res.is_minimal,
+              " n_cuttable=", Length(res.ListCuttable), "\n");
+        return false;
+    fi;
+    return true;
+end;
+
+# The tiles and the two minimal covering polytopes of dimension 3 found by
+# the grid method are minimal; the polytopes they come from are not. The
+# triangle 2 conv(0, e_1, e_2) has fewer than 2n facets, so it cannot be
+# minimal (Theorem 2.7 of Codenotti, Freyer, Krivokuca).
+ListIsMinimalCovering:=[
+  rec(file:="square.ext", is_covering:=true, is_minimal:=true, n_cuttable:=0),
+  rec(file:="cube3.ext", is_covering:=true, is_minimal:=true, n_cuttable:=0),
+  rec(file:="mincov_rect.ext", is_covering:=true, is_minimal:=false, n_cuttable:=4),
+  rec(file:="mincov_triangle2.ext", is_covering:=true, is_minimal:=false, n_cuttable:=3),
+  rec(file:="hexagon.ext", is_covering:=true, is_minimal:=false, n_cuttable:=6),
+  rec(file:="mincov_octa3.ext", is_covering:=true, is_minimal:=false, n_cuttable:=6),
+  rec(file:="mincov_irr3.ext", is_covering:=true, is_minimal:=false, n_cuttable:=7),
+  rec(file:="mincov_octa3_minimal.ext", is_covering:=true, is_minimal:=true, n_cuttable:=0),
+  rec(file:="mincov_irr3_minimal.ext", is_covering:=true, is_minimal:=true, n_cuttable:=0),
+  rec(file:="octa3.ext", is_covering:=false, is_minimal:=false, n_cuttable:=0)
+];
+
 # All the cases are run, so that every failure is reported.
 ListResult:=Concatenation(List(ListPackingCovering, TestPackingCovering),
                           List(ListCertify, TestCertify),
                           List(ListOptimalLattice, TestOptimalLattice),
                           List(ListBetkeHenk, TestBetkeHenk),
                           List(ListMaxKissing, TestMaxKissing),
-                          List(ListMinimalCovering, TestMinimalCovering));
+                          List(ListMinimalCovering, TestMinimalCovering),
+                          List(ListIsMinimalCovering, TestIsMinimalCovering));
 test:=ForAll(ListResult, x->x);
 Print("test=", test, "\n");
 CI_Decision_Reset();
