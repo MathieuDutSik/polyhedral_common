@@ -9,4 +9,7 @@ TestHermitianEnumeration.g on hermitian_enumeration_cases.g): from their
 genus symbols, the seed built and the genus enumerated by neighbours until
 the mass, over abelian fields given by (n, H), where the mass is computed,
 and over fields given by a polynomial, with the class numbers, the orders of
-the unitary groups and the masses of Hecke.jl.
+the unitary groups and the masses of Hecke.jl; for three CM fields that are
+not abelian the program computes the mass itself (the zeta values of the
+real subfield by Siegel's formula, the L-values of the relative character
+numerically and certified with Arb).

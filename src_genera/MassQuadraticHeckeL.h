@@ -1048,6 +1048,13 @@ template <typename T> struct QuadHeckeLData {
   // log p for the small primes, log j for j <= S
   std::vector<DoubleDouble> log_small;
   std::vector<DoubleDouble> log_j;
+  // For a character given otherwise than through the abelian field FK
+  // (MakeQuadHeckeLDataGeneric): the primes of K over p, and the
+  // coefficient c_1(q) of q^{-s} at a prime q that is not bad. The point
+  // 1 - r of the value, r = m / 2 when 0.
+  std::function<std::vector<QuadHeckePrime>(int64_t)> primes_fn;
+  std::function<int(int64_t)> c1_fn;
+  int r;
 };
 
 template <typename T>
@@ -1084,7 +1091,38 @@ MakeQuadHeckeLData(MyMatrix<T> const &B, std::vector<MyMatrix<T>> const &Omega,
                         {},
                         {},
                         {},
-                        {}};
+                        {},
+                        {},
+                        {},
+                        0};
+  return res;
+}
+
+/*
+  The data of L(s, chi) for a quadratic character chi of a totally real
+  field K of degree n given by its primes: primes_fn(p) lists the primes of
+  K over p with their residue degree and chi, c1_fn(q) is sum_{P | q, f_P =
+  1} chi(P) at the primes q that are not in bad, A2 = |D_K| N(f), and the
+  value is L(1 - r, chi). Used for the Hermitian masses over a CM field
+  that is not abelian (HermitianGenusMass.h).
+ */
+template <typename T>
+QuadHeckeLData<T> MakeQuadHeckeLDataGeneric(
+    int n, int delta, typename underlying_z_ring<T>::ring_type const &A2,
+    std::set<int64_t> const &bad,
+    std::function<std::vector<QuadHeckePrime>(int64_t)> const &primes_fn,
+    std::function<int(int64_t)> const &c1_fn, int r) {
+  QuadHeckeLData<T> res;
+  res.m = 2 * r;
+  res.n = n;
+  res.delta = delta;
+  res.A2 = A2;
+  res.bad = bad;
+  res.X = 0;
+  res.S = 0;
+  res.primes_fn = primes_fn;
+  res.c1_fn = c1_fn;
+  res.r = r;
   return res;
 }
 
@@ -1116,8 +1154,29 @@ template <typename T> void QuadHeckeLExtend(QuadHeckeLData<T> &Ld, int64_t X) {
       Ld.c1_bad[p] = c;
     }
   };
-  ComputeQuadHeckeCharacter(Ld.B, Ld.Omega, Ld.FK, Ld.d, Ld.K, Ld.m, S, false,
-                            f_prime);
+  if (Ld.primes_fn) {
+    // the primes p <= S, then the bad primes in (S, X]
+    for (int64_t p = 2; p <= S; p++) {
+      bool is_prime = true;
+      for (int64_t q = 2; q * q <= p; q++) {
+        if (p % q == 0) {
+          is_prime = false;
+          break;
+        }
+      }
+      if (is_prime) {
+        f_prime(p, Ld.primes_fn(p));
+      }
+    }
+    for (int64_t p : Ld.bad) {
+      if (p > S && p <= X) {
+        f_prime(p, Ld.primes_fn(p));
+      }
+    }
+  } else {
+    ComputeQuadHeckeCharacter(Ld.B, Ld.Omega, Ld.FK, Ld.d, Ld.K, Ld.m, S,
+                              false, f_prime);
+  }
   // a_j for j <= S
   Ld.a_small.assign(S + 1, 1);
   Ld.a_small[0] = 0;
@@ -1212,7 +1271,7 @@ void QuadHeckeForEachTerm(QuadHeckeLData<T> &Ld, int64_t X, F &&f) {
         auto it = Ld.c1_bad.find(q);
         c = (it == Ld.c1_bad.end()) ? 0 : it->second;
       } else {
-        c = Ld.GP.c1(q);
+        c = Ld.c1_fn ? Ld.c1_fn(q) : Ld.GP.c1(q);
       }
       if (c == 0) {
         continue;
@@ -1261,7 +1320,7 @@ template <typename Tf, typename T>
 std::optional<Tf> QuadHeckeLNegative(QuadHeckeLData<T> &Ld, int prec_bits,
                                      bool all_double) {
   constexpr bool is_ball = RealIsBall<Tf>;
-  int r = Ld.m / 2;
+  int r = (Ld.r > 0) ? Ld.r : Ld.m / 2;
   int n = Ld.n;
   int delta = Ld.delta;
   double logA = 0.5 * std::log(real_from_integer<double>(Ld.A2));

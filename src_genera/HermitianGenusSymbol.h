@@ -241,6 +241,50 @@ int HermDyadicNormClass(CMOrder<T, Tint> const &ord,
 }
 
 /*
+  The residue at P = l_prime[i_P] of an element u of E with v_P(u) >= 0,
+  whatever its valuations at the other primes above ell: u is multiplied by
+  y, a product of powers of uniformizers of those primes taken outside P,
+  so that y u is integral at every prime above ell (its coordinates then
+  have no ell in their denominators), and res(u) = res(y u) / res(y).
+ */
+template <typename T, typename Tint>
+FqElt HermResidueAtP(CMOrder<T, Tint> const &ord,
+                     std::vector<HermIdealPrime<Tint>> const &l_prime,
+                     size_t i_P, MyVector<T> const &u) {
+  HermIdealPrime<Tint> const &P = l_prime[i_P];
+  int d = ord.deg;
+  MyVector<T> yu = u;
+  MyVector<Tint> y = ZeroVector<Tint>(d);
+  y(0) = 1;
+  for (size_t j = 0; j < l_prime.size(); j++) {
+    if (j == i_P) {
+      continue;
+    }
+    int v = HermIdealVal(ord, l_prime[j], yu);
+    if (v >= 0) {
+      continue;
+    }
+    std::vector<HermIdealPrime<Tint>> l_other;
+    for (size_t k = 0; k < l_prime.size(); k++) {
+      if (k != j) {
+        l_other.push_back(l_prime[k]);
+      }
+    }
+    MyVector<Tint> pi =
+        HermFindUniformizer<T, Tint>(l_prime[j].ideal, l_prime[j], l_other);
+    MyMatrix<T> Mpi =
+        UniversalMatrixConversion<T, Tint>(ord.mult_matrix(pi)).transpose();
+    for (int t = 0; t < -v; t++) {
+      yu = Mpi * yu;
+      y = ord.product(y, pi);
+    }
+  }
+  FqElt num = HermResidueRat(P, yu);
+  FqElt den = HermResidue(P, y);
+  return FqMul(P.F, num, FqInv(P.F, den));
+}
+
+/*
   Whether a, an element of K_0 (coordinates on e), is a local norm from E
   at the prime of K_0 under P: 1 or -1.
  */
@@ -279,9 +323,11 @@ int HermLocalNormClass(CMOrder<T, Tint> const &ord,
   for (int k = 0; k < -v / 2; k++) {
     u = Mt * u;
   }
-  FqElt r = HermResidueRat(P, u);
+  FqElt r = HermResidueAtP(ord, l_prime, i_P, u);
   if (r.is_zero()) {
-    std::cerr << "HERMSYM: the unit part has a zero residue\n";
+    std::cerr << "HERMSYM: the unit part has a zero residue at a prime above "
+              << P.ell << " (e=" << P.e << ", f=" << P.f << "), v_P=" << v
+              << "\n";
     throw TerminalException{1};
   }
   return FqQuadraticCharacter(P.F, r);

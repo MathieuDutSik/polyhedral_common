@@ -3,7 +3,11 @@
 #include "NumberTheory.h"
 #include "Group.h"
 #include "Permutation.h"
+#ifdef ENABLE_FLINT_SUPPORT
+#include "NumberTheoryFlint.h"
+#endif
 #include "HermitianEnumeration.h"
+#include "HermitianGenusMass.h"
 #include "Namelist.h"
 #include <string>
 #include <vector>
@@ -37,7 +41,9 @@ HermitianGenusSymbol.h), the blocks with their norm valuation (s,r,+,n) at\n\
 the dyadic primes ramified in E / K_0";
     ListStringValues_doc["TotalMass"] = "Default: unset\n\
 The mass of the genus, a rational. Over an abelian field (AbelianConductor)\n\
-it is computed exactly, and checked against this value when one is given";
+it is computed exactly, and checked against this value when one is given;\n\
+over another field it is computed from numerical L-values made exact\n\
+(certified with Arb when built with flint) when no value is given";
     std::map<std::string, std::string> ListIntValues_doc;
     ListIntValues_doc["AbelianConductor"] = "Default: 0\n\
 n > 0 for the abelian CM field fixed by the subgroup H of (Z/n)^* generated\n\
@@ -185,9 +191,12 @@ int main(int argc, char *argv[]) {
       }
     }
     if (!mass) {
-      std::cerr << "GENUS_HermitianEnumerate: the mass is not available for "
-                   "this field and genus, TotalMass must be given\n";
-      throw TerminalException{1};
+      // any CM field: the exact zeta values of K_0, the numerical L-values
+      // of chi_{E/K_0} made exact (HermitianGenusMass.h)
+      mass = HermMassAnyField<T, Tint, Tgroup>(ord, seed.ring, seed.basis,
+                                               std::cerr);
+      std::cerr << "GENUS_HermitianEnumerate: mass " << *mass
+                << " (standard mass from numerical L-values)\n";
     }
     HermEnumResult<T, Tint> res = HermitianEnumeration<T, Tint, Tgroup>(
         ord, seed, *mass, max_prime, std::cerr);
