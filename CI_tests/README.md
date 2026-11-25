@@ -39,7 +39,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
 * `05B_CddSkeletons` -- `ci_05B_cdd_skeletons`: CDD skeletons (DualDescriptionAdjacencies).
   GitHub CI: build and run 23 s, whole job 3 min, 2026-10-05.
 * `06A_GeometricallyUnique` -- `ci_06A_geometrically_unique`: Finding interior point in polytope defined by facets, which is invariant under transformation, on 100 examples: all 80 of dimension 4 to 9 (up to 51 facets) and 20 of dimension 3 with 4 to 28 facets. They were chosen among 3382 (the archive before 2026-11-25), on which every example took 2 s on GitHub CI whatever its size, so 100 examples are about 3.4 min there.
-  Local run: build 10 s, run 9 min (`ProcessEntries.g`), 2026-11-25.
+  Local run: build 10 s, run 2 min (`ProcessEntries.g`), 2026-11-25.
 * `06B_CharacteristicVectorSet` -- `ci_06B_characteristic_vector_set`: Generation of characteristic vector sets.
   Local run: build 10 s, run 3 min (`ProcessEntries.g`), 2026-11-08, machine under heavy load.
   GitHub CI: build and run 4 min, whole job 8 min, 2026-10-06.

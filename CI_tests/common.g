@@ -83,8 +83,18 @@ GetSourceCodePath:=function()
     Error("Failed to determine the absolute source code path");
 end;
 
+# The paths found by GetBinaryFilename, by program name. The search runs
+# find over the whole source tree, which costs from tens of milliseconds
+# on a fresh checkout to a third of a second on a large working tree,
+# and a test calls the same programs many times. A program rebuilt
+# during a GAP session is therefore not seen before the next session.
+GetBinaryFilename_Cache:=rec();
+
 GetBinaryFilename:=function(FileName)
     local TmpDir, read_first_line, path, TmpFileB, command, eProg, FullProg, TmpFile;
+    if IsBound(GetBinaryFilename_Cache.(FileName)) then
+        return GetBinaryFilename_Cache.(FileName);
+    fi;
     TmpDir:=DirectoryTemporary();
     read_first_line:=function(TheFile)
         local list_lines;
@@ -108,6 +118,7 @@ GetBinaryFilename:=function(FileName)
             Print("FullProg=", FullProg, "\n");
             Error("The file should exist A");
         fi;
+        GetBinaryFilename_Cache.(FileName):=FullProg;
         return FullProg;
     fi;
     # Fall back to the PATH for binaries not built in the tree.
@@ -119,6 +130,7 @@ GetBinaryFilename:=function(FileName)
             Print("eProg=", eProg, "\n");
             Error("The file should exist B");
         fi;
+        GetBinaryFilename_Cache.(FileName):=eProg;
         return eProg;
     fi;
     Print("We failed to find the program ", FileName, "\n");
