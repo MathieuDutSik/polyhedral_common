@@ -25,20 +25,27 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
                                          std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Tgroup::Tidx;
+  // Qin is positive definite and Xin the norm for Qin.
   auto get_orbit_representatives =
-      [&](MyMatrix<T> const &Qin) -> std::vector<MyVector<Tint>> {
-    MyMatrix<Tint> SHV = T_ShortVector_fixed<T, Tint>(Qin, X, os);
+      [&](MyMatrix<T> const &Qin,
+          T const &Xin) -> std::vector<MyVector<Tint>> {
+    // T_ShortVector_fixed gives one vector of each pair {v, -v}, and the
+    // group acts on all of them.
+    MyMatrix<Tint> SHV = T_ShortVector_fixed<T, Tint>(Qin, Xin, os);
 #ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
     os << "POSNEG: |SHV|=" << SHV.rows() << "\n";
 #endif
-    size_t len = SHV.rows();
     std::vector<MyVector<Tint>> ListVect;
     std::unordered_map<MyVector<Tint>, size_t> MapVect;
     for (int i = 0; i < SHV.rows(); i++) {
       MyVector<Tint> eV = GetMatrixRow(SHV, i);
-      MapVect[eV] = i + 1;
-      ListVect.push_back(eV);
+      MyVector<Tint> eVneg = -eV;
+      for (auto &fV : {eV, eVneg}) {
+        ListVect.push_back(fV);
+        MapVect[fV] = ListVect.size();
+      }
     }
+    size_t len = ListVect.size();
     std::vector<MyMatrix<Tint>> LGen =
         ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qin, os).ListGen;
 #ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
@@ -77,10 +84,11 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
   DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q, os);
   if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
     MyMatrix<T> Qneg = -Q;
-    return get_orbit_representatives(Qneg);
+    T Xneg = -X;
+    return get_orbit_representatives(Qneg, Xneg);
   }
   if (DSM.nbMinus == 0 && DSM.nbZero == 0) {
-    return get_orbit_representatives(Q);
+    return get_orbit_representatives(Q, X);
   }
   std::cerr << "Failed to find a matching entry for PosNeg\n";
   throw TerminalException{1};

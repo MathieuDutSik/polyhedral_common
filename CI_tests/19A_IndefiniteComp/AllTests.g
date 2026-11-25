@@ -132,6 +132,68 @@ TestOrbitIsotropic:=function(eList, kDim)
     return true;
 end;
 
+# The number of positive eigenvalues of a nondegenerate symmetric matrix:
+# its characteristic polynomial has only real roots, so Descartes' rule of
+# signs counts them exactly.
+NumberPositiveEigenvalues:=function(eGram)
+    local coeffs, signs;
+    coeffs:=CoefficientsOfUnivariatePolynomial(CharacteristicPolynomial(eGram));
+    signs:=Filtered(List(coeffs, SignInt), x -> x <> 0);
+    return Number([1..Length(signs)-1], i -> signs[i] <> signs[i+1]);
+end;
+
+# Q and -Q are equivalent when the signature (p,q) is balanced, p = q, for
+# the lattices tested here (U + 2U is isometric to its negative), and never
+# when p <> q.
+TestEquivNegative:=function(eList)
+    local eGram, U, p, n;
+    Print("Running TestEquivNegative with INDEF_FORM_TestEquivalence\n");
+    eGram:=GetGramMatrixFromList(eList);
+    n:=Length(eGram);
+    p:=NumberPositiveEigenvalues(eGram);
+    U:=INDEF_FORM_TestEquivalence(eGram, -eGram, IndefOptions);
+    if U="program failure" then
+        Print("The output file is not existing. That qualifies as a fail\n");
+        return false;
+    fi;
+    if 2 * p <> n then
+        if U <> fail then
+            Print("TestEquivNegative: Q and -Q found equivalent, signature (", p, ",", n - p, ")\n");
+            return false;
+        fi;
+        return true;
+    fi;
+    if U = fail then
+        Print("TestEquivNegative: Q and -Q not found equivalent, signature (", p, ",", n - p, ")\n");
+        return false;
+    fi;
+    if U * eGram * TransposedMat(U) <> -eGram then
+        Print("TestEquivNegative: Failed at U * eGram * TransposedMat(U) <> -eGram\n");
+        return false;
+    fi;
+    return true;
+end;
+
+# The orbits of vectors of norm Xnorm for a definite form and for its
+# negative (norm -Xnorm), compared with the known number.
+TestDefiniteOrbits:=function(eRec)
+    local eGram, eSign, res;
+    eGram:=GetGramMatrixFromList(eRec.eList);
+    for eSign in [1, -1]
+    do
+        res:=GetNrOrbitRepresentative(eSign * eGram, eSign * eRec.Xnorm);
+        if res.is_correct=false then
+            Print("TestDefiniteOrbits: Failed at res.is_correct\n");
+            return false;
+        fi;
+        if res.nr_orbit <> eRec.nr_orbit then
+            Print("TestDefiniteOrbits: eList=", eRec.eList, " sign=", eSign, " nr_orbit=", res.nr_orbit, " but expected ", eRec.nr_orbit, "\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
 FullTest:=function()
     local eRec, ListRec, eList, k, result;
     ListRec:=[];
@@ -162,6 +224,31 @@ FullTest:=function()
             return result;
         fi;
         if TestOrbitIsotropic(eList, k)=false then
+            return false;
+        fi;
+        if TestEquivNegative(eList)=false then
+            return false;
+        fi;
+    od;
+    # Definite forms: the vectors of norm Xnorm form nr_orbit orbits.
+    ListRec:=[];
+    Add(ListRec, rec(eList:=["A2"], Xnorm:=2, nr_orbit:=1));
+    Add(ListRec, rec(eList:=["A1", "A1"], Xnorm:=2, nr_orbit:=1));
+    Add(ListRec, rec(eList:=["A1", "A2"], Xnorm:=2, nr_orbit:=2));
+    Add(ListRec, rec(eList:=["D4"], Xnorm:=2, nr_orbit:=1));
+    Add(ListRec, rec(eList:=["E8"], Xnorm:=2, nr_orbit:=1));
+    for eRec in ListRec
+    do
+        Print("Working with eRec=", eRec, "\n");
+        if TestDefiniteOrbits(eRec)=false then
+            return false;
+        fi;
+        result:=TestEquiv(eRec.eList);
+        if result<>true then
+            Print("Failed the TestEquiv\n");
+            return result;
+        fi;
+        if TestEquivNegative(eRec.eList)=false then
             return false;
         fi;
     od;

@@ -380,7 +380,6 @@ public:
           list_idx.push_back(i_gen);
           list_lattice.push_back(SubSublatt);
           list_det.push_back(det);
-          pos += 1;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
           if (det > 1) {
             std::cerr
@@ -395,6 +394,7 @@ public:
               found_pos = pos;
             }
           }
+          pos += 1;
         }
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -979,7 +979,10 @@ private:
     os << "COMB: INDEF_FORM_TestEquivalence_Kernel, eBlock1.h=" << eBlock1.h
        << " eBlock2.h=" << eBlock2.h << "\n";
 #endif
-    if (eBlock1.h != eBlock2.h) {
+    // For forms of the same dimension, h and sign determine the signature.
+    // Q and -Q have the same h, and both are mapped to the same eBlock.mat
+    // when the signature is not balanced: the signs then differ.
+    if (eBlock1.h != eBlock2.h || eBlock1.sign != eBlock2.sign) {
       return {};
     }
     MyMatrix<T> const &mat1 = eBlock1.mat;
@@ -2594,6 +2597,9 @@ public:
   }
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
+    if (Q1.rows() != Q2.rows()) {
+      return {};
+    }
     if (Q1.rows() == 0) {
       MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
       return eGen;
