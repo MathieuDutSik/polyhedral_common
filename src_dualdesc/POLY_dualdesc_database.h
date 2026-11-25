@@ -5,6 +5,7 @@
 // clang-format off
 #include "GRP_DoubleCoset.h"
 #include "POLY_Fundamental.h"
+#include "PolytopeEquiStab.h"
 #include <format>
 #include <string>
 #include <string_view>
@@ -178,15 +179,16 @@ CanonicalizationPolytopePair(MyMatrix<T> const &EXT,
   return {std::move(EXTret), std::move(CanonicOrd)};
 }
 
-template <typename T, typename Tgroup, typename Tidx_value>
-TripleCanonic<T, Tgroup>
-CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
-                               WeightMatrix<true, T, Tidx_value> const &WMat,
-                               std::ostream &os) {
+// The triple from the canonical ordering of the rows and the generators of
+// the automorphism group of EXT.
+template <typename T, typename Tgroup>
+TripleCanonic<T, Tgroup> CanonicalizationPolytopeTripleFromPair(
+    MyMatrix<T> const &EXT,
+    std::pair<std::vector<typename Tgroup::Telt::Tidx>,
+              std::vector<std::vector<typename Tgroup::Telt::Tidx>>> const
+        &PairCanGrp) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp =
-      GetGroupCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat, os);
   Tidx n_row = EXT.rows();
   Tidx n_col = EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
@@ -212,7 +214,33 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
   }
   Tgroup GRP(LGen, n_row);
   //
-  return {std::move(EXTretB), std::move(GRP), Telt(std::move(PairCanGrp.first))};
+  return {std::move(EXTretB), std::move(GRP), Telt(PairCanGrp.first)};
+}
+
+template <typename T, typename Tgroup, typename Tidx_value>
+TripleCanonic<T, Tgroup>
+CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
+                               WeightMatrix<true, T, Tidx_value> const &WMat,
+                               std::ostream &os) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  return CanonicalizationPolytopeTripleFromPair<T, Tgroup>(
+      EXT, GetGroupCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat,
+                                                                       os));
+}
+
+/*
+  The canonicalization of the bank: the key of an entry and of a lookup, so
+  that every place that builds one has to use this function. It is done by
+  the subset method above THRESHOLD_USE_SUBSET_SCHEME_CANONIC rows, the graph
+  of the whole weight matrix taking 2.6 GB for 4577 rows.
+ */
+template <typename T, typename Tgroup>
+TripleCanonic<T, Tgroup> CanonicalizationPolytopeTripleBank(
+    MyMatrix<T> const &EXT, std::ostream &os) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  return CanonicalizationPolytopeTripleFromPair<T, Tgroup>(
+      EXT, LinPolytope_CanonicOrderingGroup<T, Tidx>(
+               EXT, THRESHOLD_USE_SUBSET_SCHEME_CANONIC, os));
 }
 
 template <typename T>

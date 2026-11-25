@@ -975,26 +975,6 @@ public:
   }
 };
 
-template <typename T, typename Tidx_value> struct LazyWMat {
-public:
-  LazyWMat(const MyMatrix<T> &EXT, std::ostream &os)
-      : EXT(EXT), WMat(os), HaveWMat(false), os(os) {}
-  WeightMatrix<true, T, Tidx_value> &GetWMat() {
-    if (HaveWMat)
-      return WMat;
-    WMat = GetWeightMatrix<T, Tidx_value>(EXT, os);
-    WMat.ReorderingSetWeight();
-    HaveWMat = true;
-    return WMat;
-  }
-
-private:
-  const MyMatrix<T> &EXT;
-  WeightMatrix<true, T, Tidx_value> WMat;
-  bool HaveWMat;
-  std::ostream &os;
-};
-
 template <typename Tint, typename T, typename Tgroup>
 PolytopeInputInfo<Tint> ComputeInitialInfo(const MyMatrix<T> &EXT,
                                            const Tgroup &GRP,
@@ -1442,7 +1422,6 @@ vectface DUALDESC_AdjacencyDecomposition(
     return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
         TheBank_i, EXT_i, GRP_i, info_i, AllArr_i, ePrefix_i, os_i);
   };
-  using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: Beginning of DUALDESC_AdjacencyDecomposition\n";
@@ -1479,7 +1458,6 @@ vectface DUALDESC_AdjacencyDecomposition(
 #endif
     return TheOutput;
   }
-  LazyWMat<T, Tidx_value> lwm(EXT, os);
   // The canonicalization of the polytope is expensive (graph canonicalization).
   // It is needed both for the bank lookup and for the bank insertion, so we
   // compute it at most once and share it between the two.
@@ -1487,7 +1465,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   auto get_canonic_triple = [&]() -> TripleCanonic<T, Tgroup> & {
     if (!opt_canonic_triple) {
       opt_canonic_triple =
-          CanonicalizationPolytopeTriple<T, Tgroup>(EXT, lwm.GetWMat(), os);
+          CanonicalizationPolytopeTripleBank<T, Tgroup>(EXT, os);
     }
     return *opt_canonic_triple;
   };
@@ -1540,9 +1518,19 @@ vectface DUALDESC_AdjacencyDecomposition(
        << additional_symmetry_decision_to_string(symm_decision) << "\n";
 #endif
     if (symm_decision == AdditionalSymmetryDecision::yes) {
-      TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
-          lwm.GetWMat(), os);
+      // Not from the graph of the whole weight matrix, which is quadratic
+      // in nbRow times the number of bits of the weights (4.9 GB for 4577
+      // vertices): LinPolytope_Automorphism uses the subset scheme above
+      // THRESHOLD_USE_SUBSET_SCHEME_STAB vertices.
+      TheGRPrelevant = LinPolytope_Automorphism<T, Tgroup>(EXT, os);
       NeedSplit = TheGRPrelevant.size() != GRP.size();
+      // The heuristics of the decomposition below (ChoiceCanonicalization
+      // among them) are evaluated on info, so its group size has to be the
+      // one of the group the computation is done with: with the size of
+      // GRP, "store" was chosen for a group of order 125 while the
+      // computation went on with the full group of order 7.5 10^11, all of
+      // whose elements were then listed.
+      info.groupsize = TheGRPrelevant.size();
       BankSymmCheck = false;
     } else {
       TheGRPrelevant = GRP;
@@ -1918,14 +1906,12 @@ void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
       throw TerminalException{1};
     }
     // We are creating a bank entry for further works.
-    using Tidx_value = uint16_t;
     using Tint = typename Tgroup::Tint;
-    WeightMatrix<true, T, Tidx_value> WMat =
-        GetWeightMatrix<T, Tidx_value>(EXT, os);
-    WMat.ReorderingSetWeight();
     FaceOrbitsizeTableContainer<Tint> fotc(TheOutput, GRP);
     std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
-        GetCanonicalInformation(EXT, WMat, GRP, fotc, os);
+        GetCanonicalInformation_Triple<T, Tgroup>(
+            CanonicalizationPolytopeTripleBank<T, Tgroup>(EXT, os), GRP, fotc,
+            os);
     Write_BankEntry(OutFile, eP.first, eP.second);
     return;
   }

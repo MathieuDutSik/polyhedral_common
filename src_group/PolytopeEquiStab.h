@@ -809,12 +809,16 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT, std::ostream &os) {
   return LinPolytope_Automorphism_GramMat<T, Tgroup>(EXTred, Qmat, os);
 }
 
+// The canonical ordering with the generators of the automorphism group: by
+// the subset method above threshold, from the graph of the whole weight
+// matrix otherwise.
 template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
           typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
           typename F5>
-std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
-                                F2tr f2tr, F3 f3, F4 f4, F5 f5, bool is_symm,
-                                size_t threshold, std::ostream &os) {
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+f_for_canonic_group(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
+                    F4 f4, F5 f5, bool is_symm, size_t threshold,
+                    std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold
      << " is_symm=" << is_symm << "\n";
@@ -824,28 +828,36 @@ std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
   if (nbRow > threshold) {
     if (is_symm) {
       return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(
-                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
-          .first;
+                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os);
     } else {
       return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(
-                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
-          .first;
+                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os);
     }
   } else {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       WMat.ReorderingSetWeight();
       return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx,
-                                                   Tidx_value, true>(WMat, os)
-          .first;
+                                                   Tidx_value, true>(WMat, os);
     } else {
       WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       WMat.ReorderingSetWeight();
       return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx,
-                                                   Tidx_value, false>(WMat, os)
-          .first;
+                                                   Tidx_value, false>(WMat, os);
     }
   }
+}
+
+template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
+          typename F5>
+std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
+                                F2tr f2tr, F3 f3, F4 f4, F5 f5, bool is_symm,
+                                size_t threshold, std::ostream &os) {
+  return f_for_canonic_group<Tvalue, Tidx, Tidx_value>(nbRow, f1, f2, f1tr,
+                                                       f2tr, f3, f4, f5,
+                                                       is_symm, threshold, os)
+      .first;
 }
 
 template <typename T, typename Tidx, typename Tidx_value>
@@ -896,6 +908,31 @@ std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT,
   MyMatrix<T> Qmat = GetQmatrix(EXTred, os);
   return LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXTred, Qmat, threshold,
                                                       os);
+}
+
+// The canonical ordering with the generators of the automorphism group (see
+// f_for_canonic_group), the subset method being used above threshold.
+template <typename T, typename Tidx>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+LinPolytope_CanonicOrderingGroup(MyMatrix<T> const &EXT, size_t threshold,
+                                 std::ostream &os) {
+  using Treturn = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<T> Qmat = GetQmatrix(EXTred, os);
+  size_t max_poss_val =
+      weightmatrix_get_nb(IsSymmetricMatrix(Qmat), EXTred.rows());
+  auto f_dispatch = [&]<typename Tidx_value>() -> Treturn {
+    auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr,
+                 auto f3, auto f4, auto f5, bool is_symm) -> Treturn {
+      return f_for_canonic_group<T, Tidx, Tidx_value, decltype(f1),
+                                 decltype(f2), decltype(f1tr), decltype(f2tr),
+                                 decltype(f3), decltype(f4), decltype(f5)>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, threshold, os);
+    };
+    return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXTred, Qmat, f);
+  };
+  return call_with_smallest_unsigned(
+      max_poss_val, "LinPolytope_CanonicOrderingGroup", f_dispatch);
 }
 
 template <typename T, typename Tidx>
