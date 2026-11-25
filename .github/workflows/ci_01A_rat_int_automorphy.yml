@@ -56,7 +56,7 @@ jobs:
 
       - name: Test rational and integral automorphy
         run: |
-          cd CI_tests/01_RatIntAutomorphy
+          cd CI_tests/01A_RatIntAutomorphy
           # Bounded: GRP_LinPolytopeIntegral_Automorphism_DoubleCoset currently
           # hangs on some simplices, and without this the job only stops on the
           # job timeout, hours later. A healthy run takes well under a minute.

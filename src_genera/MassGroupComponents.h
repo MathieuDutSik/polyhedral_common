@@ -489,6 +489,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
     IsometryComponent<T> comp =
         BuildIsometryComponent<T, Tint>(A, blk.E, ListP[0], 1);
     comp.d = 0;
+    // set by the method that gives the mass; a component left without one
+    // stops the program at the end of the loop
+    comp.kind = ComponentKind::Unsupported;
     for (size_t i = 1; i < ListP.size(); i++) {
       comp.extra_sigma.push_back(action(ListP[i]));
     }
@@ -903,9 +906,9 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
         res.push_back(comp);
         continue;
       }
-      comp.kind = ComponentKind::Multiplicity;
-      comp.multiplicity_gram = found;
       if (found) {
+        comp.kind = ComponentKind::Multiplicity;
+        comp.multiplicity_gram = found;
         MultiplicityFactorBounds mbounds;
         comp.multiplicity_factor = MultiplicityLocalFactor<T, Tint>(
             A, found_basis, blk.E, elts, ListP, {}, {}, false, mbounds, os);
@@ -1381,6 +1384,23 @@ FiniteGroupComponents(MyMatrix<T> const &A, std::vector<MyMatrix<T>> const &List
        << e << ", multiplicity lattice "
        << (comp.multiplicity_gram ? "found" : "not found") << "\n";
 #endif
+    if (comp.kind == ComponentKind::Unsupported) {
+      std::cerr << "ISOM_MASS: a component of rank " << k << " with End_G of "
+                << "dimension " << e << " and a center of degree " << c
+                << " has no mass method: ";
+      if (c == 1 && m * m == e) {
+        std::cerr << "End_G = M_" << m << "(Q), no End_G-submodule F of "
+                  << "dimension " << m << " found by the searches";
+      } else if (c > 1 && m * m * c == e) {
+        std::cerr << "End_G of dimension m^2 c, m=" << m << ", no "
+                  << "End_G-submodule F of dimension m c found by the "
+                  << "searches, or End_G not split";
+      } else {
+        std::cerr << "End_G not recognized";
+      }
+      std::cerr << ", please insert the code\n";
+      throw TerminalException{1};
+    }
     res.push_back(comp);
   }
   return res;

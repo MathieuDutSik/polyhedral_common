@@ -25,8 +25,6 @@ jobs:
       # flint, for Arb (the certified L-values, lvalue=arb) and the flint
       # number types
       ENABLE_FLINT_SUPPORT: "1"
-      FLINT_INCDIR: /home/runner/opt/flint/include
-      FLINT_LINK: "-L/home/runner/opt/flint/lib -lflint -Wl,-rpath,/home/runner/opt/flint/lib"
 
     steps:
       - uses: actions/checkout@v7
@@ -39,15 +37,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmpfr-dev
 
-      # flint 3.6.0, the release used for development (Arb is part of it)
-      - name: Install flint
-        run: |
-          wget -q https://github.com/flintlib/flint/releases/download/v3.6.0/flint-3.6.0.tar.gz
-          tar -xzf flint-3.6.0.tar.gz
-          cd flint-3.6.0
-          ./configure --prefix=/home/runner/opt/flint --disable-static
-          make -j"$(nproc)"
-          make install
+      # flint, with Arb
+      - uses: ./.github/actions/install-flint
 
       - uses: ./.github/actions/install-boost
 

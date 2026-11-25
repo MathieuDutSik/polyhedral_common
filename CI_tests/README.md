@@ -19,9 +19,10 @@ The "GitHub CI" times are those of the last successful scheduled run:
 "build and run" is the test step (most workflows compile inside it), the
 whole job adds the installation of the dependencies (nauty, GAP, ...).
 
-* `01_RatIntAutomorphy` -- `ci_01A_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
+* `01A_RatIntAutomorphy` -- `ci_01A_rat_int_automorphy`: Rational and integral automorphism groups of a configuration of vectors, the associated isomorphism and canonical form codes, and the decomposition of the rational group into double cosets of the integral one.
   GitHub CI: build 8 min, run 2 min, whole job 12 min, 2026-11-01.
 * `01B_NonSymmetricStabilizers` -- `ci_01B_direct_matrix_stabilizer`: The stabilizer of a matrix given directly, which need not be symmetric (GRP_DirectMatrix_Stabilizer: Paley tournaments, circulants with distinct values, matrices with all entries distinct, the Petersen graph), and the automorphism group of a configuration of vectors for a non-symmetric Gram matrix (GRP_LinPolytope_Automorphism_GramMat, including more than 1000 vectors, where the heuristic scheme runs). The group orders are known and each generator is checked in GAP.
+  Local run: build 7 min, run 1 min (`TestNonSymmetricStabilizers.g`), 2026-11-24.
 * `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Finding positive vectors of indefinite forms.
   GitHub CI: build and run 13 min, whole job 16 min, 2026-11-02.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Automorphism group and dual description, by bb, cdd, lrs and normaliz, of the regular N-gons over the real algebraic field Q(2*sin(2*pi/N)); and the dual description of G553, a 7-dimensional cone on 150 generators over Q(2*sin(2*pi/5)) with a symmetry group, where the recursive dual description using the symmetry and the direct one ignoring it are checked against each other.
@@ -54,12 +55,16 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
 * `09A_Isotropic` -- `ci_09A_isotropic`: Testing existence of isotropic in quadrtaic forms and computing them if proven to exist.
   GitHub CI: build and run 32 min, whole job 35 min, 2026-11-09.
 * `09B_PerfectPartialContractingHomotopy` -- `ci_09B_partial_contracting_homotopy`: For the partial contracting homotopy.
+  Local run: build 1 min, run 3 min (`TestPartialContractingHomotopy.g` and `TestHeckeOperators.g`), 2026-11-24.
 * `11A_EquiStabDatabase` -- `ci_11A_equistabdatabase`: Memoization of equivalence and stabilizers.
   GitHub CI: build and run 1 min, whole job 3 min, 2026-11-11.
 * `11B_Robust_Covering` -- `ci_11B_robust_covering`: Robust covering density computations.
+  Local run: fails after 10 s (`ComputeRobustCoveringDensity.g`), `Robust_ExactRobustCoveringDensity` stopping on the connectivity check of an orbit (`|lconn|=1 orbit_len=3`), 2026-11-24.
 * `12A_Copositivity` -- `ci_12A_copos`: This is for checking the copositivity code.
   GitHub CI: cancelled at the 2 h timeout on 2026-09-12 and 2026-11-12, no successful run in the retained history.
+  Local run: build 1 min, then `TestCompletePositivity.g` passes and `TestCopos.g` does 186 of its 330 cases in about 6 min together, but does not finish case 187 (`spn/7/cop7_14`), stopped after 2.75 h, 2026-11-24.
 * `12B_GenPolytopes` -- `ci_12B_gen_polytopes`: Generalized Polytopes.
+  Local run: build 1 min, run under 10 s (`TestGenPolytope.g`), 2026-11-24.
 * `13A_PeriodicDelaunay` -- `ci_13A_periodic_delaunay`: The periodic Delaunay and iso-Delaunay computations.
   GitHub CI: build and run 7 min, whole job 10 min, 2026-11-13.
 * `15A_LinearProgramming` -- `ci_15A_linear_programming`: Linear programming and LinearDetermineByInequalities, over the rational types from GAP driven data files.
@@ -76,7 +81,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: `TestErdahl_centered8` build and run 19 min, whole job 25 min; `TestErdahl_full7` build and run 23 min, whole job 29 min (jobs in parallel), 2026-10-17.
 * `19A_IndefiniteComp` -- `ci_19A_indefinite_comp`: Computation of indefinite forms.
   GitHub CI: build and run 1.8 h, whole job 1.8 h, 2026-11-19.
-* `19B_AlgebraicModularForms` -- `ci_19B_algebraic_modular_forms`: The Hecke matrices of the algebraic modular forms over Z (GENUS_MPI_AlgebraicModularForms), from the classes of a genus, with and without a level structure: E8 at levels 1 and 5, II_16, and a genus of 25 classes of DefLatDB at levels 1 and 11 (1365 states). Each result is compared with the expected one and checked in GAP: rows summing to the number of neighbors, self-adjoint for the mass inner product, the operators at two primes commuting; one case also on two MPI processes, and the whole again with the SANITY_CHECK macros.
+* `19B_AlgebraicModularForms` -- `ci_19B_algebraic_modular_forms`: The Hecke matrices of the algebraic modular forms over Z (GENUS_MPI_AlgebraicModularForms), from the classes of a genus, with and without a level structure: E8 at levels 1 and 5, II_16, and a genus of 25 classes of DefLatDB at levels 1 and 11 (1365 states). Each result is compared with the expected one and checked in GAP: rows summing to the number of neighbors, self-adjoint for the mass inner product, the operators at two primes commuting; one case also on two MPI processes, and the whole again with the SANITY_CHECK macros. Over the ring of integers of Q(sqrt -7), Q(sqrt -11) and Q(sqrt -5) (GENUS_AlgebraicModularForms, TestOrderAlgebraicModularForms.g): the neighbors at the ramified prime alone close the genus of I_m at the mass formula, and the Hecke matrices at ramified, split and inert primes commute, those at the primes equal to their conjugate being self-adjoint.
 * `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
   GitHub CI: build and run 45 min, whole job 48 min, 2026-11-20.
 * `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.
@@ -88,9 +93,11 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
 * `23A_IntegralPoints` -- `ci_23A_integral_points`: Compute the integral points of some polytope.
   GitHub CI: build and run 2 min, whole job 4 min, 2026-09-23.
 * `23B_SimpleDualDesc` -- `ci_23B_simple_dual_desc`: This is for the code for computing the dual description of polyhedral cones.
-* `24_GroupSimplification` -- `ci_24_group_simplification`: Group Simplification.
+  Local run: build shared with `12B`, run 30 min (`TestSimpleDualDesc.g`), 2026-11-24.
+* `24A_GroupSimplification` -- `ci_24_group_simplification`: Group Simplification.
   GitHub CI: build and run 6 min, whole job 10 min, 2026-10-24.
-* `25_Redundancy` -- `ci_25_redundancy`: Redundancy tests.
+* `25A_Redundancy` -- `ci_25A_redundancy`: Redundancy tests.
+  Local run: build 20 s, run 33 min (`TestCoherence.g`), peak memory 4.2 GB, 2026-11-24.
 * `26A_CTYPE_AdjSch` -- `ci_26A_enum_ctype`: Computation of the Ctypes in dimension 5 with the adjacency scheme.
   GitHub CI: build and run 32 s, whole job 3 min, 2026-09-26.
 * `26B_Matrix_group_finiteness` -- `ci_26B_finite_groups`: Test of group finiteness.

@@ -8,7 +8,7 @@ matrices. `PerfectE8.ext` has 120 vertices and 36 columns, `PerfectE8.grp` is
 
 ```
 python3 ../GeneratePerfectCone.py E8 PerfectE8.ext
-../../../src_group/GRP_LinPolytope_Automorphism rational PerfectE8.ext Oscar PerfectE8.grp
+../../../src_group/GRP_LinPolytope_Automorphism mpq_class PerfectE8.ext Oscar PerfectE8.grp
 ```
 
 This is the computation the recursive adjacency decomposition method was

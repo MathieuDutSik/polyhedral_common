@@ -37,19 +37,18 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   int k = E.rows();
   int n = A.cols();
   /*
-    The failures below are not bounds: they mean that the multiplicity
-    lattice does not have the expected structure, a case the code does not
-    handle (or a bug of the decomposition). They stop the program rather
-    than leave the factor out (IsometryComponentMass::local_factor_missing
-    is for the bounds only).
+    X spans an End_G-submodule F of V_rho, a simple End_G-module, so that m
+    divides k, the greedy choice below finds k / m translates gamma F in
+    direct sum spanning V_rho, Z[G] X has rank k and N^# / N is finite
+    (Lemma lem:multstructure of the paper). The checks are of that.
   */
-  auto structural_failure = [](std::string const &msg) -> void {
-    std::cerr << "MULT_FACTOR: " << msg << ", please insert the code\n";
-    throw TerminalException{1};
-  };
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
   if (k % m != 0) {
-    structural_failure("the rank of X does not divide that of the component");
+    std::cerr << "MULT_FACTOR: the rank of X does not divide that of the "
+                 "component\n";
+    throw TerminalException{1};
   }
+#endif
   int w = k / m;
   // the gamma_a with the gamma_a X in direct sum (V_rho = W (x)_K U and
   // X in l (x) U, l a line of W over the center K)
@@ -75,12 +74,13 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
     }
   }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
   if (static_cast<int>(ListGamma.size()) != w) {
-    structural_failure("only " + std::to_string(ListGamma.size()) + " of the " +
-                       std::to_string(w) +
-                       " translates of X found in direct sum by the greedy "
-                       "choice");
+    std::cerr << "MULT_FACTOR: only " << ListGamma.size() << " of the " << w
+              << " translates of X found in direct sum\n";
+    throw TerminalException{1};
   }
+#endif
   // the basis B_V = {gamma_a x_i}, index a * m + i
   MyMatrix<T> BV(k, n);
   for (int a = 0; a < w; a++) {
@@ -91,9 +91,13 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
       }
     }
   }
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
   if (RankMat(BV) != k) {
-    structural_failure("the translates of X do not span the component");
+    std::cerr << "MULT_FACTOR: the translates of X do not span the "
+                 "component\n";
+    throw TerminalException{1};
   }
+#endif
   // coordinates in B_V of vectors of V_rho
   auto coords = [&](MyMatrix<T> const &M) -> MyMatrix<T> {
     // M = C BV, C = M BV^T (BV BV^T)^{-1}
@@ -112,10 +116,13 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
   }
   MyMatrix<Tint> Ngen_i = UniversalMatrixConversion<Tint, T>(Ngen);
   MyMatrix<T> Nb = UniversalMatrixConversion<T, Tint>(GetZbasis(Ngen_i));
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
   if (Nb.rows() != k) {
-    structural_failure("Z[G] X has rank " + std::to_string(Nb.rows()) +
-                       " instead of " + std::to_string(k));
+    std::cerr << "MULT_FACTOR: Z[G] X has rank " << Nb.rows() << " instead of "
+              << k << "\n";
+    throw TerminalException{1};
   }
+#endif
   MyMatrix<T> GramN = Nb * A * Nb.transpose();
   MyMatrix<T> Nsharp = Inverse(GramN) * Nb;
   MyMatrix<T> N_c = coords(Nb);
@@ -153,9 +160,12 @@ std::optional<T> MultiplicityLocalFactor(MyMatrix<T> const &A,
     int c = 0;
     for (int i = 0; i < k; i++) {
       T d = T_abs(UniversalScalarConversion<T, Tint>(Dm(i, i)));
+#ifdef SANITY_CHECK_MULTIPLICITY_LOCAL_FACTOR
       if (d == T(0)) {
-        structural_failure("N^# / N is infinite");
+        std::cerr << "MULT_FACTOR: N^# / N is infinite\n";
+        throw TerminalException{1};
       }
+#endif
       int v = RationalValuation(d, p);
       if (v > 0) {
         ListIdx.push_back(i);

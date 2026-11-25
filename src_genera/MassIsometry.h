@@ -82,8 +82,6 @@ template <typename T> struct IsometryMassResult {
   // the multiplicity factors of a component are beyond the bounds
   // (IsometryComponentMass::local_factor_missing)
   bool local_correction_open = false;
-  // a component of a type whose mass is not implemented
-  bool unsupported_component = false;
   // the group has more than IsometryMassBounds::max_group elements, with
   // TOO_LONG_ISOMETRY_MASS: nothing computed
   bool too_long = false;
@@ -159,6 +157,11 @@ ComponentMassValue<T> ComponentMass(IsometryComponent<T> const &comp,
     base = comp.precomputed_mass;
     break;
   case ComponentKind::Unsupported:
+    // FiniteGroupComponents stops on such a component
+#ifdef SANITY_CHECK_ISOMETRY_MASS
+    std::cerr << "ISOM_MASS: an unsupported component reached the mass\n";
+    throw TerminalException{1};
+#endif
     return {};
   }
   if (!base) {
@@ -198,9 +201,6 @@ IsometryGenusMassComponents(MyMatrix<T> const &A, int order,
     if (v.local_factor_missing) {
       cm.local_factor_missing = true;
       res.local_correction_open = true;
-    }
-    if (!v.mass && comp.d == 0) {
-      res.unsupported_component = true;
     }
     if (cm.mass) {
       mass0 *= *cm.mass;
@@ -528,8 +528,6 @@ void WriteIsometryMassResult(std::ostream &os, IsometryMassResult<T> const &res)
      << ",\n  image_assumed:=" << GAP_logical(res.image_assumed)
      << ",\n  local_correction_open:="
      << GAP_logical(res.local_correction_open)
-     << ",\n  unsupported_component:="
-     << GAP_logical(res.unsupported_component)
      << ",\n  too_long:=" << GAP_logical(res.too_long);
   if (res.mass) {
     os << ",\n  mass:=" << *res.mass;

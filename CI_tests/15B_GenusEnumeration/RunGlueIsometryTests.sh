@@ -138,7 +138,8 @@ fi
 echo "--- the numbers of odd genera of 512 (rank, determinant) agree with SageMath ---"
 
 # The genera of hermitian lattices over Q(zeta_d) / Q(zeta_d)^+ against
-# hermitian_genera of Hecke.jl (HermitianGenusCounts.jl), d not a power of 2
+# hermitian_genera of Hecke.jl (HermitianGenusCounts.jl), d = 4, 8, 16 (a
+# dyadic ramified prime) included
 THP=../../src_genera/GENUS_HermitianPieces
 ours=$(grep -v '^#' hermitian_genus_counts_hecke.txt | while read -r d b N c; do $THP genera $d $b $N 2>/dev/null; done)
 theirs=$(grep -v '^#' hermitian_genus_counts_hecke.txt | awk '{print $1, $2, $3, $4}')
