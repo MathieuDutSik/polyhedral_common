@@ -1,0 +1,31 @@
+# The cases of TestHermitianAlgebraicModularForms.g: the field (polynomial
+# of theta, conjugate of theta on the powers of theta), the genus symbol in
+# the notation of Hecke.jl, the rational Hecke primes (an operator at every
+# prime of E above each), the level (1, or a rational prime and the index
+# level_ideal of the prime of E above it), and the expected values: the
+# number of classes, the sorted orders of the unitary groups, the number of
+# states, and for each operator its ideal, its number of neighbors and the
+# coefficients of its characteristic polynomial. With mpi:=true the case is
+# also run on two MPI processes.
+#
+# - I_m over Q(sqrt -7), Q(sqrt -11) and Z[sqrt -5], with and without a
+#   level at an inert or a split prime: the characteristic polynomials and
+#   the orbit structures are those of GENUS_AlgebraicModularForms, the
+#   implementation over imaginary quadratic orders.
+# - Two genera over the non-Galois CM quartics theta^4 + 6 theta^2 + 7 and
+#   theta^4 + 6 theta^2 + 6, and one over a sextic CM field whose real
+#   subfield is the non-Galois cubic of discriminant 229: the classes are
+#   those of Hecke.jl, the operators are checked by amf_checks.g only.
+return [
+  rec( auts := [ 48, 336 ], field := rec( conj := [ 1, -1 ], poly := [ 2, -1, 1 ] ), level := 1, level_ideal := 0, n_class := 2, n_state := 2, name := "I3 over Q(sqrt-7)", operators := [ [ "(7,0)", 56, [ -448, -48, 1 ] ], [ "(2,0)", 7, [ -7, -6, 1 ] ], [ "(2,1)", 7, [ -7, -6, 1 ] ], [ "(3,0)", 84, [ 1680, -104, 1 ] ] ], primes := [ 7, 2, 3 ], symbol := "m=3; 2: (0,3,+); 7: (0,3,+)", mpi := false ),
+  rec( auts := [ 384, 672, 1152 ], field := rec( conj := [ 1, -1 ], poly := [ 2, -1, 1 ] ), level := 1, level_ideal := 0, n_class := 3, n_state := 3, name := "I4 over Q(sqrt-7)", operators := [ [ "(7,0)", 448, [ 1376256, -10240, -432, 1 ] ], [ "(2,0)", 15, [ 675, -105, -11, 1 ] ], [ "(2,1)", 15, [ 675, -105, -11, 1 ] ], [ "(3,0)", 840, [ -10080000, 230400, -1100, 1 ] ] ], primes := [ 7, 2, 3 ], symbol := "m=4; 2: (0,4,+); 7: (0,4,+)", mpi := false ),
+  rec( auts := [ 24, 48 ], field := rec( conj := [ 1, -1 ], poly := [ 3, -1, 1 ] ), level := 1, level_ideal := 0, n_class := 2, n_state := 2, name := "I3 over Q(sqrt-11)", operators := [ [ "(11,0)", 132, [ -1584, -120, 1 ] ], [ "(3,0)", 13, [ -26, -11, 1 ] ], [ "(3,1)", 13, [ -26, -11, 1 ] ], [ "(2,0)", 18, [ 162, -27, 1 ] ] ], primes := [ 11, 3, 2 ], symbol := "m=3; 2: (0,3,+); 11: (0,3,+)", mpi := false ),
+  rec( auts := [ 12, 16, 16, 24, 24, 48 ], field := rec( conj := [ 0, -1 ], poly := [ 5, 0, 1 ] ), level := 1, level_ideal := 0, n_class := 6, n_state := 6, name := "I3 over Z[sqrt-5]", operators := [ [ "(5,0)", 30, [ 388800, 207360, 31536, -576, -444, -16, 1 ] ], [ "(3,0)", 13, [ -7917, -5176, 2707, 8, 25, -16, 1 ] ], [ "(3,1)", 13, [ -7917, -5176, 2707, 8, 25, -16, 1 ] ], [ "(7,0)", 57, [ 3015243, -1578504, 209507, -6968, 465, -64, 1 ] ], [ "(7,1)", 57, [ 3015243, -1578504, 209507, -6968, 465, -64, 1 ] ] ], primes := [ 5, 3, 7 ], symbol := "m=3; 2: (0,3,+,0); 5: (0,3,+)", mpi := false ),
+  rec( auts := [ 48, 336 ], field := rec( conj := [ 1, -1 ], poly := [ 2, -1, 1 ] ), level := 3, level_ideal := 0, n_class := 2, n_state := 4, name := "I3 over Q(sqrt-7), level 3 (inert)", operators := [ [ "(7,0)", 56, [ 28672, 3072, -512, -48, 1 ] ], [ "(2,0)", 7, [ 21, 32, 2, -8, 1 ] ], [ "(2,1)", 7, [ 21, 32, 2, -8, 1 ] ] ], primes := [ 7, 2 ], symbol := "m=3; 2: (0,3,+); 7: (0,3,+)", mpi := false ),
+  rec( auts := [ 48, 336 ], field := rec( conj := [ 1, -1 ], poly := [ 2, -1, 1 ] ), level := 2, level_ideal := 0, n_class := 2, n_state := 4, name := "I3 over Q(sqrt-7), level (2,0) (split)", operators := [ [ "(7,0)", 56, [ -28672, -10240, -1152, -32, 1 ] ], [ "(3,0)", 84, [ 672000, -108800, 6240, -144, 1 ] ] ], primes := [ 7, 3 ], symbol := "m=3; 2: (0,3,+); 7: (0,3,+)", mpi := true ),
+  rec( auts := [ 48, 336 ], field := rec( conj := [ 1, -1 ], poly := [ 2, -1, 1 ] ), level := 2, level_ideal := 1, n_class := 2, n_state := 4, name := "I3 over Q(sqrt-7), level (2,1) (split)", operators := [ [ "(7,0)", 56, [ -28672, -10240, -1152, -32, 1 ] ], [ "(3,0)", 84, [ 672000, -108800, 6240, -144, 1 ] ] ], primes := [ 7, 3 ], symbol := "m=3; 2: (0,3,+); 7: (0,3,+)", mpi := false ),
+  rec( auts := [ 24, 48 ], field := rec( conj := [ 1, -1 ], poly := [ 3, -1, 1 ] ), level := 2, level_ideal := 0, n_class := 2, n_state := 4, name := "I3 over Q(sqrt-11), level 2 (inert)", operators := [ [ "(11,0)", 132, [ 456192, 53568, -432, -132, 1 ] ], [ "(3,0)", 13, [ 208, 140, -12, -13, 1 ] ], [ "(3,1)", 13, [ 208, 140, -12, -13, 1 ] ] ], primes := [ 11, 3 ], symbol := "m=3; 2: (0,3,+); 11: (0,3,+)", mpi := false ),
+  rec( auts := [ 4, 8, 8, 8, 8 ], field := rec( conj := [ 0, -1, 0, 0 ], poly := [ 7, 0, 6, 0, 1 ] ), level := 1, level_ideal := 0, n_class := 5, n_state := 5, name := "theta^4+6theta^2+7 over Q(sqrt2)", operators := [ [ "(3,0)", 10, [ -160, 16, 80, -8, -10, 1 ] ], [ "(3,1)", 10, [ -160, 16, 80, -8, -10, 1 ] ], [ "(5,0)", 650, [ -31460000, 3480400, 187120, -15896, -626, 1 ] ] ], primes := [ 3, 5 ], symbol := "m=2; 2: (0,2,+,0); (7,[28,0,16,0]): (0,2,+)", mpi := false ),
+  rec( auts := [ 4, 4, 8, 8, 8, 8 ], field := rec( conj := [ 0, -1, 0, 0 ], poly := [ 6, 0, 6, 0, 1 ] ), level := 1, level_ideal := 0, n_class := 6, n_state := 6, name := "theta^4+6theta^2+6 over Q(sqrt3)", operators := [ [ "(5,0)", 26, [ 7488, -4032, -1936, 1120, 12, -28, 1 ] ], [ "(5,1)", 26, [ 7488, -4032, -1936, 1120, 12, -28, 1 ] ], [ "(7,0)", 2450, [ -5083294731200, -259810233024, -2797161744, 32133728, 364668, -2604, 1 ] ] ], primes := [ 5, 7 ], symbol := "m=2; 3: (0,2,+); 2: (0,2,+,0)", mpi := false ),
+  rec( auts := [ 4, 4, 4, 16, 16, 32, 32 ], field := rec( conj := [ 782/1253, -909/1253, -132/1253, 320/1253, -18/1253, -96/1253 ] , poly := [ 26, -14, 19, 2, -5, 0, 1 ] ), level := 1, level_ideal := 0, n_class := 7, n_state := 7, name := "sextic over the cubic of discriminant 229", operators := [ [ "(3,0)", 756, [ -4514807808, -2063314944, -389173248, -38672640, -2125440, -60624, -672, 1 ] ] ], primes := [ 3 ], symbol := "m=2; (2,[-15697/1253,4702/1253,-5301/1253,1460/1253,701/1253,-438/1253]): (0,2,+,0); (2,[-16950/1253,4702/1253,-5301/1253,1460/1253,701/1253,-438/1253]): (0,2,+,0)", mpi := false )
+];

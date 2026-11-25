@@ -313,6 +313,11 @@ template <typename TintGroup> struct AmfZResult {
   Tmass mass;
   Tmass mass_formula;
   std::vector<int> ListPrime;
+  // over a CM field (AlgebraicModularFormsHerm.h): the prime ideal of each
+  // operator, and the index of its adjoint (the operator at the conjugate
+  // prime); both empty over Z, where every operator is self-adjoint
+  std::vector<std::string> ListPrimeName;
+  std::vector<size_t> ListAdjoint;
   std::vector<size_t> ListNeighbor;
   // per prime, (row state, column state) -> entry
   std::vector<std::map<std::pair<size_t, size_t>, int64_t>> ListHecke;
@@ -343,8 +348,12 @@ void WriteAmfZResult(std::ostream &os, AmfZResult<TintGroup> const &res,
     os << "],\nmass:=" << res.mass << ", mass_formula:=" << res.mass_formula
        << ",\nListHecke:=[";
     for (size_t ip = 0; ip < res.ListPrime.size(); ip++) {
-      os << (ip > 0 ? ",\n" : "") << "rec(prime:=" << res.ListPrime[ip]
-         << ", n_neighbor:=" << res.ListNeighbor[ip] << ", entries:=[";
+      os << (ip > 0 ? ",\n" : "") << "rec(prime:=" << res.ListPrime[ip];
+      if (!res.ListPrimeName.empty()) {
+        os << ", ideal:=\"" << res.ListPrimeName[ip]
+           << "\", adjoint:=" << (res.ListAdjoint[ip] + 1);
+      }
+      os << ", n_neighbor:=" << res.ListNeighbor[ip] << ", entries:=[";
       bool first = true;
       for (auto const &[key, val] : res.ListHecke[ip]) {
         os << (first ? "" : ",") << "[" << (key.first + 1) << ","
@@ -364,7 +373,8 @@ void WriteAmfZResult(std::ostream &os, AmfZResult<TintGroup> const &res,
 /*
   The Hecke operators are self-adjoint for the inner product of the
   states, <(L_j, O), (L_j, O)> = |O| / |Aut(L_j)|: T(s, t) w(s) = T(t, s)
-  w(t). That is checked with SANITY_CHECK, and with the extensive check
+  w(t); over a CM field the adjoint of T_P is T_conj(P), T_P(s, t) w(s) =
+  T_conj(P)(t, s) w(t). That is checked with SANITY_CHECK, and with the extensive check
   that the operators at the different primes commute, which is cubic in
   the number of states.
  */
@@ -382,12 +392,16 @@ void AmfZCheckResult([[maybe_unused]] AmfZResult<TintGroup> const &res) {
   }
   for (size_t ip = 0; ip < res.ListHecke.size(); ip++) {
     auto const &H = res.ListHecke[ip];
+    auto const &H_adj =
+        res.ListHecke[res.ListAdjoint.empty() ? ip : res.ListAdjoint[ip]];
     for (auto const &[key, val] : H) {
-      auto iter = H.find({key.second, key.first});
-      int64_t val_t = (iter == H.end()) ? 0 : iter->second;
+      auto iter = H_adj.find({key.second, key.first});
+      int64_t val_t = (iter == H_adj.end()) ? 0 : iter->second;
       if (Tmass(static_cast<long>(val)) * weight[key.first] !=
           Tmass(static_cast<long>(val_t)) * weight[key.second]) {
         std::cerr << "AMFZ: the Hecke operator at p=" << res.ListPrime[ip]
+                  << (res.ListPrimeName.empty() ? "" : " ")
+                  << (res.ListPrimeName.empty() ? "" : res.ListPrimeName[ip])
                   << " is not self-adjoint at the states " << key.first
                   << ", " << key.second << "\n";
         throw TerminalException{1};
@@ -429,15 +443,27 @@ inline FullNamelist NAMELIST_GetStandard_AMF_Z() {
     std::map<std::string, std::string> ListStringValues_doc;
     std::map<std::string, std::string> ListIntValues_doc;
     std::map<std::string, std::string> ListListIntValues_doc;
+    ListStringValues_doc["Ring"] = "Default: Z\n\
+Z: lattices over Z. Hermitian: Hermitian lattices over a CM field E\n\
+(AlgebraicModularFormsHerm.h)";
     ListStringValues_doc["ClassesFile"] = "Default: unset (required)\n\
-The classes of the genus, in the CPP format of GENUS_Enumerate (the number of\n\
-classes, then their Gram matrices). They must be the whole genus of positive\n\
-definite even lattices: the mass is checked against the mass formula";
+The classes of the genus. Over Z, in the CPP format of GENUS_Enumerate (the\n\
+number of classes, then their Gram matrices), positive definite and even.\n\
+Hermitian: in the CPP format of GENUS_HermitianEnumerate (the field, the\n\
+form, the bases of the classes). They must be the whole genus: the mass is\n\
+checked against the mass formula";
     ListListIntValues_doc["ListPrime"] = "Default: 2\n\
-The primes of the Hecke operators, prime to the level and to the determinant";
+The primes of the Hecke operators, prime to the level and to the determinant.\n\
+Hermitian: rational primes where the genus is unimodular, an operator for\n\
+every prime of E above each (not the dyadic ramified ones)";
     ListIntValues_doc["level"] = "Default: 1\n\
 1 for no level structure, or a prime N prime to the determinant: the states\n\
-are then the orbits of the automorphism groups on the isotropic lines mod N";
+are then the orbits of the automorphism groups on the isotropic lines mod N.\n\
+Hermitian: a rational prime where the genus is unimodular; the level is the\n\
+prime of E above it of index level_ideal, the states the orbits on its\n\
+level lines (all of them at a split prime, the isotropic ones otherwise)";
+    ListIntValues_doc["level_ideal"] = "Default: 0\n\
+Hermitian: which prime of E above level (the list is printed)";
     ListIntValues_doc["max_level_lines"] = "Default: 100000000\n\
 The largest number of lines mod N of a lattice, whose orbits are tabulated";
     SingleBlock BlockDATA;
@@ -452,7 +478,9 @@ The largest number of lines mod N of a lattice, whose orbits are tabulated";
     ListStringValues_doc["automorphism_method"] = "Default: weyl_chamber\n\
 The automorphism groups of the classes (see LatticeMethods.h)";
     ListStringValues_doc["isomorphism_method"] = "Default: weyl_chamber\n\
-The isometry from a neighbor to its class, needed with a level structure";
+The isometry from a neighbor to its class, needed with a level structure.\n\
+Over Z only: the Hermitian groups and isometries are those of the pairs\n\
+(G, G Omega^T), by the graph methods";
     SingleBlock BlockMETHOD;
     BlockMETHOD.setListStringValues_doc(ListStringValues_doc);
     ListBlock["METHOD"] = BlockMETHOD;

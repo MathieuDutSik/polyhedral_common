@@ -91,6 +91,10 @@ struct InvariantFamilyNode {
 
 template <typename Tint> struct InvariantFamily {
   std::vector<MyMatrix<Tint>> ListGram;
+  // A second form for each lattice, or empty: the classes are then those of
+  // the pairs (G, S) (a Hermitian lattice, S = G Omega^T), the invariants of
+  // G being only filters and the canonical form that of the pair.
+  std::vector<MyMatrix<Tint>> ListSecond;
   std::vector<InvariantFamilyNode> nodes;
   // the first node, or -1 - index for a family of one class
   int root;
@@ -129,6 +133,29 @@ MyMatrix<Tint> InvariantFamilyReduced(MyMatrix<Tint> const &G,
   }
 }
 
+// The LLL reduction of the Gram matrix G, in gmp, applied to the pair (G,
+// S): P G P^T and P S P^T.
+template <typename Tint>
+std::pair<MyMatrix<Tint>, MyMatrix<Tint>>
+InvariantFamilyReducedPair(MyMatrix<Tint> const &G, MyMatrix<Tint> const &S,
+                           std::ostream &os) {
+  MyMatrix<mpq_class> G_q = InvariantFamilyGmpMatrix(G);
+  MyMatrix<mpq_class> S_q = InvariantFamilyGmpMatrix(S);
+  LLLreduction<mpq_class, mpz_class> rec =
+      LLLreducedBasis<mpq_class, mpz_class>(G_q, os);
+  MyMatrix<mpq_class> P = UniversalMatrixConversion<mpq_class, mpz_class>(rec.Pmat);
+  MyMatrix<mpq_class> S_red = P * S_q * P.transpose();
+  auto back = [&](MyMatrix<mpq_class> const &M) -> MyMatrix<Tint> {
+    if constexpr (std::is_same_v<Tint, mpz_class>) {
+      return UniversalMatrixConversion<mpz_class, mpq_class>(M);
+    } else {
+      return UniversalMatrixConversion<Tint, int64_t>(
+          UniversalMatrixConversion<int64_t, mpq_class>(M));
+    }
+  };
+  return {back(rec.GramMatRed), back(S_red)};
+}
+
 template <typename Tint> struct InvariantFamilyCache {
   using T = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> G_int;
@@ -149,6 +176,16 @@ template <typename Tint> struct InvariantFamilyCache {
   InvariantFamilyCache(MyMatrix<Tint> const &G_in, std::ostream &os)
       : G_int(InvariantFamilyReduced(G_in, os)),
         G(UniversalMatrixConversion<T, Tint>(G_int)) {}
+  // the second form, on the same reduced basis (empty without one)
+  MyMatrix<Tint> S_int;
+  InvariantFamilyCache(MyMatrix<Tint> const &G_in, MyMatrix<Tint> const &S_in,
+                       std::ostream &os) {
+    std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pr =
+        InvariantFamilyReducedPair(G_in, S_in, os);
+    G_int = pr.first;
+    S_int = pr.second;
+    G = UniversalMatrixConversion<T, Tint>(G_int);
+  }
 };
 
 /*
@@ -340,15 +377,23 @@ InvariantFamilyValue(InvariantFamilyCache<Tint> &cache,
       // In gmp whatever Tint is: the canonical forms are not available for
       // every arithmetic, and the fallback is rarely needed.
       MyMatrix<mpq_class> G_q = InvariantFamilyGmpMatrix(cache.G_int);
-      MyMatrix<mpz_class> B = LatticeCanonicalBasis<mpq_class, mpz_class, Tgroup>(
-          G_q, LatticeStabCanIsomMethod::Heuristic, os);
+      std::vector<MyMatrix<mpq_class>> l_mat{G_q};
+      if (cache.S_int.rows() > 0) {
+        l_mat.push_back(InvariantFamilyGmpMatrix(cache.S_int));
+      }
+      MyMatrix<mpz_class> B =
+          LatticeCanonicalBasisMultiple<mpq_class, mpz_class, Tgroup>(
+              l_mat, LatticeStabCanIsomMethod::Heuristic, os);
       MyMatrix<mpq_class> B_T = UniversalMatrixConversion<mpq_class, mpz_class>(B);
-      MyMatrix<mpq_class> GramCan = B_T * G_q * B_T.transpose();
       std::ostringstream str;
-      for (int i = 0; i < GramCan.rows(); i++) {
-        for (int j = 0; j <= i; j++) {
-          str << GramCan(i, j) << " ";
+      for (auto const &M : l_mat) {
+        MyMatrix<mpq_class> Can = B_T * M * B_T.transpose();
+        for (int i = 0; i < Can.rows(); i++) {
+          for (int j = 0; j < Can.cols(); j++) {
+            str << Can(i, j) << " ";
+          }
         }
+        str << "| ";
       }
       cache.canonical = str.str();
     }
@@ -366,9 +411,11 @@ InvariantFamilyValue(InvariantFamilyCache<Tint> &cache,
 template <typename Tint, typename Tgroup>
 InvariantFamily<Tint>
 get_invariant_family(std::vector<MyMatrix<Tint>> const &ListGram,
-                     std::ostream &os, size_t max_vectors = 20000) {
+                     std::ostream &os, size_t max_vectors = 20000,
+                     std::vector<MyMatrix<Tint>> const &ListSecond = {}) {
   InvariantFamily<Tint> family;
   family.ListGram = ListGram;
+  family.ListSecond = ListSecond;
   family.max_vectors = max_vectors;
 #ifdef TIMINGS_LATTICE_INVARIANT_FAMILY
   // per kind of work: the evaluations and their total time in microseconds
@@ -387,7 +434,11 @@ get_invariant_family(std::vector<MyMatrix<Tint>> const &ListGram,
 #endif
   std::vector<InvariantFamilyCache<Tint>> caches;
   for (auto const &G : ListGram) {
-    caches.emplace_back(G, os);
+    if (ListSecond.empty()) {
+      caches.emplace_back(G, os);
+    } else {
+      caches.emplace_back(G, ListSecond[caches.size()], os);
+    }
   }
 #ifdef TIMINGS_LATTICE_INVARIANT_FAMILY
   timings["reduce"] = {ListGram.size(), time_reduce.eval_int64()};
@@ -563,8 +614,11 @@ get_invariant_family(std::vector<MyMatrix<Tint>> const &ListGram,
  */
 template <typename Tint, typename Tgroup>
 size_t family_invariant_index(InvariantFamily<Tint> const &family,
-                              MyMatrix<Tint> const &G, std::ostream &os) {
-  InvariantFamilyCache<Tint> cache(G, os);
+                              MyMatrix<Tint> const &G, std::ostream &os,
+                              MyMatrix<Tint> const &S = MyMatrix<Tint>(0, 0)) {
+  InvariantFamilyCache<Tint> cache =
+      (S.rows() > 0) ? InvariantFamilyCache<Tint>(G, S, os)
+                     : InvariantFamilyCache<Tint>(G, os);
   int node = family.root;
   while (node >= 0) {
     InvariantFamilyNode const &nd = family.nodes[node];

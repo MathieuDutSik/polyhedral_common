@@ -3555,6 +3555,79 @@ get_hermitian_enumeration:=function(field, symbol, mass)
     return U;
 end;
 
+# The algebraic modular forms of a genus of Hermitian lattices over a CM
+# field: the classes by GENUS_HermitianEnumerate (field and symbol as for
+# get_hermitian_enumeration, the mass computed by the program), then the
+# Hecke matrices by GENUS_MPI_AlgebraicModularForms with Ring = Hermitian, at
+# every prime of E above the rational primes of ListPrime, with the level
+# structure at the prime of index level_ideal above the rational prime level
+# (level = 1: none). The options are those of get_algebraic_modular_forms
+# (np). The result is the record of the program, whose operators carry the
+# ideal and the index of their adjoint.
+get_hermitian_algebraic_modular_forms:=function(arg)
+    local field, symbol, ListPrime, level, level_ideal, np, options, TmpDir, FileC, FileN, FileN2, FileO, FileE, eProg, strOut, binary, list_arg, status, U;
+    field:=arg[1];
+    symbol:=arg[2];
+    ListPrime:=arg[3];
+    level:=arg[4];
+    level_ideal:=arg[5];
+    np:=1;
+    if Length(arg) >= 6 then
+        options:=arg[6];
+        if IsBound(options.np) then
+            np:=options.np;
+        fi;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    FileC:=Filename(TmpDir, "HermAmf.classes");
+    FileN:=Filename(TmpDir, "HermAmf_enum.nml");
+    FileN2:=Filename(TmpDir, "HermAmf.nml");
+    FileO:=Filename(TmpDir, "HermAmf.out");
+    FileE:=Filename(TmpDir, "HermAmf.err");
+    strOut:=Concatenation("&DATA\n FieldPolynomial = ", JoinStringsWithSeparator(List(field.poly, String), ", "), "\n",
+                          " FieldConjugate = ", JoinStringsWithSeparator(List(field.conj, x->Concatenation("\"", String(x), "\"")), ", "), "\n",
+                          " GenusSymbol = \"", symbol, "\"\n/\n\n&METHOD\n/\n\n",
+                          "&SYSTEM\n OutFormat = \"CPP\"\n OutFile = \"", FileC, "\"\n/\n");
+    WriteStringFile(FileN, strOut);
+    eProg:=GetBinaryFilename("GENUS_HermitianEnumerate");
+    list_arg:=[FileN];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileC)=false then
+        return "program failure: GENUS_HermitianEnumerate wrote no output";
+    fi;
+    strOut:=Concatenation("&DATA\n Ring = \"Hermitian\"\n ClassesFile = \"", FileC, "\"\n",
+                          " ListPrime = ", JoinStringsWithSeparator(List(ListPrime, String), ", "), "\n",
+                          " level = ", String(level), "\n level_ideal = ", String(level_ideal), "\n/\n\n",
+                          "&METHOD\n/\n\n",
+                          "&SYSTEM\n OutFormat = \"GAP\"\n OutFile = \"", FileO, "\"\n/\n");
+    WriteStringFile(FileN2, strOut);
+    eProg:=GetBinaryFilename("GENUS_MPI_AlgebraicModularForms");
+    if np = 1 then
+        binary:=eProg;
+        list_arg:=[FileN2];
+    else
+        binary:="/usr/bin/env";
+        list_arg:=["mpirun", "-np", String(np), "--oversubscribe", eProg, FileN2];
+    fi;
+    status:=run_binary(binary, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(binary, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_MPI_AlgebraicModularForms wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileC);
+    RemoveFile(FileN);
+    RemoveFile(FileN2);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 # The algorithms of Section 8 of Allcock on the 2-dimensional Lorentzian
 # forms of the file FileCases, in the mode "anisotropic" or "first_next" of
 # LORENTZ_TwoDimAnisotropic_Allcock: the list of the result records.

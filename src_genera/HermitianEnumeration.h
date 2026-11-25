@@ -169,6 +169,21 @@ NumberField<T> NumberFieldOfAbelianCM(AbelianField const &F) {
   throw TerminalException{1};
 }
 
+/*
+  The pair (G, G Omega^T) of the lattice of basis A (rows in the ambient
+  space): G its trace form, Omega the multiplication by theta on the basis.
+  The integral matrices preserving both are the unitary isometries, so the
+  automorphism group, the canonical form and the isometries of the pair are
+  those of the Hermitian lattice.
+ */
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> HermPairOfBasis(RealifiedRing<T, Tint> const &ring,
+                                         MyMatrix<T> const &A) {
+  MyMatrix<T> G = A * UniversalMatrixConversion<T, Tint>(ring.B) * A.transpose();
+  MyMatrix<T> Om = A * UniversalMatrixConversion<T, Tint>(ring.W) * Inverse(A);
+  return {G, MyMatrix<T>(G * Om.transpose())};
+}
+
 template <typename T, typename Tint> struct HermEnumClass {
   // the canonical basis, rows in the coordinates of the ambient space
   MyMatrix<T> basis;
@@ -260,9 +275,7 @@ HermitianEnumeration(CMOrder<T, Tint> const &ord, HermSeed<T, Tint> const &seed,
     LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(
         MyMatrix<T>(A_in * B_T * A_in.transpose()), os);
     MyMatrix<T> A = UniversalMatrixConversion<T, Tint>(rec.Pmat) * A_in;
-    MyMatrix<T> G = rec.GramMatRed;
-    MyMatrix<T> Om = A * W_T * Inverse(A);
-    std::vector<MyMatrix<T>> l_mat{G, MyMatrix<T>(G * Om.transpose())};
+    std::vector<MyMatrix<T>> l_mat = HermPairOfBasis(ring, A);
     MyMatrix<Tint> Pc =
         ComputeCanonicalFormMultiple<T, Tint, Tgroup>(l_mat, os);
     MyMatrix<T> Pc_T = UniversalMatrixConversion<T, Tint>(Pc);

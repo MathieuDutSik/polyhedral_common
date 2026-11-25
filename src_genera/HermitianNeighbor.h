@@ -28,7 +28,8 @@
   The primes. Over a rational prime ell, A = O_E / ell O_E is a finite
   commutative F_ell-algebra. Its radical R is the kernel of x -> x^(ell^j),
   ell^j >= [E : Q], and A / R is the product of the residue fields of the
-  primes above ell. A random element z whose minimal polynomial has
+  primes above ell. An element z (from a generator of fixed seed, the same
+  on every run) whose minimal polynomial has
   distinct irreducible factors g_i of total degree dim A / R generates every
   residue field: the primary idempotents of F_ell[z] are then the primitive
   idempotents of A, the prime P_i is the kernel of O_E -> F_ell[x] / g_i, z
@@ -325,10 +326,15 @@ std::vector<HermIdealPrime<Tint>> HermIdealPrimesAbove(CMOrder<T, Tint> const &o
   // a generator z of A / R: distinct irreducible factors of total degree
   // dim A / R in its minimal polynomial
   T_small_prime ell_u = static_cast<T_small_prime>(ell);
+  // The candidates come from a linear congruential generator of fixed seed,
+  // so that every process of an MPI computation gets the same primes, in
+  // the same order, and the same line spaces.
+  uint64_t state = 0x9E3779B97F4A7C15ULL;
   for (int iter = 0; iter < 1000; iter++) {
     std::vector<int64_t> z(d);
     for (int a = 0; a < d; a++) {
-      z[a] = random_int(0, static_cast<int>(ell) - 1);
+      state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+      z[a] = static_cast<int64_t>((state >> 33) % static_cast<uint64_t>(ell));
     }
     std::vector<std::vector<int64_t>> pows{A.one()};
     std::optional<PolyQ> opt_mu;

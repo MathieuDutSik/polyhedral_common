@@ -4,7 +4,7 @@
 #include "Group.h"
 #include "Permutation.h"
 #ifdef ENABLE_FLINT_SUPPORT
-#include "NumberTheoryFlint.h"
+# include "NumberTheoryFlint.h"
 #endif
 #include "HermitianEnumeration.h"
 #include "HermitianGenusMass.h"
@@ -70,7 +70,8 @@ The largest rational prime under the neighbor primes";
     ListStringValues_doc["OutFormat"] = "Default: GAP\n\
 GAP: a record with the field, the form h of the ambient space (h = sum_k\n\
 theta^k h_k), the bases of the classes in it, their unitary group orders\n\
-and the mass";
+and the mass. CPP: the same data for GENUS_MPI_AlgebraicModularForms\n\
+(Ring = Hermitian)";
     ListStringValues_doc["OutFile"] = "Default: stdout\n\
 The output file, or stdout / stderr";
     SingleBlock BlockSYSTEM;
@@ -78,6 +79,33 @@ The output file, or stdout / stderr";
     ListBlock["SYSTEM"] = BlockSYSTEM;
   }
   return FullNamelist(ListBlock);
+}
+
+/*
+  The CPP format: deg, the coefficients of the polynomial of theta, those of
+  its conjugate; m and the deg matrices h_k (h = sum_k theta^k h_k); the
+  number of classes and their bases (n x n, rows in the ambient space).
+ */
+template <typename T, typename Tint>
+void WriteHermEnumResultCPP(std::ostream &os, NumberField<T> const &K,
+                            std::vector<MyMatrix<T>> const &h,
+                            HermEnumResult<T, Tint> const &res) {
+  os << K.deg << "\n";
+  for (size_t k = 0; k < K.Phi.size(); k++) {
+    os << (k > 0 ? " " : "") << K.Phi[k];
+  }
+  os << "\n";
+  for (int k = 0; k < K.deg; k++) {
+    os << (k > 0 ? " " : "") << K.conj[k];
+  }
+  os << "\n" << h[0].rows() << "\n";
+  for (auto const &hk : h) {
+    WriteMatrix(os, hk);
+  }
+  os << res.l_class.size() << "\n";
+  for (auto const &cl : res.l_class) {
+    WriteMatrix(os, cl.basis);
+  }
 }
 
 template <typename T, typename Tint>
@@ -204,8 +232,17 @@ int main(int argc, char *argv[]) {
               << " classes, mass " << res.mass << " of " << *mass
               << (res.complete ? ", complete" : ", NOT complete") << "\n";
     std::vector<MyMatrix<T>> const &h = seed.h;
+    std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+    if (OutFormat != "GAP" && OutFormat != "CPP") {
+      std::cerr << "GENUS_HermitianEnumerate: OutFormat is GAP or CPP\n";
+      throw TerminalException{1};
+    }
     auto f = [&](std::ostream &os_out) -> void {
-      WriteHermEnumResult(os_out, K, seed, h, res);
+      if (OutFormat == "CPP") {
+        WriteHermEnumResultCPP(os_out, K, h, res);
+      } else {
+        WriteHermEnumResult(os_out, K, seed, h, res);
+      }
     };
     FILE_PrintStderrStdoutFile(BlockSYSTEM.get_string("OutFile"), f);
     std::cerr << "Normal termination of GENUS_HermitianEnumerate\n";
