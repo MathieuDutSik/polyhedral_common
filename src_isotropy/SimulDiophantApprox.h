@@ -70,7 +70,9 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
     return retV;
   };
   T eVal = 2;
-  eCoeff += IntPow(epsilon, n) / IntPow(eVal, totdim);
+  // The last basis vector is (-alpha, c) with c = 2^(-n(n+1)/4) eps^(n+1),
+  // whose square enters the Gram matrix.
+  eCoeff += IntPow(epsilon, 2 * n + 2) / IntPow(eVal, totdim);
   GramMat(n, n) = eCoeff;
   //
   // Computing the LLL reduction

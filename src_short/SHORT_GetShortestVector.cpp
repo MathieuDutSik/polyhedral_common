@@ -30,6 +30,10 @@ int main(int argc, char *argv[]) {
     Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(M, std::cerr);
     int nbRow = rec_shv.SHV.rows();
     std::cerr << "nbRow=" << nbRow << "\n";
+    std::ofstream os(argv[2]);
+    os << "return rec(min:=" << rec_shv.min << ", SHV:=";
+    WriteMatrixGAP(os, rec_shv.SHV);
+    os << ");\n";
     std::cerr << "Normal termination of the SHORT_GetShortestVector\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_GetShortestVector\n";

@@ -55,3 +55,30 @@ jobs:
           fi
           cd ../..
           echo "After the search for positive vectors"
+
+      - name: Test the indefinite LLL and the reductions
+        run: |
+          cd CI_tests/02A_FindPositiveVectors
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestReductions.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the tests of the reductions"
+
+      - name: Test the shortest vectors and the configurations of src_short
+        run: |
+          make -C src_short
+          echo "After compilation of src_short"
+
+          cd CI_tests/02A_FindPositiveVectors
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestShort.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the tests of src_short"

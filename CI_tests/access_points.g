@@ -1934,13 +1934,17 @@ end;
 
 
 GetReflectivityInformation:=function(arg)
-    local LorMat, options, print_info, n, TmpDir, FileI, FileN, FileO, FileE, strOut, eProg, U, runtime_str, list_arg, status;
+    local LorMat, options, print_info, arith, n, TmpDir, FileI, FileN, FileO, FileE, strOut, eProg, U, runtime_str, list_arg, status;
     LorMat:=arg[1];
     print_info:=false;
+    arith:="gmp";
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
+        fi;
+        if IsBound(options.arith) then
+            arith:=options.arith;
         fi;
     fi;
     n:=Length(LorMat);
@@ -1960,6 +1964,7 @@ GetReflectivityInformation:=function(arg)
     strOut:=Concatenation(strOut, " OptionNorms = \"all\"\n");
     strOut:=Concatenation(strOut, " EarlyTerminationIfNotReflective = T\n");
     strOut:=Concatenation(strOut, " ComputeAllSimpleRoots = T\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"", arith, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
     WriteStringFile(FileN, strOut);
@@ -3235,6 +3240,272 @@ get_algebraic_modular_forms:=function(arg)
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileC);
     RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+# The programs of src_isotropy that take a matrix and write a GAP record.
+# f_args builds the argument list from the input and output file names.
+# The files are removed before use, since WriteMatrixFile appends.
+run_matrix_program_gap:=function(ProgName, M, f_args)
+    local TmpDir, FileI, FileO, FileE, eProg, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "MatProg.in");
+    FileO:=Filename(TmpDir, "MatProg.out");
+    FileE:=Filename(TmpDir, "MatProg.err");
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    WriteMatrixFile(FileI, M);
+    eProg:=GetBinaryFilename(ProgName);
+    list_arg:=f_args(FileI, FileO);
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return Concatenation("program failure: ", ProgName, " did not create its output file");
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+# Indefinite LLL of Simon: rec(B, Mred) with Mred = B M B^T, and Xisotrop
+# when an isotropic vector was met.
+indefinite_lll:=function(M)
+    return run_matrix_program_gap("LATT_IndefiniteLLL", M,
+        function(FileI, FileO) return ["gmp", FileI, "GAP", FileO]; end);
+end;
+
+indefinite_reduction:=function(M)
+    return run_matrix_program_gap("LATT_IndefiniteReduction", M,
+        function(FileI, FileO) return [FileI, "GAP", FileO]; end);
+end;
+
+lll_reduce_basis:=function(M)
+    return run_matrix_program_gap("LATT_LLLreduceBasis", M,
+        function(FileI, FileO) return [FileI, "GAP", FileO]; end);
+end;
+
+sublattice_basis_reduction:=function(M)
+    return run_matrix_program_gap("LATT_SublatticeBasisReduction", M,
+        function(FileI, FileO) return [FileI, "GAP", FileO]; end);
+end;
+
+determinant_minimization:=function(M)
+    return run_matrix_program_gap("LATT_DetMinimization", M,
+        function(FileI, FileO) return ["mpq_class", FileI, "GAP", FileO]; end);
+end;
+
+# LATT_AutomorphyReduction writes two records, for M and for the
+# primitive integral multiple of its inverse. They are returned as a list.
+automorphy_reduction:=function(M)
+    local TmpDir, FileI, FileO, FileE, eProg, list_arg, status, eStr, list_rec, ePart;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "AutRed.in");
+    FileO:=Filename(TmpDir, "AutRed.out");
+    FileE:=Filename(TmpDir, "AutRed.err");
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    WriteMatrixFile(FileI, M);
+    eProg:=GetBinaryFilename("LATT_AutomorphyReduction");
+    list_arg:=["mpq_class", FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_AutomorphyReduction did not create its output file";
+    fi;
+    eStr:=StringFile(FileO);
+    list_rec:=[];
+    for ePart in SplitString(eStr, ";") do
+        ePart:=NormalizedWhitespace(ePart);
+        if Length(ePart) > 0 then
+            if starts_with(ePart, "return ")=fail then
+                return Concatenation("program failure: unexpected output of LATT_AutomorphyReduction: ", ePart);
+            fi;
+            Add(list_rec, EvalString(ePart{[8..Length(ePart)]}));
+        fi;
+    od;
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return list_rec;
+end;
+
+# The verdict of CheckPositiveSemiDefinite, which it prints on the
+# standard output: "definite", "semidefinite" or "not".
+check_positive_semidefinite:=function(M)
+    local TmpDir, FileI, FileO, FileE, eProg, status, eStr;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "PSD.in");
+    FileO:=Filename(TmpDir, "PSD.out");
+    FileE:=Filename(TmpDir, "PSD.err");
+    RemoveFileIfExist(FileI);
+    WriteMatrixFile(FileI, M);
+    eProg:=GetBinaryFilename("CheckPositiveSemiDefinite");
+    status:=Process(DirectoryCurrent(), "/bin/sh", InputTextNone(), OutputTextUser(),
+        ["-c", "exec \"$1\" \"$2\" > \"$3\" 2> \"$4\"", "sh", eProg, FileI, FileO, FileE]);
+    if status <> 0 then
+        return binary_failure(eProg, [FileI], status, FileE);
+    fi;
+    eStr:=StringFile(FileO);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    if PositionSublist(eStr, "is NOT positive semidefinite") <> fail then
+        return "not";
+    fi;
+    if PositionSublist(eStr, "is positive semidefinite") <> fail then
+        return "semidefinite";
+    fi;
+    if PositionSublist(eStr, "is positive definite") <> fail then
+        return "definite";
+    fi;
+    return Concatenation("program failure: unexpected output of CheckPositiveSemiDefinite: ", eStr);
+end;
+
+# Simultaneous Diophantine approximation of the reals given as decimal
+# strings: rec(Numerators, Denominator), read from the standard error,
+# where LATT_DiophantApprox writes it.
+diophantine_approximation:=function(ListStr, epsilon_str)
+    local TmpDir, FileI, FileE, eProg, list_arg, status, output, eStr, pos, pos2, L;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Dioph.in");
+    FileE:=Filename(TmpDir, "Dioph.err");
+    output:=OutputTextFile(FileI, false);
+    AppendTo(output, Length(ListStr), "\n", JoinStringsWithSeparator(ListStr, " "), "\n");
+    CloseStream(output);
+    eProg:=GetBinaryFilename("LATT_DiophantApprox");
+    list_arg:=[FileI, epsilon_str];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    eStr:=StringFile(FileE);
+    pos:=PositionSublist(eStr, "Proposed solution = ");
+    if pos=fail then
+        return "program failure: LATT_DiophantApprox printed no solution";
+    fi;
+    pos2:=Position(eStr, ']', pos);
+    # The fractions are parsed as text: evaluated by GAP, p/q would be
+    # reduced and the common denominator lost.
+    L:=List(SplitString(Filtered(eStr{[pos+20..pos2]}, c -> not c in " []\n"), ","),
+            x -> List(SplitString(x, "/"), Int));
+    RemoveFile(FileI);
+    RemoveFile(FileE);
+    return rec(Numerators:=List(L, x -> x[1]), Denominators:=List(L, x -> x[2]));
+end;
+
+# The isometry between two Lorentzian lattices computed by the edgewalk of
+# Allcock: a matrix U with U LorMat1 U^T = LorMat2, or fail when they are
+# not isometric. The optional third argument is a record with field arith.
+lorentzian_isomorphism:=function(arg)
+    local LorMat1, LorMat2, arith, TmpDir, File1, File2, FileN, FileO, FileE, strOut, eProg, list_arg, status, U;
+    LorMat1:=arg[1];
+    LorMat2:=arg[2];
+    arith:="gmp";
+    if Length(arg) >= 3 and IsBound(arg[3].arith) then
+        arith:=arg[3].arith;
+    fi;
+    TmpDir:=DirectoryTemporary();
+    File1:=Filename(TmpDir, "Isom1.in");
+    File2:=Filename(TmpDir, "Isom2.in");
+    FileN:=Filename(TmpDir, "Isom.nml");
+    FileO:=Filename(TmpDir, "Isom.out");
+    FileE:=Filename(TmpDir, "Isom.err");
+    RemoveFileIfExist(File1);
+    RemoveFileIfExist(File2);
+    RemoveFileIfExist(FileO);
+    WriteMatrixFile(File1, LorMat1);
+    WriteMatrixFile(File2, LorMat2);
+    strOut:="&PROC\n";
+    strOut:=Concatenation(strOut, " FileLorMat1 = \"", File1, "\"\n");
+    strOut:=Concatenation(strOut, " FileLorMat2 = \"", File2, "\"\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"", arith, "\"\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " FileOut = \"", FileO, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    WriteStringFile(FileN, strOut);
+    eProg:=GetBinaryFilename("LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism");
+    list_arg:=[FileN];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism did not create its output file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(File1);
+    RemoveFile(File2);
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+# The shortest vectors of a positive definite form: rec(min, SHV), one
+# vector of each pair +-v.
+short_get_shortest_vector:=function(GramMat)
+    return run_matrix_program_gap("SHORT_GetShortestVector", GramMat,
+        function(FileI, FileO) return [FileI, FileO]; end);
+end;
+
+# The integral matrices g with M g = M up to the order and the signs of
+# the rows, for a configuration M of vectors given by its rows.
+short_automorphism_group:=function(SHV)
+    return run_matrix_program_gap("SHORT_AutomorphismGroup", SHV,
+        function(FileI, FileO) return ["gmp", FileI, "GAP", FileO]; end);
+end;
+
+# A list of configurations reduced to one canonical representative per
+# class under the integral linear group.
+short_reduce_vector_family:=function(ListSHV)
+    local TmpDir, FileI, FileO, FileE, eProg, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Reduce.in");
+    FileO:=Filename(TmpDir, "Reduce.out");
+    FileE:=Filename(TmpDir, "Reduce.err");
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    WriteListMatrixFile(FileI, ListSHV);
+    eProg:=GetBinaryFilename("SHORT_ReduceVectorFamilyGAP");
+    list_arg:=[FileI, FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U.ListReduced;
+end;
+
+# The configurations of index i with i mod N = residue, in order.
+short_split_vector_family:=function(ListSHV, N, residue)
+    local TmpDir, FileI, FileO, FileE, eProg, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Split.in");
+    FileO:=Filename(TmpDir, "Split.out");
+    FileE:=Filename(TmpDir, "Split.err");
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    WriteListMatrixFile(FileI, ListSHV);
+    eProg:=GetBinaryFilename("SHORT_SplitVectorFamily");
+    list_arg:=[FileI, String(N), String(residue), FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    U:=ReadListMatrixFile(FileO);
+    RemoveFile(FileI);
     RemoveFile(FileO);
     RemoveFile(FileE);
     return U;

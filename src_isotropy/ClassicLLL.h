@@ -29,9 +29,33 @@ void CheckLLLreduction(LLLreduction<T, Tint> const &res,
                        MyMatrix<T> const &GramMat) {
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(res.Pmat);
   MyMatrix<T> prod = Pmat_T * GramMat * Pmat_T.transpose();
-  if (prod != res.GramMatRed) {
-    std::cerr << "LLL: The GramMatRed is not the reduced expression\n";
-    throw TerminalException{1};
+  if constexpr (is_exact_arithmetic<T>::value) {
+    if (prod != res.GramMatRed) {
+      std::cerr << "LLL: The GramMatRed is not the reduced expression\n";
+      throw TerminalException{1};
+    }
+  } else {
+    // In floating point (the Diophantine approximation runs in double) the
+    // reduced matrix, updated step by step, and P G P^T differ by rounding,
+    // which grows with the entries of P and G: the bound is relative to
+    // n max|P|^2 max|G|.
+    int n = prod.rows();
+    T max_P(0);
+    T max_G(0);
+    T max_diff(0);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        max_P = T_max(max_P, T_abs(Pmat_T(i, j)));
+        max_G = T_max(max_G, T_abs(GramMat(i, j)));
+        max_diff = T_max(max_diff, T_abs(prod(i, j) - res.GramMatRed(i, j)));
+      }
+    }
+    T scale = T(n) * max_P * max_P * max_G;
+    if (max_diff > T(1) / T(1000000000) * scale) {
+      std::cerr << "LLL: The GramMatRed is not the reduced expression, max_diff="
+                << max_diff << "\n";
+      throw TerminalException{1};
+    }
   }
 }
 

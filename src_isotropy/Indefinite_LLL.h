@@ -157,11 +157,21 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M,
 #endif
       return {B, get_matrix(), ResGS.Xisotrop};
     }
+    // Size reduction. The coefficients mu(i, l) change with each
+    // subtraction of a row j, so j goes down from i - 1 and the row of mu
+    // is updated. The rows j < i are not yet modified when i is treated.
     for (int i = n - 1; i >= 0; i--) {
-      for (int j = 0; j < i; j++) {
+      for (int j = i - 1; j >= 0; j--) {
         T val = ResGS.mu(i, j);
         Tint q = UniversalNearestScalarInteger<Tint, T>(val);
-        RowSubMul(B, i, q, j);
+        if (q != 0) {
+          RowSubMul(B, i, q, j);
+          T q_T = UniversalScalarConversion<T, Tint>(q);
+          for (int l = 0; l < j; l++) {
+            ResGS.mu(i, l) -= q_T * ResGS.mu(j, l);
+          }
+          ResGS.mu(i, j) -= q_T;
+        }
       }
     }
     T mu = ResGS.mu(k, k - 1);

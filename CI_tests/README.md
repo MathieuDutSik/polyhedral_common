@@ -23,7 +23,7 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build 8 min, run 2 min, whole job 12 min, 2026-11-01.
 * `01B_NonSymmetricStabilizers` -- `ci_01B_direct_matrix_stabilizer`: Stabilizers of non-symmetric matrices and Gram matrices.
   Local run: build 7 min, run 1 min (`TestNonSymmetricStabilizers.g`), 2026-11-24.
-* `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Finding positive vectors of indefinite forms.
+* `02A_FindPositiveVectors` -- `ci_02A_find_positive_vectors`: Positive vectors, indefinite LLL, reductions and shortest vector configurations.
   GitHub CI: build and run 13 min, whole job 16 min, 2026-11-02.
 * `02B_RealAlgebraicPolytope` -- `ci_02B_real_algebraic_polytope`: Symmetries and dual descriptions over real algebraic fields.
   GitHub CI: build and run 9 min, whole job 15 min, 2026-10-02.
@@ -78,10 +78,10 @@ whole job adds the installation of the dependencies (nauty, GAP, ...).
   GitHub CI: build and run 13 s, whole job 3 min, 2026-11-17.
 * `17B_Erdahl` -- `ci_17B_erdahl`: Enumeration of the perfect Delaunay polyhedra in the Erdahl cone.
   GitHub CI: `TestErdahl_centered8` build and run 19 min, whole job 25 min; `TestErdahl_full7` build and run 23 min, whole job 29 min (jobs in parallel), 2026-10-17.
-* `19A_IndefiniteComp` -- `ci_19A_indefinite_comp`: Computation of indefinite forms.
+* `19A_IndefiniteComp` -- `ci_19A_indefinite_comp`: Stabilizers, equivalences and orbits of indefinite forms, on flint.
   GitHub CI: build and run 1.8 h, whole job 1.8 h, 2026-11-19.
 * `19B_AlgebraicModularForms` -- `ci_19B_algebraic_modular_forms`: Hecke matrices of algebraic modular forms.
-* `20_Reflective` -- `ci_20_reflective`: This is for using the edgewalk algorithm of Allcock for building the polyheral cone.
+* `20_Reflective` -- `ci_20_reflective`: Allcock's edgewalk: reflective Lorentzian lattices and their isometries, on flint.
   GitHub CI: build and run 45 min, whole job 48 min, 2026-11-20.
 * `21A_SamplingFacets` -- `ci_21A_sampling_facets`: Sampling facets of polytopes.
   GitHub CI: build and run 2 min, whole job 5 min, 2026-11-21.

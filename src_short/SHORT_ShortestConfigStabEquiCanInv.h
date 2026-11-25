@@ -105,8 +105,15 @@ MyMatrix<Tint> SHORT_Canonicalize(MyMatrix<Tint> const &M, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{eRec1.GramMat};
   MyMatrix<Tint> Basis = ComputeCanonicalForm_inner<T, Tint>(ListMat, eRec1.SHVdisc, os);
   MyMatrix<Tint> BasisInv = Inverse(Basis);
-  MyMatrix<Tint> M_can = M * BasisInv;
-  return M_can;
+  MyMatrix<Tint> M_basis = M * BasisInv;
+  // The configuration is a set of vectors up to sign: the canonical form
+  // does not depend on the order nor on the signs of the input rows once
+  // each row has its first nonzero entry positive and the rows are sorted.
+  for (int i = 0; i < M_basis.rows(); i++) {
+    MyVector<Tint> V = SignCanonicalizeVector(GetMatrixRow(M_basis, i));
+    AssignMatrixRow(M_basis, i, V);
+  }
+  return SortMatrix(M_basis);
 }
 
 template <typename T, typename Tint>
