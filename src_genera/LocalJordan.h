@@ -78,16 +78,16 @@ inline ElemE<T> LocalComponentDet(LocalJordanComponent<T> const &C,
 }
 
 /*
-  The splitting. pi is the uniformizer of P, used by the quadratic form at
+  The splitting, for the valuation val (an int of an ElemE) of a prime
+  dyadic or not. pi is the uniformizer of P, used by the quadratic form at
   a dyadic prime only (nullptr otherwise).
  */
-template <typename T>
+template <typename T, typename Fval>
 inline std::vector<LocalJordanComponent<T>>
-LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
-                 PrimeValuation<T> const &vP, JordanForm form,
-                 std::type_identity_t<ElemE<T>> const *pi) {
+LocalJordanSplitVal(SmallGram<T> G, NumberField<T> const &K, Fval const &val,
+                    bool dyadic, JordanForm form,
+                    std::type_identity_t<ElemE<T>> const *pi) {
   bool hermitian = (form == JordanForm::Hermitian);
-  bool dyadic = (vP.q == 2);
   auto inv = [&](ElemE<T> const &c) -> ElemE<T> {
     return hermitian ? EConj(c, K) : c;
   };
@@ -177,7 +177,7 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
     if (hermitian) {
       for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-          int v = PrimeVal(G[i][j], K, vP);
+          int v = val(G[i][j]);
           if (v < vmin || (v == vmin && i == j && bi != bj)) {
             vmin = v;
             bi = i;
@@ -187,7 +187,7 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
       }
     } else {
       for (int i = k; i < n; i++) {
-        int v = PrimeVal(G[i][i], K, vP);
+        int v = val(G[i][i]);
         if (v < vmin) {
           vmin = v;
           bi = i;
@@ -196,7 +196,7 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
       }
       for (int i = k; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-          int v = PrimeVal(G[i][j], K, vP);
+          int v = val(G[i][j]);
           if (v < vmin) {
             vmin = v;
             bi = i;
@@ -236,7 +236,7 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
       bi = k;
       bj = k + 1;
       // dyadic: x_i <- pi^v / G_ij x_i, the off-diagonal entry pi^v
-      int v12 = PrimeVal(G[bi][bj], K, vP);
+      int v12 = val(G[bi][bj]);
       ElemE<T> c = EInv(G[bi][bj], K);
       for (int i = 0; i < v12; i++) {
         c = EMul(c, *pi, K);
@@ -256,6 +256,16 @@ LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
     }
   }
   return res;
+}
+
+// The splitting for the valuation of a PrimeValuation.
+template <typename T>
+inline std::vector<LocalJordanComponent<T>>
+LocalJordanSplit(SmallGram<T> G, NumberField<T> const &K,
+                 PrimeValuation<T> const &vP, JordanForm form,
+                 std::type_identity_t<ElemE<T>> const *pi) {
+  auto val = [&](ElemE<T> const &x) -> int { return PrimeVal(x, K, vP); };
+  return LocalJordanSplitVal<T>(std::move(G), K, val, vP.q == 2, form, pi);
 }
 
 // clang-format off

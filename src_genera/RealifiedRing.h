@@ -19,7 +19,8 @@
 
 /*
   A lattice over R = Z or R = O_K = Z[omega] (omega^2 = s omega - p, K
-  imaginary quadratic) with a form h, realified: the vector (x_1, ..., x_m)
+  imaginary quadratic) with a form h, realified (the order O_E of any CM
+  field, of degree d, is in CMOrder.h, with the same layout): the vector (x_1, ..., x_m)
   of R^m, x_j = a_j + b_j omega, is the row vector (a_1, ..., a_m, b_1, ...,
   b_m) of Z^{d m} (d = 1 for Z, 2 for O_K), a matrix of GL_m(R) is the
   matrix of the induced Z-linear map, acting on the right, and the form is
@@ -41,6 +42,9 @@ template <typename T, typename Tint> struct RealifiedRing {
   long s = 0;
   long p = 0;
   MyMatrix<Tint> W;
+  // the complex conjugation on the realified E^m (CMOrder.h); empty for the
+  // rings of the description files
+  MyMatrix<Tint> Conj;
   std::vector<MyMatrix<Tint>> l_unit;
   std::vector<MyMatrix<Tint>> l_ring_basis;
   MyMatrix<Tint> B;
