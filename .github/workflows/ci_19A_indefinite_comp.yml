@@ -34,10 +34,11 @@ jobs:
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-flint
       - uses: ./.github/actions/install-gap
       - name: Test of indefinite forms
         run: |
-          make -C src_indefinite -f Makefile_indef_ci
+          make -C src_indefinite -f Makefile_indef_ci ENABLE_FLINT_SUPPORT=1
           echo "After compilation of indefinite codes"
 
           # Running the test

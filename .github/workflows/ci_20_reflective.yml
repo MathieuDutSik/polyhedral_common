@@ -38,10 +38,11 @@ jobs:
       - uses: ./.github/actions/install-nauty
       - uses: ./.github/actions/install-bliss
       - uses: ./.github/actions/install-eigen
+      - uses: ./.github/actions/install-flint
       - uses: ./.github/actions/install-gap
       - name: Test reflectivity
         run: |
-          make -C src_lorentzian -f Makefile_Allcock_edgewalk
+          make -C src_lorentzian -f Makefile_Allcock_edgewalk ENABLE_FLINT_SUPPORT=1
           pwd
           echo "After compilation of Lorentzian code"
 
@@ -53,3 +54,15 @@ jobs:
           fi
           cd ../..
           echo "After the reflectivity tests"
+
+      - name: Test the isometries of Lorentzian lattices by the edgewalk
+        run: |
+          cd CI_tests/20_Reflective
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestIsomorphism.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the isometry tests"

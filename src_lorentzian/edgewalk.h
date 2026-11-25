@@ -53,6 +53,16 @@
 #undef DEBUG_ENUM_PROCESS
 #endif
 
+// The arithmetic of the coordinates of the edgewalk programs.
+inline std::string doc_EdgewalkArithmetic() {
+  return "Default: gmp\n\
+The arithmetic of the coordinates. Possible values:\n\
+gmp: mpq_class and mpz_class of GMP\n\
+gmp_boost, multi_boost: the boost multiprecision types\n\
+flint: fmpq_class and fmpz_class of flint, when built with\n\
+  ENABLE_FLINT_SUPPORT";
+}
+
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
   // PROC
@@ -75,6 +85,7 @@ The file of the initial vertex. Used only if OptionInitialVertex is\n\
 FileVertex or FileVertexRoots";
     ListStringValues_doc["OptionNorms"] = doc_OptionNorms();
     ListStringValues_doc["DualDescProg"] = doc_DualDescProg();
+    ListStringValues_doc["Arithmetic"] = doc_EdgewalkArithmetic();
     ListStringValues_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible values:\n\
 GAP: a GAP readable file\n\
@@ -113,6 +124,7 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
     ListStringValues_doc["FileLorMat2"] =
         "The file containing the second Lorentzian matrix";
     ListStringValues_doc["DualDescProg"] = doc_DualDescProg();
+    ListStringValues_doc["Arithmetic"] = doc_EdgewalkArithmetic();
     ListStringValues_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible value:\n\
 GAP: the isometry mapping the first matrix to the second, or fail if they\n\
@@ -1820,7 +1832,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
-    SublattInfos<T> const &si1, MyMatrix<T> const &G2,
+    SublattInfos<T> const &si1, SublattInfos<T> const &si2,
     FundDomainVertex<T, Tint> const &eVert1,
     FundDomainVertex<T, Tint> const &eVert2,
     TheHeuristic<typename Tgroup::Tint> const &HeuristicIdealStabEquiv,
@@ -1828,17 +1840,24 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
   CuspidalBank<T, Tint> cusp_bank;
   std::optional<MyMatrix<Tint>> answer;
   //
+  // The vertex of the second lattice is described with the sublattices of
+  // the second lattice, si2: with those of the first one, two lattices
+  // could only be found isometric when their Gram matrices are equal.
   FundDomainVertex_FullInfo<T, Tint, Tgroup> vertFull2 =
-      gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, si1, eVert2,
+      gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, si2, eVert2,
                                                  HeuristicIdealStabEquiv, os);
   auto f_increase_nbdone = [&]() -> bool { return false; };
   auto f_vertex =
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt =
-          LORENTZ_TestEquivalence(si1.G, vertFull1, G2, vertFull2, os);
+          LORENTZ_TestEquivalence(si1.G, vertFull1, si2.G, vertFull2, os);
       if (equiv_opt) {
-        answer = UniversalMatrixConversion<Tint, T>(*equiv_opt);
+        // The equivalence maps the second lattice to the first,
+        // E G2 E^T = G1, while the documented result maps the first to the
+        // second: its inverse, U G1 U^T = G2.
+        MyMatrix<T> const &E = *equiv_opt;
+        answer = UniversalMatrixConversion<Tint, T>(Inverse(E));
         return true;
       }
     }
@@ -2357,7 +2376,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
   //
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T, Tint, Tgroup>(
-          si1, G2, eVert1, eVert2, HeuristicIdealStabEquiv, os);
+          si1, si2, eVert1, eVert2, HeuristicIdealStabEquiv, os);
   print_result(opt);
 }
 

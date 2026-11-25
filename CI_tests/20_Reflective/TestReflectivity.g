@@ -1,5 +1,9 @@
 Read("../common.g");
 Read("../access_points.g");
+
+# The edgewalk programs are built with ENABLE_FLINT_SUPPORT=1 and run on
+# flint, the faster arithmetic for these computations.
+ReflectiveOptions:=rec(arith:="flint");;
 Print("Beginning TestReflectivity\n");
 
 GeneratePoincareFundamentalInput:=false;
@@ -67,7 +71,7 @@ end;
 
 TestReflectivity:=function(eRec)
     local U, ListVertNorm, isCocompact, n, PrefixPoincare, ListGen, ListGenTot, eRoot, ThePt, hasIsotropic, is_correct;
-    U:=GetReflectivityInformation(eRec.LorMat);
+    U:=GetReflectivityInformation(eRec.LorMat, ReflectiveOptions);
     ListVertNorm:=List(U.ListVertices, x->x.norm);
     isCocompact:=Maximum(ListVertNorm) < 0;
     n:=Length(eRec.LorMat);
@@ -83,7 +87,7 @@ GeneratePoincareInput:=function(ListRecInput)
     iPoincare:=0;
     for eRec in ListRecInput
     do
-        U:=GetReflectivityInformation(eRec.LorMat);
+        U:=GetReflectivityInformation(eRec.LorMat, ReflectiveOptions);
         ListVertNorm:=List(U.ListVertices, x->x.norm);
         isCocompact:=Maximum(ListVertNorm) < 0;
         n:=Length(eRec.LorMat);
@@ -117,7 +121,7 @@ GenerateFamilyDomains:=function(ListRecInput)
     for iRec in [1..nRec]
     do
         eRec:=ListRecInput[iRec];
-        U:=GetReflectivityInformation(eRec.LorMat);
+        U:=GetReflectivityInformation(eRec.LorMat, ReflectiveOptions);
         dim:=Length(eRec.LorMat);
         n_simple:=Length(U.ListSimpleRoots);
         Print("iRec=", iRec, " / ", nRec, " dim=", dim, " n_simple=", n_simple, "\n");

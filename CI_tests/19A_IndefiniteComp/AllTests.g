@@ -1,12 +1,16 @@
 Read("../common.g");
 Read("../access_points.g");
+
+# The programs are built with ENABLE_FLINT_SUPPORT=1 and run on flint,
+# the faster arithmetic for these computations.
+IndefOptions:=rec(arith:="flint");;
 Print("Beginning of AllTests\n");
 
 TestStab:=function(eList)
     local eProg, eGram, TmpDir, FileIn, FileOut, FileErr, TheCommand, U, eP;
     Print("Running TestStab with INDEF_FORM_AutomorphismGroup\n");
     eGram:=GetGramMatrixFromList(eList);
-    GRP:=INDEF_FORM_Stabilizer(eGram);
+    GRP:=INDEF_FORM_Stabilizer(eGram, IndefOptions);
     if GRP="program failure" then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
@@ -27,7 +31,7 @@ TestEquiv:=function(eList)
     eGram1:=GetGramMatrixFromList(eList);
     eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
     eGram2:=eP * eGram1 * TransposedMat(eP);
-    U:=INDEF_FORM_TestEquivalence(eGram1, eGram2);
+    U:=INDEF_FORM_TestEquivalence(eGram1, eGram2, IndefOptions);
     if U="program failure" then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
@@ -50,7 +54,7 @@ end;
 GetNrOrbitRepresentative:=function(eGram, Xnorm)
     local U;
     Print("Running GetNrOrbitRepresentative with INDEF_FORM_GetOrbitRepresentative\n");
-    U:=INDEF_FORM_GetOrbitRepresentative(eGram, Xnorm);
+    U:=INDEF_FORM_GetOrbitRepresentative(eGram, Xnorm, IndefOptions);
     if U="program failure" then
         Print("The output file is not existing. That qualifies as a fail\n");
         return rec(is_correct:=false);
@@ -90,7 +94,7 @@ end;
 GetNrOrbitIsotropic:=function(eGram, kDim, choice)
     local TmpDir, eProg, FileM, FileOut, FileErr, TheCommand, U;
     Print("Running GetNrOrbitIsotropic with INDEF_FORM_GetOrbit_IsotropicKplane\n");
-    U:=INDEF_FORM_GetOrbitIsotropic(eGram, kDim, choice);
+    U:=INDEF_FORM_GetOrbitIsotropic(eGram, kDim, choice, IndefOptions);
     if U="program failure" then
         Print("The output file is not existing. That qualifies as a fail\n");
         return rec(is_correct:=false);
