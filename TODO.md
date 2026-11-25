@@ -690,3 +690,23 @@ not give an equivariant form this way. Open questions:
   made from the K-orbit (as LINSPA_Invariant_SHV does), but the form has to
   transform under each element, which a symmetrization over the orbit does
   not obviously give.
+
+## src_isotropy: LATT_AutomorphyReduction increases the determinant
+
+`LATT_AutomorphyReduction` applies `DeterminantMinimization` with
+`only_equivariant = true` to a form and to the primitive integral multiple
+of its inverse. Its help says the point is that "the determinant may be
+reduceable and the problem easier", but on the scrambled indefinite forms of
+`CI_tests/02A_FindPositiveVectors/LGramReflect` the determinant of the result
+is larger than that of the input in 40 cases out of 60 (2026-11-25), for
+example -12 -> -24, -49 -> -343, -100 -> -1000, -45 -> -405. The result is
+still correct (`P Q P^T` a multiple of `Mred`, `Mred` integral), and the
+non-equivariant `LATT_DetMinimization` decreases the determinant on the same
+forms. To clarify:
+- whether an equivariant step may increase the determinant by design (an
+  operation forced to be canonical, applied even when it does not help), and
+  then whether such a step should simply not be applied;
+- or whether it is a bug in the equivariant branch of
+  `src_isotropy/DeterminantMinimization.h`.
+`TestReductions.g` of 02A only prints a note when the determinant increases;
+the check can become strict once this is settled.
