@@ -80,17 +80,16 @@ faster); every result is exact.
     touching `P`, with a witness lattice and its contact vectors. The value
     is scale invariant. See "Maximal kissing number" below.
 
-  * **POLYNORM_MinimalCoveringPolytope** `[arith] [FileEXT] [OutFormat] [OutFile] [MaxStep]`
-    takes a covering polytope `P` (`P + Z^n = R^n`) and returns a minimal
-    covering polytope `Q` contained in `P`: `Q` is covering and no convex
-    body strictly contained in `Q` is (Codenotti, Freyer, Krivokuca,
+  * **POLYNORM_MinimalCoveringPolytope** `[arith] [FileEXT] [OutFormat] [OutFile] [method] [param ...]`
+    takes a covering polytope `P` (`P + Z^n = R^n`) and returns a covering
+    polytope `Q` contained in `P`, minimal when possible: no convex body
+    strictly contained in `Q` is covering (Codenotti, Freyer, Krivokuca,
     *Minimal covering bodies and Brunn-Minkowski type inequalities for the
-    covering radius*). `P` is first shrunk to `mu(P) P`, then reduced by
-    vertex removals, facet pushes and vertex cuts, each the deepest one
-    that keeps the covering, computed exactly; minimality is the criterion
-    of Lemma 2.2 of the paper (no vertex can be cut). At most `MaxStep`
-    reductions are done (default 1000). See "Minimal covering polytopes"
-    below.
+    covering radius*). `P` is first shrunk to `mu(P) P`. The `method` is
+    `grid [N] [n_round]` (default), which keeps the vertices of a
+    polytope with vertices on a grid, or `reduction [MaxStep]`, which cuts
+    the vertices; the output says whether `Q` is proved minimal. See
+    "Minimal covering polytopes" below.
 
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
@@ -229,12 +228,34 @@ some facet `j`, in the cone of `j`. A node is solved when no lattice point
 of `x* - K` violates its bound. Since `h` is not continuous, only the nodes
 whose region has a nonempty interior count (a second linear program).
 
-Each step applies the first reduction that keeps the covering: the
-removal of a vertex, the deepest translate of a facet, the deepest cut of
-a vertex in the direction of the sum of its facet normals. The cuts alone
-can go on forever (on the rectangle, a vertex gets flatter and flatter on
-an edge of the limit square); the first two reductions add no new facet
-direction and avoid that on the examples.
+The method `reduction` applies at each step the reduction of smallest
+volume among the removal of a vertex, the deepest translate of a facet and
+the deepest cut of a vertex. Each reduction is exact, but in dimension 3
+they can go on without end, shallower and shallower (octahedron,
+tetrahedron).
+
+The method `grid` (default) works on a finite set `S` of candidate
+points: the vertices of `mu(P) P` and its points in `(1/D) Z^n`, with `D`
+equal to `N` times the lcm of the denominators of these vertices. A vertex
+of `conv(S)` is dropped from `S` when the hull of the rest still covers
+(a covering test that stops at the first uncovered point), until none
+can be dropped. This takes at most `|S|` tests: a point that cannot be
+dropped never can later, as `S` only shrinks. The result is then proved
+minimal when its volume is 1 (a lattice tile) or when no vertex can be cut;
+otherwise the grids `(1/2D) Z^n`, `(1/3D) Z^n`, ... are tried, for at most
+`n_round` rounds (default 3).
+
+Some results of the grid method, all proved minimal (times with the
+sanity checks on, Apple M-series):
+
+| `P` | `Q` | time |
+|---|---|---|
+| `[0,3/2] x [0,1]` | `[1/2,3/2] x [0,1]` | seconds |
+| `conv(0, 3e_1, 3e_2)` | a lattice parallelogram | seconds |
+| `conv(+-e_1, +-e_2, +-(e_1 + e_2))` | a centrally symmetric hexagon, area 1 | seconds |
+| `conv(0, 3e_1, 3e_2, 3e_3)` | the cube `[0,1]^3` | seconds |
+| `(3/2) conv(+-e_i)`, `n = 3` | 12 vertices, 14 facets, volume 5/4, not a tile | 20 s |
+| `conv(0, 2e_i, (2,2,1), (1,2,2), (2,1,2))` | 15 vertices, 23 facets, volume 7/6, not a tile | 110 s |
 
 Files
 -----

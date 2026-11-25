@@ -7,20 +7,21 @@
 #include "POLY_DirectTriangulation.h"
 #include <algorithm>
 #include <optional>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 // clang-format on
 
 #ifdef DEBUG
-# define DEBUG_POLYNORM_MINCOV
+#define DEBUG_POLYNORM_MINCOV
 #endif
 
 #ifdef SANITY_CHECK
-# define SANITY_CHECK_POLYNORM_MINCOV
+#define SANITY_CHECK_POLYNORM_MINCOV
 #endif
 
 #ifdef TIMINGS
-# define TIMINGS_POLYNORM_MINCOV
+#define TIMINGS_POLYNORM_MINCOV
 #endif
 
 /*
@@ -128,8 +129,8 @@ MyMatrix<T> PolyNorm_MinCovVertices(MyMatrix<T> const &FAC, std::ostream &os) {
   for (int k = 1; k < n1; k++) {
     FACext(n_fac, k) = 0;
   }
-  MyMatrix<T> EXT = DirectFacetComputationInequalities_General(FACext, "cdd",
-                                                               os);
+  MyMatrix<T> EXT =
+      DirectFacetComputationInequalities_General(FACext, "cdd", os);
   int n_vert = EXT.rows();
   for (int i = 0; i < n_vert; i++) {
     T x0 = EXT(i, 0);
@@ -147,7 +148,8 @@ MyMatrix<T> PolyNorm_MinCovVertices(MyMatrix<T> const &FAC, std::ostream &os) {
 }
 
 // The isobarycenter of homogeneous vertices.
-template <typename T> MyVector<T> PolyNorm_MinCovCenter(MyMatrix<T> const &EXT) {
+template <typename T>
+MyVector<T> PolyNorm_MinCovCenter(MyMatrix<T> const &EXT) {
   int n_vert = EXT.rows();
   int n = EXT.cols() - 1;
   MyVector<T> center = ZeroVector<T>(n);
@@ -165,8 +167,7 @@ template <typename T> MyVector<T> PolyNorm_MinCovCenter(MyMatrix<T> const &EXT) 
 // need the difference body, which is left empty.
 template <typename T, typename Tint, typename Tgroup>
 PolyNormData<T, Tint, Tgroup>
-PolyNorm_BuildDataTrivialGroup(MyMatrix<T> const &EXT_input,
-                               std::ostream &os) {
+PolyNorm_BuildDataTrivialGroup(MyMatrix<T> const &EXT_input, std::ostream &os) {
   int n_vert = EXT_input.rows();
   int n = EXT_input.cols() - 1;
   PolyNormData<T, Tint, Tgroup> data;
@@ -463,10 +464,9 @@ template <typename T, typename Tint> struct PolyNormVertexCutSolver {
           {std::move(Cnew), std::move(opt->first), std::move(opt->second)});
     }
     // Best bound first, so that good incumbents are found early.
-    std::stable_sort(ListChild.begin(), ListChild.end(),
-                     [](Child const &a, Child const &b) -> bool {
-                       return a.s > b.s;
-                     });
+    std::stable_sort(
+        ListChild.begin(), ListChild.end(),
+        [](Child const &a, Child const &b) -> bool { return a.s > b.s; });
     for (auto &eChild : ListChild) {
       Process(eChild.C, eChild.x, eChild.s);
     }
@@ -549,12 +549,10 @@ PolyNormMinCovCentered<T> PolyNorm_MinCovCentered(MyMatrix<T> const &EXT,
 // s_max = max_{x in K} <x - center, u>, the threshold t* of
 // K cap {<x - center, u> <= t}. Returns the cut as an inequality (b, a) in
 // the input coordinates when t* < s_max, nothing otherwise.
-template <typename T, typename Tint>
-std::optional<MyVector<T>>
-PolyNorm_MinCovDeepestCut(MyMatrix<T> const &EXT,
-                          PolyNormMinCovCentered<T> const &cent,
-                          MyVector<T> const &u, size_t &n_node, size_t &n_lp,
-                          std::ostream &os) {
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyVector<T>> PolyNorm_MinCovDeepestCut(
+    MyMatrix<T> const &EXT, PolyNormMinCovCentered<T> const &cent,
+    MyVector<T> const &u, size_t &n_node, size_t &n_lp, std::ostream &os) {
   int n = EXT.cols() - 1;
   T s_max(0);
   for (int i = 0; i < EXT.rows(); i++) {
@@ -575,6 +573,50 @@ PolyNorm_MinCovDeepestCut(MyMatrix<T> const &EXT,
      << " t*=" << cut.t_star << " n_node=" << cut.n_node << "\n";
 #endif
   if (cut.t_star == s_max) {
+#ifdef SANITY_CHECK_POLYNORM_MINCOV
+    {
+      // The vertex cannot be cut: a small cut makes the polytope not
+      // covering. The cut is at s_max - (s_max - s_min) / 1024, with s_min
+      // the minimum of <x - center, u> over K.
+      T s_min(0);
+      for (int i = 0; i < EXT.rows(); i++) {
+        T val(0);
+        for (int k = 0; k < n; k++) {
+          val += u(k) * (EXT(i, k + 1) - cent.center(k));
+        }
+        if (i == 0 || val < s_min) {
+          s_min = val;
+        }
+      }
+      T t_eps = s_max - (s_max - s_min) / T(1024);
+      MyMatrix<T> FACeps(cent.Lmat.rows() + 1, n + 1);
+      for (int j = 0; j < cent.Lmat.rows(); j++) {
+        // 1 - ell_j(x - center) >= 0
+        T val(1);
+        for (int k = 0; k < n; k++) {
+          val += cent.Lmat(j, k) * cent.center(k);
+          FACeps(j, k + 1) = -cent.Lmat(j, k);
+        }
+        FACeps(j, 0) = val;
+      }
+      FACeps(cent.Lmat.rows(), 0) = t_eps;
+      for (int k = 0; k < n; k++) {
+        FACeps(cent.Lmat.rows(), 0) += u(k) * cent.center(k);
+        FACeps(cent.Lmat.rows(), k + 1) = -u(k);
+      }
+      MyMatrix<T> EXTeps = PolyNorm_MinCovVertices(FACeps, os);
+      MyMatrix<T> EXTeps_vert =
+          SelectRow(EXTeps, get_distinct_extreme_rays_indices(EXTeps, os));
+      T mu_eps =
+          PolyNorm_MinCovCoveringRadius<T, Tint, Tgroup>(EXTeps_vert, os);
+      if (mu_eps <= 1) {
+        std::cerr << "POLYNORM_MINCOV: The vertex was found uncuttable but "
+                  << "the cut at t=" << t_eps << " is covering, mu=" << mu_eps
+                  << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
     return {};
   }
   // <x - center, u> <= t*: t* + <center,u> - <x,u> >= 0.
@@ -590,9 +632,9 @@ PolyNorm_MinCovDeepestCut(MyMatrix<T> const &EXT,
 // The direction exposing the vertex iv: the sum of the normals of the
 // facets containing it, in the centered normalization.
 template <typename T>
-MyVector<T> PolyNorm_MinCovVertexDirection(MyMatrix<T> const &EXT,
-                                           PolyNormMinCovCentered<T> const &cent,
-                                           int iv) {
+MyVector<T>
+PolyNorm_MinCovVertexDirection(MyMatrix<T> const &EXT,
+                               PolyNormMinCovCentered<T> const &cent, int iv) {
   int n = EXT.cols() - 1;
   int m = cent.Lmat.rows();
   MyVector<T> u = ZeroVector<T>(n);
@@ -613,8 +655,7 @@ MyVector<T> PolyNorm_MinCovVertexDirection(MyMatrix<T> const &EXT,
 // The polytope K cap {b + a.x >= 0} by its vertices.
 template <typename T>
 MyMatrix<T> PolyNorm_MinCovApplyCut(MyMatrix<T> const &FAC,
-                                    MyVector<T> const &eCut,
-                                    std::ostream &os) {
+                                    MyVector<T> const &eCut, std::ostream &os) {
   int n_fac = FAC.rows();
   int n1 = FAC.cols();
   MyMatrix<T> FACcut(n_fac + 1, n1);
@@ -661,8 +702,8 @@ PolyNorm_MinCovReduce(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
   int n_vert = EXT.rows();
   std::optional<std::pair<PolyNormMinCovStep, MyMatrix<T>>> best;
   T best_vol(0);
-  auto insert = [&](PolyNormMinCovStep step, MyMatrix<T> const &EXTnew)
-      -> void {
+  auto insert = [&](PolyNormMinCovStep step,
+                    MyMatrix<T> const &EXTnew) -> void {
     T vol = PolyNorm_MinCovVolume(EXTnew, os);
 #ifdef DEBUG_POLYNORM_MINCOV
     os << "POLYNORM_MINCOV: candidate of kind " << static_cast<int>(step)
@@ -686,8 +727,7 @@ PolyNorm_MinCovReduce(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
     }
     T mu = PolyNorm_MinCovCoveringRadius<T, Tint, Tgroup>(EXTred, os);
 #ifdef DEBUG_POLYNORM_MINCOV
-    os << "POLYNORM_MINCOV: removal of vertex " << iv << " mu=" << mu
-       << "\n";
+    os << "POLYNORM_MINCOV: removal of vertex " << iv << " mu=" << mu << "\n";
 #endif
     if (mu <= 1) {
       MyMatrix<T> FACred = PolyNorm_MinCovFacets(EXTred, os);
@@ -698,16 +738,16 @@ PolyNorm_MinCovReduce(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
   int m = FAC.rows();
   for (int j = 0; j < m; j++) {
     MyVector<T> u = GetMatrixRow(cent.Lmat, j);
-    std::optional<MyVector<T>> opt =
-        PolyNorm_MinCovDeepestCut<T, Tint>(EXT, cent, u, n_node, n_lp, os);
+    std::optional<MyVector<T>> opt = PolyNorm_MinCovDeepestCut<T, Tint, Tgroup>(
+        EXT, cent, u, n_node, n_lp, os);
     if (opt) {
       insert(PolyNormMinCovStep::push, PolyNorm_MinCovApplyCut(FAC, *opt, os));
     }
   }
   for (int iv = 0; iv < n_vert; iv++) {
     MyVector<T> u = PolyNorm_MinCovVertexDirection(EXT, cent, iv);
-    std::optional<MyVector<T>> opt =
-        PolyNorm_MinCovDeepestCut<T, Tint>(EXT, cent, u, n_node, n_lp, os);
+    std::optional<MyVector<T>> opt = PolyNorm_MinCovDeepestCut<T, Tint, Tgroup>(
+        EXT, cent, u, n_node, n_lp, os);
     if (opt) {
       MyMatrix<T> EXTcut = PolyNorm_MinCovApplyCut(FAC, *opt, os);
 #ifdef SANITY_CHECK_POLYNORM_MINCOV
@@ -725,7 +765,7 @@ PolyNorm_MinCovReduce(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
       for (int i = 0; i < EXTcut.rows(); i++) {
         T val(0);
         for (int k = 0; k <= n; k++) {
-          val += (*opt)(k) * EXTcut(i, k);
+          val += (*opt)(k)*EXTcut(i, k);
         }
         if (i == 0 || val > slack) {
           slack = val;
@@ -752,8 +792,8 @@ PolyNorm_MinCovReduce(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
 // result). At most max_step reductions are done.
 template <typename T, typename Tint, typename Tgroup>
 PolyNormMinimalCovering<T>
-PolyNorm_MinimalCoveringPolytope(MyMatrix<T> const &EXT_input,
-                                 size_t max_step, std::ostream &os) {
+PolyNorm_MinimalCoveringPolytope(MyMatrix<T> const &EXT_input, size_t max_step,
+                                 std::ostream &os) {
 #ifdef TIMINGS_POLYNORM_MINCOV
   MicrosecondTime time;
 #endif
@@ -828,6 +868,286 @@ PolyNorm_MinimalCoveringPolytope(MyMatrix<T> const &EXT_input,
 #ifdef TIMINGS_POLYNORM_MINCOV
   os << "|POLYNORM_MINCOV: minimal covering polytope|=" << time << "\n";
 #endif
+  return res;
+}
+
+/*
+  The grid method.
+
+  The reductions above can go on without end in dimension 3. The grid
+  method works on a finite set S of candidate points: the vertices of K and
+  the points of K cap (1/N) Z^n. Starting from Q = conv(S), a vertex v of Q
+  is dropped from S when conv(S minus v) is still covering, until no vertex
+  can be dropped. This terminates after at most |S| covering tests: if
+  conv(S' minus v) is not covering then neither is conv(S'' minus v) for a
+  subset S'' of S', so a vertex that cannot be dropped never can, and is
+  not tested again. The vertices are tried farthest from the isobarycenter
+  first.
+
+  The result is minimal among the convex hulls of subsets of S, which does
+  not make it minimal covering. That is decided as in the reductions: the
+  polytope is minimal when its volume is 1 (a lattice tile) or when no
+  vertex can be cut (Lemma 2.2 of the paper). If it is not, the method is
+  run again on the result with the grid (1/2N) Z^n, then (1/3N) Z^n, ...
+  for at most n_round rounds, N being multiplied first by the lcm of the
+  denominators of the vertices of K.
+ */
+
+// Whether the polytope with homogeneous vertices EXT is covering.
+template <typename T, typename Tint, typename Tgroup>
+bool PolyNorm_MinCovIsCovering(MyMatrix<T> const &EXT, std::ostream &os) {
+  PolyNormData<T, Tint, Tgroup> data =
+      PolyNorm_BuildDataTrivialGroup<T, Tint, Tgroup>(EXT, os);
+  bool test = PolyNorm_IsCovering<T, Tint, Tgroup>(data, os);
+#ifdef SANITY_CHECK_POLYNORM_MINCOV_EXTENSIVE
+  std::cerr << "POLYNORM_MINCOV: SANITY_CHECK_POLYNORM_MINCOV_EXTENSIVE, "
+               "comparing the covering test with the covering radius\n";
+  T mu = ComputePolyNormCovering<T, Tint, Tgroup>(data, os).mu;
+  if (test != (mu <= 1)) {
+    std::cerr << "POLYNORM_MINCOV: The covering test gives " << test
+              << " but the covering radius is " << mu << "\n";
+    throw TerminalException{1};
+  }
+  std::cerr << "POLYNORM_MINCOV: SANITY_CHECK_POLYNORM_MINCOV_EXTENSIVE, "
+               "done\n";
+#endif
+  return test;
+}
+
+// The first vertex of K that can be cut, as the cut (b, a), or nothing when
+// K is minimal covering (Lemma 2.2 of the paper).
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyVector<T>>
+PolyNorm_MinCovFindVertexCut(MyMatrix<T> const &EXT, MyMatrix<T> const &FAC,
+                             size_t &n_node, size_t &n_lp, std::ostream &os) {
+  PolyNormMinCovCentered<T> cent = PolyNorm_MinCovCentered(EXT, FAC);
+  for (int iv = 0; iv < EXT.rows(); iv++) {
+    MyVector<T> u = PolyNorm_MinCovVertexDirection(EXT, cent, iv);
+    std::optional<MyVector<T>> opt = PolyNorm_MinCovDeepestCut<T, Tint, Tgroup>(
+        EXT, cent, u, n_node, n_lp, os);
+    if (opt) {
+      return opt;
+    }
+  }
+  return {};
+}
+
+// The candidate points: the vertices of the polytope (vertices EXT, facets
+// FAC) and its points in (1/N) Z^n, without repetition.
+template <typename T, typename Tint>
+std::vector<MyVector<T>> PolyNorm_MinCovGridPoints(MyMatrix<T> const &EXT,
+                                                   MyMatrix<T> const &FAC,
+                                                   int N, std::ostream &os) {
+  int n = EXT.cols() - 1;
+  std::vector<MyVector<T>> ListPt;
+  std::unordered_set<MyVector<T>> set_pt;
+  auto insert = [&](MyVector<T> const &V) -> void {
+    if (set_pt.insert(V).second) {
+      ListPt.push_back(V);
+    }
+  };
+  for (int i = 0; i < EXT.rows(); i++) {
+    insert(GetMatrixRow(EXT, i));
+  }
+  // b + a.x >= 0 with x = y / N: N b + a.y >= 0.
+  MyMatrix<T> FACscal = FAC;
+  for (int j = 0; j < FAC.rows(); j++) {
+    FACscal(j, 0) *= T(N);
+  }
+  for (auto &y : GetListIntegralPoint<T, Tint>(FACscal, os)) {
+    MyVector<T> V(n + 1);
+    V(0) = 1;
+    for (int k = 0; k < n; k++) {
+      V(k + 1) = UniversalScalarConversion<T, Tint>(y(k)) / T(N);
+    }
+    insert(V);
+  }
+  return ListPt;
+}
+
+template <typename T> struct PolyNormMinimalCoveringGrid {
+  T mu_input;
+  bool is_covering;
+  MyMatrix<T> EXT;
+  MyMatrix<T> FAC;
+  // Whether the result is proved minimal covering, and how: by its volume
+  // 1 or by the vertex cuts.
+  bool is_minimal;
+  bool is_tile;
+  // The rounds done and the last grid (1/N) Z^n.
+  int n_round;
+  int N_last;
+  // The candidate points of the last round and the points dropped in all.
+  size_t n_point;
+  size_t n_drop;
+  size_t n_covering_test;
+  size_t n_node;
+  size_t n_lp;
+};
+
+// One round of the grid method from the covering polytope K: the polytope
+// conv(S) with S the candidate points left. Returns its vertices.
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<T> PolyNorm_MinCovGridRound(MyMatrix<T> const &EXT,
+                                     MyMatrix<T> const &FAC, int N,
+                                     PolyNormMinimalCoveringGrid<T> &res,
+                                     std::ostream &os) {
+  int n = EXT.cols() - 1;
+  std::vector<MyVector<T>> ListPt =
+      PolyNorm_MinCovGridPoints<T, Tint>(EXT, FAC, N, os);
+  res.n_point = ListPt.size();
+#ifdef DEBUG_POLYNORM_MINCOV
+  os << "POLYNORM_MINCOV: grid round N=" << N << " |S|=" << ListPt.size()
+     << "\n";
+#endif
+  // The points that cannot be dropped.
+  std::unordered_set<MyVector<T>> set_fixed;
+  auto get_matrix = [&](std::vector<MyVector<T>> const &L) -> MyMatrix<T> {
+    MyMatrix<T> M(L.size(), n + 1);
+    for (size_t i = 0; i < L.size(); i++) {
+      for (int k = 0; k <= n; k++) {
+        M(i, k) = L[i](k);
+      }
+    }
+    return M;
+  };
+  while (true) {
+    MyMatrix<T> EXTpt = get_matrix(ListPt);
+    std::vector<int> ListVert = get_distinct_extreme_rays_indices(EXTpt, os);
+    MyMatrix<T> EXTvert = SelectRow(EXTpt, ListVert);
+    if (PolyNorm_MinCovVolume(EXTvert, os) == 1) {
+      return EXTvert;
+    }
+    MyVector<T> center = PolyNorm_MinCovCenter(EXTvert);
+    std::vector<std::pair<T, int>> ListCand;
+    for (auto &iv : ListVert) {
+      if (set_fixed.count(ListPt[iv]) > 0) {
+        continue;
+      }
+      T dist(0);
+      for (int k = 0; k < n; k++) {
+        T diff = ListPt[iv](k + 1) - center(k);
+        dist += diff * diff;
+      }
+      ListCand.push_back({dist, iv});
+    }
+    std::stable_sort(
+        ListCand.begin(), ListCand.end(),
+        [](std::pair<T, int> const &a, std::pair<T, int> const &b) -> bool {
+          return a.first > b.first;
+        });
+    bool dropped = false;
+    for (auto &eCand : ListCand) {
+      int iv = eCand.second;
+      std::vector<int> ListKeep;
+      for (int i = 0; i < int(ListPt.size()); i++) {
+        if (i != iv) {
+          ListKeep.push_back(i);
+        }
+      }
+      MyMatrix<T> EXTred = SelectRow(EXTpt, ListKeep);
+      bool is_covering = false;
+      if (RankMat(EXTred) == n + 1) {
+        std::vector<int> ListVertRed =
+            get_distinct_extreme_rays_indices(EXTred, os);
+        MyMatrix<T> EXTredVert = SelectRow(EXTred, ListVertRed);
+        res.n_covering_test++;
+        is_covering =
+            PolyNorm_MinCovIsCovering<T, Tint, Tgroup>(EXTredVert, os);
+      }
+      if (is_covering) {
+#ifdef DEBUG_POLYNORM_MINCOV
+        os << "POLYNORM_MINCOV: drop " << StringVector(ListPt[iv]) << "\n";
+#endif
+        ListPt.erase(ListPt.begin() + iv);
+        res.n_drop++;
+        dropped = true;
+        break;
+      }
+      set_fixed.insert(ListPt[iv]);
+    }
+    if (!dropped) {
+      return EXTvert;
+    }
+  }
+}
+
+// A minimal covering polytope contained in the polytope with homogeneous
+// vertices EXT_input, by the grid method with the grids (1/N) Z^n,
+// (1/2N) Z^n, ... for at most n_round rounds. The result is covering and
+// contained in the input; is_minimal says whether it is proved minimal.
+template <typename T, typename Tint, typename Tgroup>
+PolyNormMinimalCoveringGrid<T>
+PolyNorm_MinimalCoveringPolytopeGrid(MyMatrix<T> const &EXT_input, int N,
+                                     int n_round, std::ostream &os) {
+#ifdef TIMINGS_POLYNORM_MINCOV
+  MicrosecondTime time;
+#endif
+  int n = EXT_input.cols() - 1;
+  PolyNormData<T, Tint, Tgroup> data =
+      PolyNorm_BuildData<T, Tint, Tgroup>(EXT_input, os);
+  T mu = ComputePolyNormCovering<T, Tint, Tgroup>(data, os).mu;
+  PolyNormMinimalCoveringGrid<T> res{mu, mu <= 1, {}, {}, false, false, 0,
+                                     0,  0,       0,  0,  0,     0};
+  if (!res.is_covering) {
+    return res;
+  }
+  // The shrinking: center + mu (P - center) is in P since center is.
+  int n_vert = data.EXT.rows();
+  MyMatrix<T> EXT(n_vert, n + 1);
+  for (int i = 0; i < n_vert; i++) {
+    EXT(i, 0) = 1;
+    for (int k = 0; k < n; k++) {
+      EXT(i, k + 1) = data.center(k) + mu * data.EXT(i, k + 1);
+    }
+  }
+  MyMatrix<T> FAC = PolyNorm_MinCovFacets(EXT, os);
+  // The grids are multiples of the lcm of the denominators of the shrunk
+  // polytope, so that they contain its vertices: the (2/3)-scaled hexagon
+  // conv(+-e_1, +-e_2, +-(e_1 + e_2)) contains a tile with vertices in
+  // (1/3) Z^2, which no grid (1/2^k) Z^2 has.
+  Tint den(1);
+  for (int i = 0; i < EXT.rows(); i++) {
+    for (int k = 0; k < n; k++) {
+      T den_T = GetDenominator(EXT(i, k + 1));
+      den = LCMpair(den, UniversalScalarConversion<Tint, T>(den_T));
+    }
+  }
+  int N_base = N * UniversalScalarConversion<int, Tint>(den);
+  for (int i_round = 0; i_round < n_round; i_round++) {
+    int N_round = N_base * (i_round + 1);
+    EXT = PolyNorm_MinCovGridRound<T, Tint, Tgroup>(EXT, FAC, N_round, res, os);
+    FAC = PolyNorm_MinCovFacets(EXT, os);
+    res.n_round = i_round + 1;
+    res.N_last = N_round;
+#ifdef TIMINGS_POLYNORM_MINCOV
+    os << "|POLYNORM_MINCOV: grid round N=" << N_round << "|=" << time << "\n";
+#endif
+    if (PolyNorm_MinCovVolume(EXT, os) == 1) {
+      res.is_minimal = true;
+      res.is_tile = true;
+      break;
+    }
+    std::optional<MyVector<T>> opt =
+        PolyNorm_MinCovFindVertexCut<T, Tint, Tgroup>(EXT, FAC, res.n_node,
+                                                      res.n_lp, os);
+#ifdef TIMINGS_POLYNORM_MINCOV
+    os << "|POLYNORM_MINCOV: vertex cuts|=" << time << "\n";
+#endif
+    if (!opt) {
+      res.is_minimal = true;
+      break;
+    }
+  }
+#ifdef SANITY_CHECK_POLYNORM_MINCOV
+  if (!PolyNorm_MinCovIsCovering<T, Tint, Tgroup>(EXT, os)) {
+    std::cerr << "POLYNORM_MINCOV: The result of the grid method is not "
+              << "covering\n";
+    throw TerminalException{1};
+  }
+#endif
+  res.EXT = EXT;
+  res.FAC = FAC;
   return res;
 }
 

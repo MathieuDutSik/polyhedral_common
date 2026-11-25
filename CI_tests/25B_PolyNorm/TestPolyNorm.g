@@ -214,12 +214,66 @@ ListMaxKissing:=[
   rec(file:="cube3.ext", kiss:=26)
 ];
 
+# A minimal covering polytope Q inside a covering polytope P: Q must be
+# proved minimal, of the expected volume and number of vertices, and its
+# covering radius, recomputed by POLYNORM_Covering, must be 1. A polytope
+# that is not covering must be rejected.
+TestMinimalCovering:=function(eRec)
+    local TheArg, res, FileQ, res_cov;
+    Print("Minimal covering of ", eRec.file, " by ", eRec.method, "\n");
+    TheArg:=Concatenation("gmp ", eRec.file, " GAP stdout ", eRec.method);
+    res:=RunProgramGAP("POLYNORM_MinimalCoveringPolytope", TheArg);
+    if eRec.is_covering=false then
+        if res<>fail then
+            Print("The non-covering ", eRec.file, " was accepted\n");
+            return false;
+        fi;
+        return true;
+    fi;
+    if res=fail then
+        return false;
+    fi;
+    if res.is_minimal<>true or res.volume<>eRec.volume
+       or Length(res.EXT)<>eRec.n_vert then
+        Print("is_minimal=", res.is_minimal, " volume=", res.volume,
+              " n_vert=", Length(res.EXT), "\n");
+        return false;
+    fi;
+    FileQ:=Filename(DirectoryTemporary(), "Q.ext");
+    WriteMatrixFile(FileQ, res.EXT);
+    res_cov:=RunProgramGAP("POLYNORM_Covering", Concatenation("gmp ", FileQ, " GAP stdout"));
+    RemoveFile(FileQ);
+    if res_cov=fail or res_cov.mu<>1 then
+        Print("The result is not covering with radius 1\n");
+        return false;
+    fi;
+    return true;
+end;
+
+# In dimension 2 the results are lattice tiles. In dimension 3 the cube is
+# found in the tetrahedron, while the octahedron and the irregular
+# polytope give minimal covering polytopes of volume 5/4 and 7/6, which
+# are not tiles. The octahedron of octa3.ext has covering radius 3/2.
+ListMinimalCovering:=[
+  rec(file:="square.ext", method:="grid", is_covering:=true, volume:=1, n_vert:=4),
+  rec(file:="mincov_rect.ext", method:="grid", is_covering:=true, volume:=1, n_vert:=4),
+  rec(file:="mincov_rect.ext", method:="reduction", is_covering:=true, volume:=1, n_vert:=4),
+  rec(file:="mincov_triangle2.ext", method:="grid", is_covering:=true, volume:=1, n_vert:=4),
+  rec(file:="mincov_triangle2.ext", method:="reduction", is_covering:=true, volume:=1, n_vert:=4),
+  rec(file:="hexagon.ext", method:="grid", is_covering:=true, volume:=1, n_vert:=6),
+  rec(file:="mincov_simplex3.ext", method:="grid", is_covering:=true, volume:=1, n_vert:=8),
+  rec(file:="mincov_octa3.ext", method:="grid", is_covering:=true, volume:=5/4, n_vert:=12),
+  rec(file:="mincov_irr3.ext", method:="grid", is_covering:=true, volume:=7/6, n_vert:=15),
+  rec(file:="octa3.ext", method:="grid", is_covering:=false)
+];
+
 # All the cases are run, so that every failure is reported.
 ListResult:=Concatenation(List(ListPackingCovering, TestPackingCovering),
                           List(ListCertify, TestCertify),
                           List(ListOptimalLattice, TestOptimalLattice),
                           List(ListBetkeHenk, TestBetkeHenk),
-                          List(ListMaxKissing, TestMaxKissing));
+                          List(ListMaxKissing, TestMaxKissing),
+                          List(ListMinimalCovering, TestMinimalCovering));
 test:=ForAll(ListResult, x->x);
 Print("test=", test, "\n");
 CI_Decision_Reset();

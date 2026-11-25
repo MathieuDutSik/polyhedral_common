@@ -10,9 +10,21 @@
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
+// The result of either method, for the output.
+template <typename T> struct MinimalCoveringOutput {
+  T mu_input;
+  bool is_covering;
+  bool is_minimal;
+  std::string description;
+  MyMatrix<T> EXT;
+  MyMatrix<T> FAC;
+};
+
 template <typename T>
 void ComputeMinimalCovering(std::string const &FileEXT,
-                            std::string const &OutFormat, size_t max_step,
+                            std::string const &OutFormat,
+                            std::string const &method,
+                            std::vector<int> const &ListParam,
                             std::ostream &os_out) {
   using Tint = typename underlying_z_ring<T>::ring_type;
   using Tidx = uint32_t;
@@ -20,41 +32,80 @@ void ComputeMinimalCovering(std::string const &FileEXT,
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> EXT = ReadMatrixFile<T>(FileEXT);
-  PolyNormMinimalCovering<T> res =
-      PolyNorm_MinimalCoveringPolytope<T, Tint, Tgroup>(EXT, max_step,
-                                                        std::cerr);
-  if (!res.is_covering) {
-    std::cerr << "The polytope is not covering, its covering radius is mu="
-              << res.mu_input << " > 1\n";
+  MinimalCoveringOutput<T> out;
+  if (method == "grid") {
+    int N = ListParam.size() >= 1 ? ListParam[0] : 1;
+    int n_round = ListParam.size() >= 2 ? ListParam[1] : 3;
+    if (N < 1 || n_round < 1) {
+      std::cerr << "The grid method needs N >= 1 and n_round >= 1\n";
+      throw TerminalException{1};
+    }
+    PolyNormMinimalCoveringGrid<T> res =
+        PolyNorm_MinimalCoveringPolytopeGrid<T, Tint, Tgroup>(EXT, N, n_round,
+                                                              std::cerr);
+    std::ostringstream os;
+    os << "Grid method: " << res.n_round << " rounds, last grid (1/"
+       << res.N_last << ") Z^n with " << res.n_point << " candidate points, "
+       << res.n_drop << " points dropped, " << res.n_covering_test
+       << " covering tests, " << res.n_node << " nodes and " << res.n_lp
+       << " linear programs for the vertex cuts\n";
+    if (res.is_tile) {
+      os << "The polytope has volume 1, it is a lattice tile\n";
+    }
+    if (!res.is_minimal) {
+      os << "Some vertex can be cut: the polytope is covering but not "
+         << "minimal, a finer grid or more rounds are needed\n";
+    }
+    out = {res.mu_input, res.is_covering, res.is_minimal,
+           os.str(),     res.EXT,         res.FAC};
+  } else if (method == "reduction") {
+    size_t max_step = ListParam.size() >= 1 ? ListParam[0] : 1000;
+    PolyNormMinimalCovering<T> res =
+        PolyNorm_MinimalCoveringPolytope<T, Tint, Tgroup>(EXT, max_step,
+                                                          std::cerr);
+    std::ostringstream os;
+    os << "Reductions after the shrinking by mu: " << res.n_remove
+       << " vertices removed, " << res.n_push << " facets pushed, " << res.n_cut
+       << " vertices cut\n";
+    os << "Search: " << res.n_node << " nodes, " << res.n_lp
+       << " linear programs\n";
+    if (!res.is_minimal) {
+      os << "The limit of " << max_step << " reductions was reached, the "
+         << "polytope is covering but not proved minimal\n";
+    }
+    out = {res.mu_input, res.is_covering, res.is_minimal,
+           os.str(),     res.EXT,         res.FAC};
+  } else {
+    std::cerr << "Failed to find a matching entry for method=" << method
+              << ", allowed: grid and reduction\n";
     throw TerminalException{1};
   }
+  if (!out.is_covering) {
+    std::cerr << "The polytope is not covering, its covering radius is mu="
+              << out.mu_input << " > 1\n";
+    throw TerminalException{1};
+  }
+  T volume = PolyNorm_MinCovVolume(out.EXT, std::cerr);
   if (OutFormat == "text") {
-    os_out << "Covering radius of the input mu=" << res.mu_input << "\n";
-    os_out << "Reductions after the shrinking by mu: " << res.n_remove
-           << " vertices removed, " << res.n_push << " facets pushed, "
-           << res.n_cut << " vertices cut\n";
-    os_out << "Search: " << res.n_node << " nodes, " << res.n_lp
-           << " linear programs\n";
-    if (res.is_minimal) {
+    os_out << "Covering radius of the input mu=" << out.mu_input << "\n";
+    os_out << out.description;
+    if (out.is_minimal) {
       os_out << "The polytope is minimal covering\n";
-    } else {
-      os_out << "The limit of " << max_step << " reductions was reached, the "
-             << "polytope is covering but not proved minimal\n";
     }
-    os_out << "Vertices (" << res.EXT.rows() << "):\n";
-    WriteMatrix(os_out, res.EXT);
-    os_out << "Facets b + a.x >= 0 (" << res.FAC.rows() << "):\n";
-    WriteMatrix(os_out, res.FAC);
+    os_out << "Volume=" << volume << "\n";
+    os_out << "Vertices (" << out.EXT.rows() << "):\n";
+    WriteMatrix(os_out, out.EXT);
+    os_out << "Facets b + a.x >= 0 (" << out.FAC.rows() << "):\n";
+    WriteMatrix(os_out, out.FAC);
     return;
   }
   if (OutFormat == "GAP") {
-    os_out << "return rec(mu_input:=" << res.mu_input
-           << ", is_minimal:=" << GAP_logical(res.is_minimal)
-           << ", n_remove:=" << res.n_remove << ", n_push:=" << res.n_push
-           << ", n_cut:=" << res.n_cut << ", EXT:=";
-    WriteMatrixGAP(os_out, res.EXT);
+    os_out << "return rec(mu_input:=" << out.mu_input
+           << ", is_minimal:=" << GAP_logical(out.is_minimal)
+           << ", volume:=" << volume << ", EXT:=";
+    WriteMatrixGAP(os_out, out.EXT);
     os_out << ", FAC:=";
-    WriteMatrixGAP(os_out, res.FAC);
+    WriteMatrixGAP(os_out, out.FAC);
     os_out << ");\n";
     return;
   }
@@ -70,17 +121,18 @@ int main(int argc, char *argv[]) {
     std::string FileEXT;
     std::string OutFormat = "text";
     std::string OutFile = "stderr";
-    size_t max_step = 1000;
+    std::string method = "grid";
+    std::vector<int> ListParam;
     std::ostream *os_ptr = nullptr;
     ArithmeticDispatch dispatch;
     add_rational_arithmetics_by_library(dispatch, [&]<typename T>() -> void {
-      ComputeMinimalCovering<T>(FileEXT, OutFormat, max_step, *os_ptr);
+      ComputeMinimalCovering<T>(FileEXT, OutFormat, method, ListParam, *os_ptr);
     });
-    if (argc != 3 && argc != 5 && argc != 6) {
+    if (argc != 3 && argc != 5 && argc < 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLYNORM_MinimalCoveringPolytope [arith] [FileEXT] "
-                   "[OutFormat] [OutFile] [MaxStep]\n";
+                   "[OutFormat] [OutFile] [method] [param ...]\n";
       std::cerr << "    or\n";
       std::cerr << "POLYNORM_MinimalCoveringPolytope [arith] [FileEXT] "
                    "[OutFormat] [OutFile]\n";
@@ -93,11 +145,20 @@ int main(int argc, char *argv[]) {
       std::cerr << "            in homogeneous coordinates (1, v)\n";
       std::cerr << "OutFormat : text (default) or GAP\n";
       std::cerr << "OutFile   : the output file, or stderr / stdout\n";
-      std::cerr << "MaxStep   : the maximal number of reductions (default 1000)\n";
+      std::cerr << "method    : grid (default) or reduction\n";
+      std::cerr << "            grid [N] [n_round]: the candidate points in\n";
+      std::cerr << "            (1/D) Z^n, then (1/2D) Z^n, (1/3D) Z^n, ...\n";
+      std::cerr << "            for at most n_round rounds, with D = N times\n";
+      std::cerr << "            the lcm of the denominators of the vertices\n";
+      std::cerr << "            of mu(P) P (defaults N=1, n_round=3)\n";
+      std::cerr << "            reduction [MaxStep]: vertex removals, facet\n";
+      std::cerr << "            pushes and vertex cuts, at most MaxStep of\n";
+      std::cerr << "            them (default 1000)\n";
       std::cerr << "\n";
-      std::cerr << "P must be covering, P + Z^n = R^n. Returns a minimal\n";
-      std::cerr << "covering polytope Q contained in P: Q + Z^n = R^n and\n";
-      std::cerr << "no convex body strictly contained in Q is covering\n";
+      std::cerr << "P must be covering, P + Z^n = R^n. Returns a covering\n";
+      std::cerr << "polytope Q contained in P and says whether it is proved\n";
+      std::cerr << "minimal: no convex body strictly contained in Q is\n";
+      std::cerr << "covering\n";
       return -1;
     }
     std::string arith = argv[1];
@@ -106,8 +167,11 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    if (argc == 6) {
-      max_step = ParseScalar<size_t>(argv[5]);
+    if (argc >= 6) {
+      method = argv[5];
+    }
+    for (int i = 6; i < argc; i++) {
+      ListParam.push_back(ParseScalar<int>(argv[i]));
     }
     auto prt = [&](std::ostream &os_out) -> void {
       os_ptr = &os_out;

@@ -326,6 +326,10 @@ struct PolyNormCoveringSolver {
   // node) is recorded in ListSolved. These are the near-deepest holes that
   // the lattice optimization of PolyNorm_LatticeOpt.h needs.
   std::optional<T> collect_ratio;
+  // When set, the search stops as soon as the incumbent exceeds it: this
+  // decides whether the covering radius is at most stop_above without
+  // computing it.
+  std::optional<T> stop_above;
   std::vector<std::pair<MyVector<T>, T>> ListSolved;
   // The orbit of each facet under the symmetry group, for the invariants.
   std::vector<int> facet_orbit;
@@ -571,6 +575,9 @@ struct PolyNormCoveringSolver {
 
   void Process(std::vector<PolyNormPair<T, Tint>> const &C,
                MyVector<T> const &p_star, T const &mu_star) {
+    if (stop_above && mu_best > *stop_above) {
+      return;
+    }
     n_node++;
 #ifdef DEBUG_POLYNORM_COVERING
     os << "POLYNORM_COVERING: node " << n_node << " |C|=" << C.size()
@@ -632,10 +639,8 @@ struct PolyNormCoveringSolver {
     }
   }
 
-  PolyNormCovering<T, Tint> Run() {
-#ifdef TIMINGS_POLYNORM_COVERING
-    MicrosecondTime time;
-#endif
+  // The branch and bound from the roots, one per orbit of facets.
+  void Search() {
     std::vector<int> ListRep = PolyNorm_FacetOrbitRepresentatives(data);
 #ifdef DEBUG_POLYNORM_COVERING
     os << "POLYNORM_COVERING: m=" << m << " facet orbits=" << ListRep.size()
@@ -660,6 +665,13 @@ struct PolyNormCoveringSolver {
 #endif
       Process(C, opt->first, opt->second);
     }
+  }
+
+  PolyNormCovering<T, Tint> Run() {
+#ifdef TIMINGS_POLYNORM_COVERING
+    MicrosecondTime time;
+#endif
+    Search();
 #ifdef TIMINGS_POLYNORM_COVERING
     os << "|POLYNORM_COVERING: branch and bound|=" << time << "\n";
 #endif
@@ -694,6 +706,22 @@ struct PolyNormCoveringSolver {
             n_node,  n_lp,   n_skip_canonical};
   }
 };
+
+// Whether the covering radius is at most 1, that is whether P + Z^n = R^n.
+// The search only looks for a point p with f(p) > 1: the nodes of bound at
+// most 1 are pruned and it stops at the first such point.
+template <typename T, typename Tint, typename Tgroup>
+bool PolyNorm_IsCovering(PolyNormData<T, Tint, Tgroup> const &data,
+                         std::ostream &os) {
+  PolyNormCoveringSolver<T, Tint, Tgroup> solver(data, os);
+  if (solver.mu0 <= 1) {
+    return true;
+  }
+  solver.mu_best = 1;
+  solver.stop_above = T(1);
+  solver.Search();
+  return solver.mu_best <= 1;
+}
 
 template <typename T, typename Tint, typename Tgroup>
 PolyNormCovering<T, Tint>
