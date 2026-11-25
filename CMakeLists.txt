@@ -860,7 +860,6 @@ set(
   GENUS_GetGenusFromLattice
   GENUS_HermitianEnumerate
   GENUS_HermitianGenusOfLattice
-  GENUS_AlgebraicModularForms
 )
 foreach(target IN LISTS GENERA_PROGRAMS)
   add_polyhedral_binary(

@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "CMOrder.h"
-#include "OrderLatticeNeighbor.h"
+#include "ResidueModInteger.h"
 #include "ScalarFiniteField.h"
 #include "ScalarPolynomialModQ.h"
 #include "FiniteFieldProjective.h"
@@ -596,7 +596,7 @@ bool HermIsUnimodularAt(HermLatticeData<T, Tint> const &L, int64_t ell) {
 /*
   The lines of L / C L over F_q = O_E / C: the rows of C L / ell L, then an
   F_q-basis v_j given as the z^t v_j over F_ell, inverted modulo ell. The
-  interface is that of LineSpace (OrderLatticeNeighbor.h): codes of F_q, the
+  interface is that of a projective space over F_q: codes of F_q, the
   lines of P^{m-1}(F_q) by ProjectiveLineOfIndex.
  */
 struct HermLineSpace {

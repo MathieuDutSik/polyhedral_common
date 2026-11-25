@@ -7,7 +7,7 @@
 #include "LocalDensity.h"
 #include "MassGenus.h"
 #include "FiniteFieldProjective.h"
-#include "OrderLatticeNeighbor.h"
+#include "ResidueModInteger.h"
 #include "LatticeInvariantFamily.h"
 #include <map>
 #include <string>
@@ -303,7 +303,10 @@ AmfZRow AmfZComputeRow(size_t i, int p, InvariantFamily<Tint> const &family,
  */
 template <typename TintGroup> struct AmfZResult {
   using Tmass = typename overlying_field<TintGroup>::field_type;
+  // the level (over a CM field the norm of the level ideal, whose factors
+  // are level_name; empty over Z)
   int level;
+  std::string level_name;
   std::vector<TintGroup> ListAutOrder;
   std::vector<size_t> ListNumberOrbit;
   // the size of every level orbit of every class
@@ -327,8 +330,11 @@ template <typename TintGroup>
 void WriteAmfZResult(std::ostream &os, AmfZResult<TintGroup> const &res,
                      std::string const &OutFormat) {
   if (OutFormat == "GAP") {
-    os << "return rec(level:=" << res.level
-       << ", n_class:=" << res.ListAutOrder.size()
+    os << "return rec(level:=" << res.level;
+    if (!res.level_name.empty()) {
+      os << ", level_ideal:=\"" << res.level_name << "\"";
+    }
+    os << ", n_class:=" << res.ListAutOrder.size()
        << ", n_state:=" << res.n_state << ",\nListAutOrder:=[";
     for (size_t j = 0; j < res.ListAutOrder.size(); j++) {
       os << (j > 0 ? ", " : "") << res.ListAutOrder[j];
@@ -459,11 +465,14 @@ every prime of E above each (not the dyadic ramified ones)";
     ListIntValues_doc["level"] = "Default: 1\n\
 1 for no level structure, or a prime N prime to the determinant: the states\n\
 are then the orbits of the automorphism groups on the isotropic lines mod N.\n\
-Hermitian: a rational prime where the genus is unimodular; the level is the\n\
-prime of E above it of index level_ideal, the states the orbits on its\n\
-level lines (all of them at a split prime, the isotropic ones otherwise)";
-    ListIntValues_doc["level_ideal"] = "Default: 0\n\
-Hermitian: which prime of E above level (the list is printed)";
+Over Z only (Hermitian: LevelIdeal)";
+    ListStringValues_doc["LevelIdeal"] = "Default: 1\n\
+Hermitian: 1 for no level structure, or an ideal n of O_E as a product of\n\
+primes (ell,k) or prime powers (ell,k)^e, separated by spaces, (ell,k) the\n\
+k-th prime above ell (the program prints them), at primes ell where the\n\
+genus is unimodular. The states are the orbits on the level lines of\n\
+L / n L: the free summands O x + n L of rank one with h(x, x) in the trace\n\
+ideal of n (all the lines at a split prime)";
     ListIntValues_doc["max_level_lines"] = "Default: 100000000\n\
 The largest number of lines mod N of a lattice, whose orbits are tabulated";
     SingleBlock BlockDATA;

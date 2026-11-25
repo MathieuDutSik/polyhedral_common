@@ -6,7 +6,8 @@ Print("Beginning of TestHermitianAlgebraicModularForms\n");
 # The algebraic modular forms of genera of Hermitian lattices over CM
 # fields: the classes by GENUS_HermitianEnumerate, the Hecke matrices by
 # GENUS_MPI_AlgebraicModularForms (Ring = Hermitian) at every prime above
-# the given rational primes, with or without a level structure, on the
+# the given rational primes, with or without a level structure (an ideal,
+# prime or composite), on the
 # cases of hermitian_cases.g. For every case: the number of classes, the
 # orders of the unitary groups, the number of states, and for each operator
 # its prime ideal, its number of neighbors and its characteristic
@@ -30,7 +31,7 @@ FullTest:=function()
     use_mpi:=not (IsBound(GAPInfo.SystemEnvironment.AMF_MPI) and GAPInfo.SystemEnvironment.AMF_MPI = "0");
     for eCase in ListCase do
         Print("Case ", eCase.name, "\n");
-        R:=get_hermitian_algebraic_modular_forms(eCase.field, eCase.symbol, eCase.primes, eCase.level, eCase.level_ideal);
+        R:=get_hermitian_algebraic_modular_forms(eCase.field, eCase.symbol, eCase.primes, eCase.level);
         if is_error(R) then
             return false;
         fi;
@@ -50,7 +51,7 @@ FullTest:=function()
             return false;
         fi;
         if eCase.mpi and use_mpi then
-            R2:=get_hermitian_algebraic_modular_forms(eCase.field, eCase.symbol, eCase.primes, eCase.level, eCase.level_ideal, rec(np:=2));
+            R2:=get_hermitian_algebraic_modular_forms(eCase.field, eCase.symbol, eCase.primes, eCase.level, rec(np:=2));
             if is_error(R2) then
                 return false;
             fi;

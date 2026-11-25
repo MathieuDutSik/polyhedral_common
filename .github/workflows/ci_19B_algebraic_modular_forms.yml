@@ -61,24 +61,11 @@ jobs:
           fi
           cd ../..
 
-      # Over the ring of integers of an imaginary quadratic field: the
-      # neighbors at a ramified prime close the genus, and the Hecke
-      # matrices at ramified, split and inert primes commute.
-      - name: Test the algebraic modular forms over O_K
-        run: |
-          make -C src_genera GENUS_AlgebraicModularForms
-          cd CI_tests/19B_AlgebraicModularForms
-          rm -f CI_CONCLUSION
-          ../../gap.sh < TestOrderAlgebraicModularForms.g
-          if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The algebraic modular forms test over O_K has not created the expected file" >&2
-            exit 1
-          fi
-          cd ../..
       # Over CM fields: the classes by GENUS_HermitianEnumerate, the Hecke
       # matrices by GENUS_MPI_AlgebraicModularForms (Ring = Hermitian), over
-      # imaginary quadratic fields (the values of GENUS_AlgebraicModularForms),
-      # two quartic fields and a sextic one, with and without a level.
+      # imaginary quadratic fields (the values of the former
+      # GENUS_AlgebraicModularForms), two quartic fields and a sextic one,
+      # with and without a level, prime or composite.
       - name: Test the algebraic modular forms over CM fields
         run: |
           make -C src_genera GENUS_HermitianEnumerate

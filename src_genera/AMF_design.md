@@ -149,18 +149,25 @@ Runs follow the usual 10G / 30 min caps through `scripts/run_capped.sh`.
 
 - `RealifiedRing.h`: the ring, the form, the description head and the
   `a+bw` parser, shared with `src_projective_systems`.
-- `OrderLatticeNeighbor.h`: the primes of O (split of degree one, inert;
-  over Z), the lines of L / P L through an adapted basis, the neighbors.
-- `AlgebraicModularForms.h`, `GENUS_AlgebraicModularForms`: the classes in
-  canonical form, the level lines mod N and their orbits, the Hecke
-  matrices; the genus is the closure under the Hecke primes, the mass
-  sum 1/|Aut| is printed.
-- Validated: the 8 levels of su21_hecke.tex against the PARI prototype
+- `GENUS_MPI_AlgebraicModularForms` (Ring = Hermitian,
+  `AlgebraicModularFormsHerm.h`) replaces `GENUS_AlgebraicModularForms`
+  and its `AlgebraicModularForms.h`, `OrderLatticeNeighbor.h`: over any CM
+  field, from the classes of `GENUS_HermitianEnumerate`, the Hecke matrices
+  at every prime above the given rational primes, the levels prime or
+  composite (the lines O x + n L keyed by their Hermite normal form, the
+  isotropy modulo the trace ideal of n), the list checked against the mass
+  of the genus. It gives the characteristic polynomials of the former
+  program at its levels over Z[i], Q(sqrt -7), Q(sqrt -11) and Z[sqrt -5]
+  (CI 19B, TestHermitianAlgebraicModularForms.g).
+- The former program, when it was written:
+  validated on the 8 levels of su21_hecke.tex against the PARI prototype
   (identical characteristic polynomials, T(2+i) and T(3+2i) commuting at
   7+2i); the quinary genus of half discriminant 61 (8 classes, mass 31/96
   equal to GENUS_LocalDensity genus_mass, f61 with lambda = -7, -3 at 2, 3);
   the class numbers, automorphism orders and masses of O_K^m, m = 2, 3, 4,
   for D = -4, -3, -7, -8, -11, equal to those of Hecke.jl.
-- Not yet: the orbits of Aut(L) on the Hecke lines (each neighbor is
-  canonicalized), the levels over Z, the ramified primes, the weights, the
-  Hermitian mass formula (the closure is certified only by comparison).
+- Done since: the orbits of Aut(L) on the Hecke lines, the levels over Z
+  (prime), the ramified primes, the Hermitian mass formula (the list is
+  certified by the mass). Not yet: the weights other than the trivial one,
+  the composite levels over Z, the Hecke operators at the dyadic ramified
+  primes.

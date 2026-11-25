@@ -10,6 +10,7 @@
 #include "MPI_functionality.h"
 #include <boost/mpi.hpp>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 // clang-format on
@@ -344,8 +345,7 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
   std::string ClassesFile = BlockDATA.get_string("ClassesFile");
   std::vector<int> ListPrime = BlockDATA.get_list_int("ListPrime");
-  int level = BlockDATA.get_int("level");
-  size_t level_ideal = static_cast<size_t>(BlockDATA.get_int("level_ideal"));
+  std::string LevelIdeal = BlockDATA.get_string("LevelIdeal");
   size_t max_level_lines =
       static_cast<size_t>(BlockDATA.get_int("max_level_lines"));
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
@@ -367,23 +367,49 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
       throw TerminalException{1};
     }
   };
-  // The level prime N of E.
-  std::optional<HermIdealPrime<Tint>> N;
-  if (level != 1) {
-    check_prime(level, "level");
-    std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, level);
-    if (i_rank == 0) {
-      for (size_t k = 0; k < l_prime.size(); k++) {
-        std::cerr << "GENUS_MPI_AlgebraicModularForms: level_ideal=" << k
-                  << " is " << l_prime[k].name << "\n";
+  // The level ideal N of E: the factors (ell,k) or (ell,k)^e, the k-th prime
+  // above ell as HermIdealPrimesAbove lists them (their names).
+  std::optional<HermLevel<Tint>> N;
+  std::vector<int64_t> level_ell;
+  if (LevelIdeal != "1") {
+    std::vector<HermIdealPrime<Tint>> l_fact;
+    std::vector<int> l_exp;
+    for (std::string const &tok : STRING_Split(LevelIdeal, " ")) {
+      int64_t ell = 0, k = 0, e = 1;
+      char c1 = 0, c2 = 0, c3 = 0;
+      std::istringstream is(tok);
+      is >> c1 >> ell >> c2 >> k >> c3;
+      if (!is || c1 != '(' || c2 != ',' || c3 != ')') {
+        std::cerr << "AMFH: the factor " << tok << " of LevelIdeal is not of "
+                     "the form (ell,k) or (ell,k)^e\n";
+        throw TerminalException{1};
       }
+      char c4 = 0;
+      if (is >> c4) {
+        if (c4 != '^' || !(is >> e) || e < 1) {
+          std::cerr << "AMFH: the exponent of " << tok << " is not valid\n";
+          throw TerminalException{1};
+        }
+      }
+      check_prime(static_cast<int>(ell), "level prime");
+      std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, ell);
+      if (i_rank == 0) {
+        for (auto const &P : l_prime) {
+          std::cerr << "GENUS_MPI_AlgebraicModularForms: above " << ell
+                    << ", the prime " << P.name << " of norm " << P.q()
+                    << "\n";
+        }
+      }
+      if (k < 0 || static_cast<size_t>(k) >= l_prime.size()) {
+        std::cerr << "AMFH: there is no prime " << tok << " above " << ell
+                  << "\n";
+        throw TerminalException{1};
+      }
+      l_fact.push_back(l_prime[k]);
+      l_exp.push_back(static_cast<int>(e));
+      level_ell.push_back(ell);
     }
-    if (level_ideal >= l_prime.size()) {
-      std::cerr << "AMFH: level_ideal=" << level_ideal << " but there are "
-                << l_prime.size() << " primes above " << level << "\n";
-      throw TerminalException{1};
-    }
-    N = l_prime[level_ideal];
+    N = HermGetLevel<T, Tint>(ord, l_fact, l_exp);
   }
   // The Hecke operators: every prime of E above the primes of ListPrime.
   std::vector<HermNeighborPrime<T, Tint>> l_np;
@@ -392,9 +418,11 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
   std::vector<size_t> ListAdjoint;
   for (int p : ListPrime) {
     check_prime(p, "Hecke prime");
-    if (p == level) {
-      std::cerr << "AMFH: the Hecke prime " << p << " is the level\n";
-      throw TerminalException{1};
+    for (int64_t ell : level_ell) {
+      if (p == ell) {
+        std::cerr << "AMFH: the Hecke prime " << p << " divides the level\n";
+        throw TerminalException{1};
+      }
     }
     std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, p);
     size_t first = l_np.size();
@@ -419,11 +447,11 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
   }
   // The line spaces of the level, for every class (needed for the columns).
   std::vector<HermLatticeData<T, Tint>> l_lat;
-  std::vector<HermLineSpace> level_ls;
+  std::vector<HermLevelSpace> level_ls;
   for (auto const &A : cls.l_basis) {
     l_lat.push_back(HermLatticeOfBasis(ord, ring, A));
     if (N) {
-      level_ls.push_back(HermGetLineSpace(l_lat.back(), *N));
+      level_ls.push_back(HermGetLevelSpace(l_lat.back(), *N));
       if (level_ls.back().n_line() > max_level_lines) {
         std::cerr << "AMFH: " << level_ls.back().n_line()
                   << " lines modulo the level, above max_level_lines\n";
@@ -491,7 +519,9 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
     }
   }
   AmfZResult<TintGroup> res;
-  res.level = level;
+  // the norm of the level ideal, and its factors
+  res.level = N ? static_cast<int>(N->norm) : 1;
+  res.level_name = N ? N->name : std::string("1");
   res.ListAutOrder = ph.ListAutOrder;
   res.mass = mass;
   res.mass_formula = mass_formula;

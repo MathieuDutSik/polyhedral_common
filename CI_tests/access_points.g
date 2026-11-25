@@ -3560,20 +3560,19 @@ end;
 # get_hermitian_enumeration, the mass computed by the program), then the
 # Hecke matrices by GENUS_MPI_AlgebraicModularForms with Ring = Hermitian, at
 # every prime of E above the rational primes of ListPrime, with the level
-# structure at the prime of index level_ideal above the rational prime level
-# (level = 1: none). The options are those of get_algebraic_modular_forms
+# structure at the ideal LevelIdeal ("1": none; otherwise a product of the
+# primes (ell,k), the k-th above ell, or powers (ell,k)^e). The options are those of get_algebraic_modular_forms
 # (np). The result is the record of the program, whose operators carry the
 # ideal and the index of their adjoint.
 get_hermitian_algebraic_modular_forms:=function(arg)
-    local field, symbol, ListPrime, level, level_ideal, np, options, TmpDir, FileC, FileN, FileN2, FileO, FileE, eProg, strOut, binary, list_arg, status, U;
+    local field, symbol, ListPrime, LevelIdeal, np, options, TmpDir, FileC, FileN, FileN2, FileO, FileE, eProg, strOut, binary, list_arg, status, U;
     field:=arg[1];
     symbol:=arg[2];
     ListPrime:=arg[3];
-    level:=arg[4];
-    level_ideal:=arg[5];
+    LevelIdeal:=arg[4];
     np:=1;
-    if Length(arg) >= 6 then
-        options:=arg[6];
+    if Length(arg) >= 5 then
+        options:=arg[5];
         if IsBound(options.np) then
             np:=options.np;
         fi;
@@ -3600,7 +3599,7 @@ get_hermitian_algebraic_modular_forms:=function(arg)
     fi;
     strOut:=Concatenation("&DATA\n Ring = \"Hermitian\"\n ClassesFile = \"", FileC, "\"\n",
                           " ListPrime = ", JoinStringsWithSeparator(List(ListPrime, String), ", "), "\n",
-                          " level = ", String(level), "\n level_ideal = ", String(level_ideal), "\n/\n\n",
+                          " LevelIdeal = \"", LevelIdeal, "\"\n/\n\n",
                           "&METHOD\n/\n\n",
                           "&SYSTEM\n OutFormat = \"GAP\"\n OutFile = \"", FileO, "\"\n/\n");
     WriteStringFile(FileN2, strOut);

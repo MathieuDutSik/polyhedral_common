@@ -30,14 +30,22 @@
   Algebraic modular forms of trivial weight for the unitary group of a
   genus of positive definite Hermitian lattices over a CM field E, from the
   list of its classes (GENUS_HermitianEnumerate, OutFormat CPP, read by
-  GENUS_MPI_AlgebraicModularForms), with a
-  level structure at a prime N of E or none: the analogue over E of
-  AlgebraicModularFormsZ.h, whose result type and checks it shares.
+  GENUS_MPI_AlgebraicModularForms), with a level structure at an ideal n
+  of O_E or none: the analogue over E of AlgebraicModularFormsZ.h, whose
+  result type and checks it shares.
 
   The states are the pairs (L_j, O), O an orbit of U(L_j) on the level
-  lines of L_j / N L_j: all the lines when N is split over K_0 (U(L_j) acts
-  there through GL_m), the isotropic ones (h(x, x) in N) when N = conj(N);
-  a single state per class without a level.
+  lines of L_j / n L_j, a single state per class without a level. A level
+  line is a free summand O x + n L of rank one of L / n L (the submodule
+  O x + n L / n L is isomorphic to O / n) that is the reduction of an
+  isotropic vector, the analogue of the cusp of Gamma_0(n): h(x, x) is in
+  the trace ideal Tr_{E/K_0}(n) at the primes under n, the ideal by which
+  h(x, x) moves when x moves by n L. At a split prime the condition is
+  empty (all the lines), at an inert or odd ramified prime it is h(x, x)
+  in P; at a dyadic ramified prime the trace ideal can be smaller than P
+  cap K_0. At a prime level the lines are those of the projective space of
+  L / P L (HermLineSpace); otherwise they are enumerated in L / n L and
+  keyed by the Hermite normal form of O x + n L.
 
   The Hecke operator T_P at a prime P of E where the genus is unimodular:
   the entry (L_i, O) -> (L_j, O') counts the pairs (x, l), x a line of
@@ -63,34 +71,221 @@ HermPairOfBasisInt(RealifiedRing<T, Tint> const &ring, MyMatrix<T> const &A) {
 }
 
 /*
-  The level orbits of a lattice: for each line of ls (the lines of L / N
+  A level n = prod P_i^{e_i}: the Z-basis of n (in the coordinates of the
+  basis of O_E), its norm N(n), which kills O_E / n, and for each P_i the
+  valuation of Tr_{E/K_0}(n) O_E at P_i.
+ */
+template <typename Tint> struct HermLevel {
+  std::vector<HermIdealPrime<Tint>> l_prime;
+  std::vector<int> l_exp;
+  MyMatrix<Tint> ideal;
+  int64_t norm = 1;
+  std::vector<int> l_tau;
+  std::string name;
+  bool is_prime() const { return l_prime.size() == 1 && l_exp[0] == 1; }
+};
+
+template <typename T, typename Tint>
+HermLevel<Tint> HermGetLevel(CMOrder<T, Tint> const &ord,
+                             std::vector<HermIdealPrime<Tint>> const &l_prime,
+                             std::vector<int> const &l_exp) {
+  int d = ord.deg;
+  HermLevel<Tint> lev;
+  lev.l_prime = l_prime;
+  lev.l_exp = l_exp;
+  lev.ideal = IdentityMat<Tint>(d);
+  for (size_t i = 0; i < l_prime.size(); i++) {
+    lev.name += (i > 0 ? " " : "") + l_prime[i].name;
+    if (l_exp[i] > 1) {
+      lev.name += "^" + std::to_string(l_exp[i]);
+    }
+    for (int k = 0; k < l_exp[i]; k++) {
+      MyMatrix<Tint> const &P = l_prime[i].ideal;
+      MyMatrix<Tint> Gen(lev.ideal.rows() * P.rows(), d);
+      for (int a = 0; a < lev.ideal.rows(); a++) {
+        for (int b = 0; b < P.rows(); b++) {
+          MyVector<Tint> pr =
+              ord.product(GetMatrixRow(lev.ideal, a), GetMatrixRow(P, b));
+          for (int c = 0; c < d; c++) {
+            Gen(a * P.rows() + b, c) = pr(c);
+          }
+        }
+      }
+      lev.ideal = GetZbasis(Gen);
+      lev.norm *= static_cast<int64_t>(l_prime[i].q());
+    }
+  }
+  // Tr(n) is the Z-span of the traces of a Z-basis (it is an O_{K_0}
+  // module), so its valuation is the least one of these traces.
+  for (auto const &P : l_prime) {
+    int tau = 1 << 28;
+    for (int a = 0; a < lev.ideal.rows(); a++) {
+      MyVector<Tint> b = GetMatrixRow(lev.ideal, a);
+      MyVector<Tint> tr = b + ord.conjugate(b);
+      tau = std::min(tau, HermIdealVal<T, Tint>(ord, P,
+                                                UniversalVectorConversion<T, Tint>(tr)));
+    }
+    lev.l_tau.push_back(tau);
+  }
+  return lev;
+}
+
+// Whether h(x, x) is in Tr(n) at the primes of n: x is isotropic mod n.
+template <typename T, typename Tint>
+bool HermLevelIsotropic(HermLatticeData<T, Tint> const &L,
+                        HermLevel<Tint> const &lev, std::vector<int64_t> const &z) {
+  int n = L.n();
+  MyVector<Tint> x(n);
+  for (int k = 0; k < n; k++) {
+    x(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
+  }
+  MyVector<T> hxx = L.herm(x, x);
+  for (size_t i = 0; i < lev.l_prime.size(); i++) {
+    if (HermIdealVal<T, Tint>(*L.ord, lev.l_prime[i], hxx) < lev.l_tau[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+  The lines of L / n L: at a prime level the projective space of L / P L
+  (every line, the level ones found by HermLevelIsotropic), otherwise the
+  level lines only, enumerated over the N(n)^m vectors of L / n L and keyed
+  by the Hermite normal form of O x + n L (HnfKeyModM, modulo N(n)).
+ */
+struct HermLevelSpace {
+  bool general = false;
+  HermLineSpace ls;
+  int n = 0;
+  int64_t M = 1;
+  // n L in the coordinates of L, the multiplications by the basis of O_E,
+  // modulo M
+  std::vector<std::vector<int64_t>> rows_nL;
+  std::vector<std::vector<int64_t>> l_mult;
+  std::vector<std::vector<int64_t>> l_line;
+  std::map<std::vector<int64_t>, size_t> map_line;
+  int64_t modulus() const { return general ? M : ls.ell(); }
+  size_t n_line() const { return general ? l_line.size() : ls.n_line(); }
+  std::vector<int64_t> line_vector(size_t const &idx) const {
+    return general ? l_line[idx] : ls.line_vector(idx);
+  }
+  std::vector<int64_t> line_key(std::vector<int64_t> const &z) const {
+    std::vector<std::vector<int64_t>> rows = rows_nL;
+    for (auto const &Om : l_mult) {
+      std::vector<int64_t> zO(n, 0);
+      for (int j = 0; j < n; j++) {
+        int64_t sum = 0;
+        for (int k = 0; k < n; k++) {
+          sum = (sum + ResidueModPrime(z[k], M) * Om[k * n + j]) % M;
+        }
+        zO[j] = sum;
+      }
+      rows.push_back(zO);
+    }
+    return HnfKeyModM(rows, n, M);
+  }
+  std::optional<size_t> line_index(std::vector<int64_t> const &z) const {
+    if (!general) {
+      return ls.line_index(z);
+    }
+    auto iter = map_line.find(line_key(z));
+    if (iter == map_line.end()) {
+      return {};
+    }
+    return iter->second;
+  }
+};
+
+template <typename T, typename Tint>
+HermLevelSpace HermGetLevelSpace(HermLatticeData<T, Tint> const &L,
+                                 HermLevel<Tint> const &lev) {
+  HermLevelSpace res;
+  int n = L.n();
+  res.n = n;
+  if (lev.is_prime()) {
+    res.ls = HermGetLineSpace(L, lev.l_prime[0]);
+    return res;
+  }
+  res.general = true;
+  int64_t M = lev.norm;
+  res.M = M;
+  MyMatrix<Tint> nL = HermIdealTimesLattice(L, lev.ideal);
+  for (int i = 0; i < nL.rows(); i++) {
+    std::vector<int64_t> r(n);
+    for (int j = 0; j < n; j++) {
+      r[j] = order_residue(nL(i, j), M);
+    }
+    res.rows_nL.push_back(r);
+  }
+  for (auto const &Om : L.Omega) {
+    std::vector<int64_t> om(n * n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        om[i * n + j] = order_residue(Om(i, j), M);
+      }
+    }
+    res.l_mult.push_back(om);
+  }
+  // a transversal of L / n L from the diagonal of the key of n L, and the
+  // free lines: the index of O x + n L is N(n)^{m - 1}
+  std::vector<int64_t> H = HnfKeyModM(res.rows_nL, n, M);
+  int d = L.ord->deg;
+  int m = n / d;
+  int64_t target = 1;
+  for (int k = 0; k < m - 1; k++) {
+    target *= M;
+  }
+  std::vector<int64_t> diag(n);
+  int64_t total = 1;
+  for (int i = 0; i < n; i++) {
+    diag[i] = H[i * n + i];
+    total *= diag[i];
+  }
+  std::vector<int64_t> z(n, 0);
+  for (int64_t idx = 0; idx < total; idx++) {
+    int64_t w = idx;
+    for (int i = 0; i < n; i++) {
+      z[i] = w % diag[i];
+      w /= diag[i];
+    }
+    std::vector<int64_t> key = res.line_key(z);
+    int64_t index = 1;
+    for (int i = 0; i < n; i++) {
+      index *= key[i * n + i];
+    }
+    if (index != target || res.map_line.count(key) == 1) {
+      continue;
+    }
+    if (!HermLevelIsotropic(L, lev, z)) {
+      continue;
+    }
+    res.map_line[key] = res.l_line.size();
+    res.l_line.push_back(z);
+  }
+  return res;
+}
+
+/*
+  The level orbits of a lattice: for each line of ls (the lines of L / n
   L), its orbit under the generators, -1 for a line that is not a level
   line, and the size of every orbit; no orbit when L / N L has no level
   line (the caller reports it).
  */
 template <typename T, typename Tint>
 AmfZLevelData HermAmfLevelOrbits(HermLatticeData<T, Tint> const &L,
-                                 HermLineSpace const &ls,
-                                 HermIdealPrime<Tint> const &N,
+                                 HermLevelSpace const &ls,
+                                 HermLevel<Tint> const &lev,
                                  std::vector<MyMatrix<Tint>> const &l_gen) {
   int n = L.n();
-  int64_t ell = N.ell;
-  bool all_lines = N.type == HermIdealType::Split;
+  int64_t ell = ls.modulus();
   size_t n_line = ls.n_line();
-  // -2: a level line whose orbit is not known yet
+  // -2: a level line whose orbit is not known yet (the lines of a general
+  // level space are all level lines)
   AmfZLevelData data;
   data.orbit_of_line.assign(n_line, -1);
-  MyVector<Tint> zv(n);
   for (size_t idx = 0; idx < n_line; idx++) {
-    bool level = all_lines;
-    if (!level) {
-      std::vector<int64_t> z = ls.line_vector(idx);
-      for (int k = 0; k < n; k++) {
-        zv(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
-      }
-      level = HermResidueRat(N, L.herm(zv, zv)).is_zero();
-    }
-    if (level) {
+    if (ls.general || HermLevelIsotropic(L, lev, ls.line_vector(idx))) {
       data.orbit_of_line[idx] = -2;
     }
   }
@@ -142,7 +337,7 @@ AmfZLevelData HermAmfLevelOrbits(HermLatticeData<T, Tint> const &L,
 /*
   The row of the class i at the Hecke prime np. l_basis are the bases of
   the classes, family their decision tree (on the pairs), l_gen_i the
-  generators of U(L_i). With a level, N is its prime, level_ls the line
+  generators of U(L_i). With a level, N is its ideal, level_ls the line
   spaces of L_j / N L_j and level the level orbits of every class.
  */
 template <typename T, typename Tint, typename Tgroup>
@@ -152,8 +347,8 @@ AmfZRow HermAmfComputeRow(CMOrder<T, Tint> const &ord,
                           HermNeighborPrime<T, Tint> const &np,
                           InvariantFamily<Tint> const &family,
                           std::vector<MyMatrix<Tint>> const &l_gen_i,
-                          std::optional<HermIdealPrime<Tint>> const &N,
-                          std::vector<HermLineSpace> const &level_ls,
+                          std::optional<HermLevel<Tint>> const &N,
+                          std::vector<HermLevelSpace> const &level_ls,
                           std::vector<AmfZLevelData> const &level,
                           std::ostream &os) {
   MyMatrix<T> const &A_i = l_basis[i];
@@ -215,7 +410,7 @@ AmfZRow HermAmfComputeRow(CMOrder<T, Tint> const &ord,
 #endif
       }
       MyMatrix<T> R = Inverse(Bn) * Q;
-      int64_t ellN = N->ell;
+      int64_t ellN = level_ls[i].modulus();
       std::vector<int64_t> R_red(n * n);
       for (int a = 0; a < n; a++) {
         for (int b = 0; b < n; b++) {
