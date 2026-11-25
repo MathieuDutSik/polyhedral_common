@@ -128,7 +128,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "         composite or ramified; enumerated in full unless it is a\n";
       std::cerr << "         prime of degree one or inert), or ell@r for the split prime\n";
       std::cerr << "         (ell, omega - r), which need not be principal\n";
-      std::cerr << "  primes: comma separated list of the Hecke primes, given in the same way\n";
+      std::cerr << "  primes: comma separated list of the Hecke primes: an integer prime\n";
+      std::cerr << "          (inert or ramified in O_K), a generator a+bw of a prime ideal,\n";
+      std::cerr << "          or ell@r for the prime (ell, omega - r) of degree one; a ramified\n";
+      std::cerr << "          prime over 2 is refused\n";
       std::cerr << "  output: the GAP file of the classes and the Hecke matrices\n";
       return -1;
     }

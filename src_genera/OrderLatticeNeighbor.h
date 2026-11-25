@@ -46,6 +46,10 @@
   - P = (ell) inert (q = ell^2): a basis e_1, ..., e_m of L / ell L over F_q,
     that is e_j, e_j Omega a basis over F_ell, the element a + b omega of F_q
     being coded as the integer a + ell b,
+  - P = (ell, omega - r) ramified (P^2 = (ell), r the double root of x^2 - s
+    x + n mod ell, q = ell): omega - r is nilpotent on L / ell L, and L / P
+    L is its quotient by the image of Omega - r, through a basis e_1, ...,
+    e_m, e_1 (Omega - r), ..., e_m (Omega - r) of L / ell L,
   - over R = Z, P = (ell): L / ell L itself.
   The lines are then those of F_q^m, indexed by ProjectiveLineOfIndex and
   IndexOfProjectiveLine of GenusEnumeration.h, which only need the codes of
@@ -64,8 +68,16 @@
   - over Z (L even, h(x, x) = Q(x) = B(x, x) / 2): x isotropic modulo ell,
     adjusted modulo ell L so that ell^2 divides Q(x), M = {y in L : B(y, x)
     = 0 mod ell} and L' = M + Z x / ell, the classical Kneser neighbor.
-  They are unimodular at ell when L is, and in the genus of L. The ramified
-  primes are not treated.
+  - ramified (ell odd): x isotropic modulo ell (h(x, x) is in P cap Z = ell
+    Z), M = {y in L : h(y, x) in P} and L' = M + P^{-1} x, P^{-1} = P / ell,
+    which is Z x + Z (omega - r) x / ell. Changing x by pi s b, pi = omega -
+    r a uniformizer and b a basis vector with h(b, x) not in P, changes L'
+    and keeps x isotropic, so each isotropic line gives ell neighbors, the
+    lifts x + pi s b for s in F_ell (as in Hecke, Kirschmer's method).
+  They are unimodular at ell when L is, and in the genus of L. At a dyadic
+  ramified prime the lattice M + P^{-1} x need not be in the genus of L (the
+  dyadic Hermitian genus depends on the norm ideal), and those primes are
+  refused, as Hecke excludes them from its neighbors.
  */
 
 // The number types are T (a field, mpq_class or fmpq_class) and Tint (its
@@ -80,6 +92,8 @@ struct OrderPrime {
   int64_t ell = 0;
   int f = 1;
   int64_t r = 0;
+  // P^2 = (ell), r the double root of x^2 - s x + n mod ell
+  bool ramified = false;
   int64_t q() const { return f == 1 ? ell : ell * ell; }
 };
 
@@ -96,14 +110,57 @@ inline bool order_is_prime(int64_t const &x) {
 }
 
 /*
+  The ramified prime over ell of O_K: r the double root of x^2 - s x + n
+  mod ell. A dyadic one is refused (see above).
+ */
+template <typename T, typename Tint>
+OrderPrime get_ramified_order_prime(RealifiedRing<T, Tint> const &ring,
+                                    std::string const &name, int64_t ell) {
+  if (ell == 2) {
+    std::cerr << "AMF: " << name << " is the dyadic ramified prime, whose "
+              << "neighbors need not stay in the genus: not done\n";
+    throw TerminalException{1};
+  }
+  OrderPrime P;
+  P.name = name;
+  P.ell = ell;
+  P.f = 1;
+  P.ramified = true;
+  // 2 r = s mod ell
+  P.r = ResidueModPrime(ring.s * InverseModPrime(2, ell), ell);
+#ifdef SANITY_CHECK_ORDER_LATTICE
+  if (ResidueModPrime(P.r * P.r - ring.s * P.r + ring.p, ell) != 0) {
+    std::cerr << "AMF: s / 2 is not a root modulo " << ell << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return P;
+}
+
+/*
   The prime of R named by e: over Z an integer prime; over O_K an integer
-  prime inert in O_K, or a generator a + b omega (b != 0) of a split prime.
+  prime inert or ramified in O_K, or a generator a + b omega (b != 0) of a
+  prime: of prime norm (split or ramified), or an associate of an inert
+  integer prime (norm ell^2).
  */
 template <typename T, typename Tint>
 OrderPrime get_order_prime(RealifiedRing<T, Tint> const &ring,
                                   RingElementName const &e) {
   OrderPrime P;
   P.name = e.name;
+  int64_t D = ring.s * ring.s - 4 * ring.p;
+  // inert iff x^2 - s x + n has no root mod ell (and ell does not ramify)
+  auto is_inert = [&](int64_t ell) -> bool {
+    if (ResidueModPrime(D, ell) == 0) {
+      return false;
+    }
+    for (int64_t x = 0; x < ell; x++) {
+      if (ResidueModPrime(x * x - ring.s * x + ring.p, ell) == 0) {
+        return false;
+      }
+    }
+    return true;
+  };
   if (ring.d == 1 || e.b == 0) {
     if (e.b != 0) {
       std::cerr << "AMF: the prime " << e.name << " should be an integer over Z\n";
@@ -118,33 +175,39 @@ OrderPrime get_order_prime(RealifiedRing<T, Tint> const &ring,
       P.f = 1;
       return P;
     }
-    // inert iff x^2 - s x + n has no root mod ell (and ell does not ramify)
-    int64_t D = ring.s * ring.s - 4 * ring.p;
     if (ResidueModPrime(D, P.ell) == 0) {
-      std::cerr << "AMF: the prime " << e.name << " ramifies, not treated\n";
-      throw TerminalException{1};
+      return get_ramified_order_prime(ring, e.name, P.ell);
     }
-    for (int64_t x = 0; x < P.ell; x++) {
-      int64_t val = ResidueModPrime(x * x - ring.s * x + ring.p, P.ell);
-      if (val == 0) {
-        std::cerr << "AMF: " << e.name << " splits in O_K, give a generator "
-                  << "a+bw of a prime over it\n";
-        throw TerminalException{1};
-      }
+    if (!is_inert(P.ell)) {
+      std::cerr << "AMF: " << e.name << " splits in O_K, which has two primes "
+                << "over it: give a generator a+bw of one, or ell@r\n";
+      throw TerminalException{1};
     }
     P.f = 2;
     return P;
   }
   int64_t norm = e.a * e.a + ring.s * e.a * e.b + ring.p * e.b * e.b;
   if (!order_is_prime(norm)) {
-    std::cerr << "AMF: the norm " << norm << " of " << e.name
-              << " is not a prime (a split prime of degree one is needed)\n";
+    // an associate of an inert prime ell: norm ell^2 and ell divides a and b
+    int64_t ell = std::llround(std::sqrt(static_cast<double>(norm)));
+    while (ell * ell > norm) {
+      ell--;
+    }
+    while ((ell + 1) * (ell + 1) <= norm) {
+      ell++;
+    }
+    if (ell * ell == norm && order_is_prime(ell) && is_inert(ell) &&
+        e.a % ell == 0 && e.b % ell == 0) {
+      P.ell = ell;
+      P.f = 2;
+      return P;
+    }
+    std::cerr << "AMF: " << e.name << " of norm " << norm
+              << " does not generate a prime ideal\n";
     throw TerminalException{1};
   }
-  int64_t D = ring.s * ring.s - 4 * ring.p;
   if (ResidueModPrime(D, norm) == 0) {
-    std::cerr << "AMF: the prime " << e.name << " ramifies, not treated\n";
-    throw TerminalException{1};
+    return get_ramified_order_prime(ring, e.name, norm);
   }
   P.ell = norm;
   P.f = 1;
@@ -181,10 +244,14 @@ std::vector<OrderPrime> parse_order_primes(RealifiedRing<T, Tint> const &ring, s
     P.r = ResidueModPrime(ParseScalar<int64_t>(tok.substr(pos + 1)), P.ell);
     P.f = 1;
     int64_t D = ring.s * ring.s - 4 * ring.p;
-    if (ring.d != 2 || !order_is_prime(P.ell) || ResidueModPrime(D, P.ell) == 0 ||
+    if (ring.d != 2 || !order_is_prime(P.ell) ||
         ResidueModPrime(P.r * P.r - ring.s * P.r + ring.p, P.ell) != 0) {
-      std::cerr << "AMF: " << tok << " is not a split prime (ell, omega - r) of O_K\n";
+      std::cerr << "AMF: " << tok << " is not a prime (ell, omega - r) of O_K "
+                << "of degree one\n";
       throw TerminalException{1};
+    }
+    if (ResidueModPrime(D, P.ell) == 0) {
+      P = get_ramified_order_prime(ring, tok, P.ell);
     }
     l_prime.push_back(P);
   }
@@ -328,6 +395,38 @@ LineSpace get_line_space(RealifiedRing<T, Tint> const &ring,
   MyMatrix<Tint> Bas(n, n);
   if (ring.d == 1) {
     Bas = IdentityMat<Tint>(n);
+  } else if (P.ramified) {
+    // e_k and e_k (Omega - r) independent modulo ell, greedily: the first
+    // m rows then span L / P L
+    MyMatrix<Tint> Nil = Omega - UniversalScalarConversion<Tint, int64_t>(P.r) * IdentityMat<Tint>(n);
+    int n_found = 0;
+    for (int k = 0; k < n && n_found < ring.m; k++) {
+      MyMatrix<Tint> Test(2 * n_found + 2, n);
+      for (int i = 0; i < n_found; i++) {
+        for (int j = 0; j < n; j++) {
+          Test(2 * i, j) = Bas(i, j);
+          Test(2 * i + 1, j) = Bas(ring.m + i, j);
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        Test(2 * n_found, j) = (j == k) ? 1 : 0;
+        Test(2 * n_found + 1, j) = Nil(k, j);
+      }
+      if (order_rank_mod(Test, ell) == 2 * n_found + 2) {
+        for (int j = 0; j < n; j++) {
+          Bas(n_found, j) = (j == k) ? 1 : 0;
+          Bas(ring.m + n_found, j) = Nil(k, j);
+        }
+        n_found++;
+      }
+    }
+#ifdef SANITY_CHECK_ORDER_LATTICE
+    if (n_found != ring.m) {
+      std::cerr << "AMF: no basis of L / " << ell << " L adapted to the "
+                << "ramified prime found\n";
+      throw TerminalException{1};
+    }
+#endif
   } else if (P.f == 1) {
     // the eigenspaces of Omega mod ell for r and conj(r) = s - r
     int64_t r_conj = ResidueModPrime(ring.s - P.r, ell);
@@ -481,7 +580,8 @@ AmfLevel get_amf_level(RealifiedRing<T, Tint> const &ring, std::string const &st
   if (str.find('@') != std::string::npos) {
     lev.prime = parse_order_primes(ring, str)[0];
     lev.norm = lev.prime->q();
-    lev.t = lev.prime->f == 1 ? 1 : lev.prime->ell;
+    // t_n: 1 at a split prime, ell at an inert or an odd ramified prime
+    lev.t = (lev.prime->f == 1 && !lev.prime->ramified) ? 1 : lev.prime->ell;
     return lev;
   }
   RingElementName e = parse_ring_elements(str)[0];
@@ -752,7 +852,10 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
   // Over Z (an even lattice, h(x, x) = Q(x) = B(x, x) / 2) the construction
   // is the one of an inert prime with the single functional B(y, x): L' = M
   // + Z x / ell, M = {y : B(y, x) = 0 mod ell}.
-  bool split = ring.d == 2 && P.f == 1;
+  bool split = ring.d == 2 && P.f == 1 && !P.ramified;
+  bool ramified = ring.d == 2 && P.ramified;
+  // the primes with one functional h(y, x) mod P: split and ramified
+  bool degree_one = split || ramified;
   int n = G.rows();
   int64_t ell = P.ell;
   Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
@@ -784,6 +887,11 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
       }
 #endif
     }
+  } else if (ramified) {
+    // h(x, x) in P cap Z = ell Z: no adjustment
+    if (order_residue(order_hermitian_norm(G, x), ell) != 0) {
+      return {};
+    }
   } else {
     Tint hx = order_hermitian_norm(G, x);
     if (order_residue(hx, ell) != 0) {
@@ -813,22 +921,23 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
 #ifdef SANITY_CHECK_ORDER_LATTICE
   {
     Tint hx = order_hermitian_norm(G, x);
-    Tint mod = split ? ell_T : ell_T * ell_T;
+    Tint mod = degree_one ? ell_T : ell_T * ell_T;
     if (hx % mod != 0) {
       std::cerr << "AMF: the adjusted vector is not isotropic enough\n";
       throw TerminalException{1};
     }
   }
 #endif
-  // M: the kernel of y -> h(y, x) mod conj(P) (split) or mod ell (inert, Z).
+  // M: the kernel of y -> h(y, x) mod conj(P) (split, ramified, where
+  // conj(P) = P and conj(r) = r) or mod ell (inert, Z).
   std::vector<std::pair<Tint, Tint>> l_h = order_hermitian_products(ring, G, Omega, x);
-  int n_func = ring.d == 1 || split ? 1 : 2;
+  int n_func = ring.d == 1 || degree_one ? 1 : 2;
   MyMatrix<Tint> Func(n, n_func);
   int64_t r_conj = ResidueModPrime(ring.s - P.r, ell);
   for (int k = 0; k < n; k++) {
     int64_t a = order_residue(l_h[k].first, ell);
     int64_t b = order_residue(l_h[k].second, ell);
-    if (split) {
+    if (degree_one) {
       // omega = conj(r) mod conj(P)
       Func(k, 0) = UniversalScalarConversion<Tint, int64_t>((a + b * r_conj) % ell);
     } else {
@@ -863,7 +972,28 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
     (of trace 0), and as many neighbors of the line.
    */
   std::vector<MyVector<Tint>> l_lift{x};
-  if (!split && ring.d == 2) {
+  if (ramified) {
+    // x + s pi e_k, pi = omega - r, e_k with h(e_k, x) not in P
+    std::optional<int> opt_k;
+    for (int k = 0; k < n && !opt_k; k++) {
+      if (Func(k, 0) != 0) {
+        opt_k = k;
+      }
+    }
+#ifdef SANITY_CHECK_ORDER_LATTICE
+    if (!opt_k) {
+      std::cerr << "AMF: y -> h(y, x) is zero modulo P\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyVector<Tint> ek = ZeroVector<Tint>(n);
+    ek(*opt_k) = Tint(1);
+    MyVector<Tint> pi_ek = Omega.transpose() * ek - UniversalScalarConversion<Tint, int64_t>(P.r) * ek;
+    for (int64_t t = 1; t < ell; t++) {
+      l_lift.push_back(MyVector<Tint>(x + UniversalScalarConversion<Tint, int64_t>(t) * pi_ek));
+    }
+  }
+  if (!degree_one && ring.d == 2) {
     // y1 = c1 e_k1 + c2 e_k2 for two basis vectors whose h(e_k, x) are
     // independent mod ell
     int64_t target_a = ResidueModPrime(-ring.s, ell), target_b = 2 % ell;
@@ -901,18 +1031,18 @@ order_neighbor(RealifiedRing<T, Tint> const &ring, MyMatrix<Tint> const &G,
 #ifdef SANITY_CHECK_ORDER_LATTICE
     {
       Tint hxl = order_hermitian_norm(G, xl);
-      Tint mod = split ? ell_T : ell_T * ell_T;
+      Tint mod = degree_one ? ell_T : ell_T * ell_T;
       if (hxl % mod != 0) {
         std::cerr << "AMF: a lift is not isotropic enough\n";
         throw TerminalException{1};
       }
     }
 #endif
-    // P^{-1} x: x and (omega - conj(r)) x / ell (split); x / ell and omega x
-    // / ell (inert); x / ell (Z).
+    // P^{-1} x: x and (omega - conj(r)) x / ell (split, ramified); x / ell
+    // and omega x / ell (inert); x / ell (Z).
     MyVector<Tint> xO = ring.d == 2 ? MyVector<Tint>(Omega.transpose() * xl) : xl;
     for (int k = 0; k < n; k++) {
-      if (split) {
+      if (degree_one) {
         Gens(pos, k) = UniversalScalarConversion<T, Tint>(xl(k));
         Gens(pos + 1, k) = UniversalScalarConversion<T, Tint>(xO(k) - UniversalScalarConversion<Tint, int64_t>(r_conj) * xl(k)) / UniversalScalarConversion<T, int64_t>(ell);
       } else {
