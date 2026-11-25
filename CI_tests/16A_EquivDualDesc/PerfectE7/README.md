@@ -14,7 +14,7 @@ against the constant functional `<E7, X> / min(E7)`. It is regenerated with
 
 ```
 python3 ../GeneratePerfectCone.py E7 PerfectE7.ext
-../../../src_group/GRP_LinPolytope_Automorphism rational PerfectE7.ext Oscar PerfectE7.grp
+../../../src_group/GRP_LinPolytope_Automorphism mpq_class PerfectE7.ext Oscar PerfectE7.grp
 ```
 
 `PerfectE7.grp` is `Aut(E7) / {+-1}`, of order 1451520.
