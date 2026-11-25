@@ -28,7 +28,7 @@
     GENUS_HermitianPieces genera d b N
         a line "d b N number": the hermitian genera of rank b over
         Q(zeta_d) / Q(zeta_d)^+ with scales between O_E and N O_E
-        (HermitianGenus.h, d not a power of 2)
+        (HermitianGenus.h)
     GENUS_HermitianPieces compare FilePieces d b N
         every invariant (HermitianPairInvariant) of the pieces of the file
         (Gram matrices and isometries acting on the columns, in turn) is
