@@ -3510,3 +3510,47 @@ short_split_vector_family:=function(ListSHV, N, residue)
     RemoveFile(FileE);
     return U;
 end;
+
+# The classes of a genus of Hermitian lattices over a CM field
+# (GENUS_HermitianEnumerate), from its genus symbol. The field is either
+# rec(conductor:=n, gens:=[...]) (the abelian field fixed by <gens> in
+# (Z/n)^*, the mass then computed exactly) or rec(poly:=[c_0, ..., c_d],
+# conj:=[t_0, ..., t_{d-1}]) (theta a root of the polynomial, its conjugate
+# on the powers of theta). mass is the mass of the genus, or fail to let the
+# program compute it. The result is the record of the program: the field,
+# the form of the ambient space, ListBasis, ListAutOrder, mass, complete.
+get_hermitian_enumeration:=function(field, symbol, mass)
+    local TmpDir, FileN, FileO, FileE, eProg, strOut, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "Herm.nml");
+    FileO:=Filename(TmpDir, "Herm.out");
+    FileE:=Filename(TmpDir, "Herm.err");
+    strOut:="&DATA\n";
+    if IsBound(field.conductor) then
+        strOut:=Concatenation(strOut, " AbelianConductor = ", String(field.conductor), "\n",
+                              " AbelianGenerators = ", JoinStringsWithSeparator(List(field.gens, String), ", "), "\n");
+    else
+        strOut:=Concatenation(strOut, " FieldPolynomial = ", JoinStringsWithSeparator(List(field.poly, String), ", "), "\n",
+                              " FieldConjugate = ", JoinStringsWithSeparator(List(field.conj, x->Concatenation("\"", String(x), "\"")), ", "), "\n");
+    fi;
+    strOut:=Concatenation(strOut, " GenusSymbol = \"", symbol, "\"\n");
+    if mass <> fail then
+        strOut:=Concatenation(strOut, " TotalMass = \"", String(mass), "\"\n");
+    fi;
+    strOut:=Concatenation(strOut, "/\n\n&METHOD\n/\n\n&SYSTEM\n OutFormat = \"GAP\"\n OutFile = \"", FileO, "\"\n/\n");
+    WriteStringFile(FileN, strOut);
+    eProg:=GetBinaryFilename("GENUS_HermitianEnumerate");
+    list_arg:=[FileN];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_HermitianEnumerate wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;

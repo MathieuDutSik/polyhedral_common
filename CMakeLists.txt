@@ -858,6 +858,8 @@ set(
   GENUS_Enumerate
   GENUS_SpinorGenera
   GENUS_GetGenusFromLattice
+  GENUS_HermitianEnumerate
+  GENUS_HermitianGenusOfLattice
   GENUS_AlgebraicModularForms
 )
 foreach(target IN LISTS GENERA_PROGRAMS)

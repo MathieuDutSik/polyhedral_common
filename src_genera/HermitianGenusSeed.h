@@ -360,6 +360,8 @@ MyMatrix<T> HermHyperplaneSublattice(HermLatticeData<T, Tint> const &L,
  */
 template <typename T, typename Tint> struct HermSeed {
   RealifiedRing<T, Tint> ring;
+  // the form of the space, h = sum_k theta^k h[k]
+  std::vector<MyMatrix<T>> h;
   MyMatrix<T> basis;
 };
 
@@ -486,6 +488,7 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
   }
   HermSeed<T, Tint> seed;
   seed.ring = CMOrderRealifiedRing<T, Tint>(ord, m, h);
+  seed.h = h;
   int n = seed.ring.n();
   seed.basis = IdentityMat<T>(n);
 #ifdef DEBUG_HERMITIAN_GENUS_SEED

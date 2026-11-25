@@ -140,6 +140,8 @@ src_genera/GENUS_*
 src_genera/GENUS_SpinorGenera
 src_genera/GENUS_GetGenusFromLattice
 src_genera/GENUS_MPI_Enumerate
+src_genera/GENUS_HermitianEnumerate
+src_genera/GENUS_HermitianGenusOfLattice
 src_genera/GENUS_MPI_AlgebraicModularForms
 src_genera/Bench_InvariantCost
 src_group/POLY_HashWeightMatrixLimited

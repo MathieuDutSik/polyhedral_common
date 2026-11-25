@@ -364,6 +364,68 @@ HermLocalSymbol HermLocalSymbolOfLattice(
   auto val = [&](ElemE<T> const &x) -> int {
     return x.is_zero() ? (1 << 28) : HermIdealVal(ord, P, to_e(x));
   };
+  if (P.type == HermIdealType::Split) {
+    /*
+      At a split prime O_E (x) O_{K_0,p} = O_P x O_conj(P) is not a local
+      ring: L_p is a pair of lattices paired by h, and the symbol is given
+      by the elementary divisors of that pairing at P, the blocks (s, r, +)
+      (every element is a norm). They are those of H over the localization
+      of O_E at P, a discrete valuation ring: a Smith elimination with
+      independent row and column operations, the pivot of least v_P.
+     */
+    SmallGram<T> M = H;
+    std::map<int, int> count;
+    int sz = m;
+    while (sz > 0) {
+      int bi = 0, bj = 0, bv = 1 << 28;
+      for (int i = 0; i < sz; i++) {
+        for (int j = 0; j < sz; j++) {
+          int v = val(M[i][j]);
+          if (v < bv) {
+            bv = v;
+            bi = i;
+            bj = j;
+          }
+        }
+      }
+      if (bv == (1 << 28)) {
+        std::cerr << "HERMSYM: the form is degenerate at a split prime\n";
+        throw TerminalException{1};
+      }
+      count[bv]++;
+      ElemE<T> inv = EInv(M[bi][bj], K);
+      // clear the column bj and the row bi, then remove them
+      for (int i = 0; i < sz; i++) {
+        if (i == bi || M[i][bj].is_zero()) {
+          continue;
+        }
+        ElemE<T> c = EMul(M[i][bj], inv, K);
+        for (int j = 0; j < sz; j++) {
+          M[i][j] = M[i][j] - EMul(c, M[bi][j], K);
+        }
+      }
+      SmallGram<T> M2;
+      for (int i = 0; i < sz; i++) {
+        if (i == bi) {
+          continue;
+        }
+        std::vector<ElemE<T>> row;
+        for (int j = 0; j < sz; j++) {
+          if (j != bj) {
+            row.push_back(M[i][j]);
+          }
+        }
+        M2.push_back(row);
+      }
+      M = M2;
+      sz--;
+    }
+    HermLocalSymbol sym;
+    for (auto const &[sv, r] : count) {
+      sym.blocks.push_back({sv, r, 1});
+    }
+    return sym;
+  }
   std::vector<LocalJordanComponent<T>> comps = LocalJordanSplitVal<T>(
       H, K, val, P.ell == 2, JordanForm::Hermitian, nullptr);
   HermLocalSymbol sym;

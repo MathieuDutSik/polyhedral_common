@@ -138,6 +138,17 @@ jobs:
           fi
           cd ../..
 
+      - name: Test the enumeration of genera of Hermitian lattices
+        run: |
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHermitianEnumeration.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The Hermitian enumeration test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       # the checks in the code (SANITY_CHECK_*), on cases that reach them;
       # it rebuilds the programs it runs
       - name: Test with the SANITY_CHECK macros
