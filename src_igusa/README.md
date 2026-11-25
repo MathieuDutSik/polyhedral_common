@@ -197,6 +197,10 @@ full rank facets and processes:
  FileLowerRankFacets = "unset"     ! full rank facets of conv(I_r), r <= that
  FileLowerRankRhs = "unset"
  IncidenceDirectory = "unset"      ! incidences kept on disk, one file per orbit
+ FileVertexRepresentatives = "unset" ! vertices of conv(I_n): vertex search
+ LowerRankRidgeRanks = ""          ! ranks of the facets G walked inside
+ SeedInitialFacets = T             ! start those walks from Psi_w
+ FileInitialRidges = "unset"       ! ridges of a previous run (".ridges")
 /
 &TSPACE ... /
 ```
@@ -232,6 +236,27 @@ current functional before each minimization: without them, with the
 incidences read from disk and so an almost empty pool of cuts, the linear
 programs are unbounded and each step adds a single cut (thousands of exact
 linear programs for one flip).
+
+Walk inside the facets of lower rank. With `FullRankOnly = F` and
+`LowerRankRidgeRanks = "r"`, the walk also runs on the facets of the facets
+G of rank r (the ridges of P in G): for r = n - 1 these are bounded when not
+vertical (their rank is n), the vertical ones being the lifts of the facets
+of the polytope Phi_0, so the walk on the bounded ridges of G, through their
+faces of codimension 3, reaches all the non vertical facets of G
+(Proposition PROP_nonvertical_connected, under (LP_n)). For r < n - 1 the
+non vertical facets of G of rank between r + 1 and n - 1 are unbounded and
+the walk needs the recursion into them; it is refused for now. Each lift of
+a facet of `FileLowerRankFacets` of rank r starts a walk from its facet
+Psi_w = G cap {X[e_{r+1}] = 1} (Proposition PROP_initial_facet) unless
+`SeedInitialFacets = F`; the flips from full rank facets to G give the
+other starting ridges. A ridge R of G is R = G cap Q for the other facet Q
+of P through R, and the pair (R, G) is identified by the canonical form of
+(G + Q, G); its points are the face of G + Q, through the incidence cache.
+The ridges are processed by increasing incidence and written to
+`CheckpointFile.ridges` (G, (cG), Q, (cQ), (done)), from which
+`FileInitialRidges` resumes. At n = 6, from F5 with r = 5, it gives in 22 s
+the 3 full rank facets F5, F14, F23 and 5 orbits of ridges in the facet of
+rank 5 (F11 is joined to them only through a facet of rank 1).
 
 Status. For n = 5 it gives the unique full rank facet in 4 seconds. For
 n = 6, from F5 it finds F5, F14, F23 and 11 orbits of bounded ridges in

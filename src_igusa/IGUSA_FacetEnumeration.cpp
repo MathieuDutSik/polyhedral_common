@@ -84,13 +84,70 @@ void process(FullNamelist const &eFull, std::ostream &os) {
       ListLowerRank.push_back({F, ParseScalar<T>(str)});
     }
   }
-  IgusaFacetEnumResult<T> l_orbit =
-      igusa_facet_enumeration<T, Tint, Tgroup>(space, ListInit, max_orbit, os,
-                                               full_rank_only, checkpoint_file,
-                                               n_processed_init,
-                                               ListLowerRank, complete_up_to,
-                                               incidence_dir,
-                                               incidence_function);
+  IgusaFacetEnumOptions<T> opt;
+  opt.full_rank_only = full_rank_only;
+  opt.checkpoint_file = checkpoint_file;
+  opt.n_processed_init = n_processed_init;
+  opt.ListLowerRank = ListLowerRank;
+  opt.complete_up_to = complete_up_to;
+  opt.incidence_dir = incidence_dir;
+  opt.incidence_function = incidence_function;
+  {
+    std::istringstream is_ranks(BlockDATA.get_string("LowerRankRidgeRanks"));
+    int r;
+    while (is_ranks >> r) {
+      opt.lower_ranks.insert(r);
+    }
+  }
+  opt.seed_initial_facets = BlockDATA.get_bool("SeedInitialFacets");
+  std::string file_vertex_lower =
+      BlockDATA.get_string("FileVertexRepresentativesLower");
+  std::vector<MyMatrix<T>> ListVertexReprLower;
+  if (file_vertex_lower != "unset") {
+    ListVertexReprLower = ReadListMatrixFile<T>(file_vertex_lower);
+    // the vertices of the face (F0, c) of P_r, in the coordinates of F0
+    opt.lower_vertex_function =
+        [&](MyMatrix<T> const &F0, T const &c) -> std::vector<MyMatrix<T>> {
+      int r = F0.rows();
+      std::vector<MyMatrix<T>> ListRepr;
+      for (auto &A : ListVertexReprLower) {
+        if (A.rows() == r) {
+          ListRepr.push_back(A);
+        }
+      }
+      if (ListRepr.empty()) {
+        std::cerr << "IGUSA_FACET_ENUM: no vertex representative of rank "
+                  << r << " in FileVertexRepresentativesLower\n";
+        throw TerminalException{1};
+      }
+      IgusaFaceVertices<T> info =
+          igusa_face_vertices<T, Tint, Tgroup>(params, F0, c, ListRepr, os);
+      MyMatrix<T> Binv = Inverse(info.B);
+      std::vector<MyMatrix<T>> l_Y;
+      for (auto &Y0 : info.l_vertex) {
+        l_Y.push_back(Binv * Y0 * Binv.transpose());
+      }
+      return l_Y;
+    };
+  }
+  std::string file_ridges = BlockDATA.get_string("FileInitialRidges");
+  if (file_ridges != "unset") {
+    std::vector<MyMatrix<T>> l_mat = ReadListMatrixFile<T>(file_ridges);
+    if (l_mat.size() % 5 != 0) {
+      std::cerr << "IGUSA_FACET_ENUM: FileInitialRidges should contain G, "
+                   "(cG), Q, (cQ), (done) for each ridge\n";
+      throw TerminalException{1};
+    }
+    for (size_t i = 0; i < l_mat.size(); i += 5) {
+      // done: 0 to do, 1 done, 2 postponed (processed after all the others)
+      T d = l_mat[i + 4](0, 0);
+      opt.ListInitRidge.push_back({l_mat[i], l_mat[i + 1](0, 0), l_mat[i + 2],
+                                   l_mat[i + 3](0, 0), d == T(1),
+                                   d == T(2)});
+    }
+  }
+  IgusaFacetEnumResult<T> l_orbit = igusa_facet_enumeration<T, Tint, Tgroup>(
+      space, ListInit, max_orbit, os, opt);
   os << "IGUSA_FACET_ENUM: number of orbits of full rank facets="
      << l_orbit.l_facet.size() << " of bounded ridges in facets of lower rank="
      << l_orbit.l_ridge.size() << "\n";

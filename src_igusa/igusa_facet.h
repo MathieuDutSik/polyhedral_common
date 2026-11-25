@@ -129,6 +129,130 @@ igusa_face_integral_points(IgusaSpace<T, Tint> &space,
 }
 
 /*
+  The Voronoi descent: the minimal vectors of a perfect form P* minimizing
+  tr(F P) over the Ryshkov polyhedron, F positive definite. At a perfect
+  form P with minimal vectors v (up to sign), either tr(F D) >= 0 on the
+  cone {D : D[v] >= 0 for all v}, that is F is in the Voronoi domain of P
+  and P is a minimizer, or an extreme ray D of that cone has tr(F D) < 0 and
+  the flip of P along D gives a perfect form with a smaller value of
+  tr(F .). The extreme ray is a vertex of the section sum_v D[v] = 1 of the
+  cone (pointed since P is perfect), found by the simplex method. The cuts
+  X[v] >= 1 for the minimal vectors of P* make every linear program of the
+  minimization of tr(F X) bounded from the start: the cone of these cuts
+  at P* is the dual of the Voronoi domain of P*, which contains F. (The
+  seed cuts below do not give that: on a ridge of the walk inside a facet
+  of rank 6 of conv(I_7), the linear programs stayed unbounded, one cut
+  being added at each of thousands of exact linear programs.)
+  It is done in an LLL reduced basis of F, Fr = U F U^T, starting from the
+  perfect form A_n of minimum 1; the vectors are given back in the basis of
+  F: Fr = U F U^T, and X'[v'] for X' = U^{-T} X U^{-1} is X[U^{-1} v'].
+ */
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> igusa_voronoi_descent(MyMatrix<T> const &F,
+                                                  std::ostream &os) {
+  int n = F.rows();
+  int dim = n * (n + 1) / 2;
+  LLLreduction<T, Tint> lll = LLLreducedBasis<T, Tint>(F, os);
+  MyMatrix<T> const &Fr = lll.GramMatRed;
+  MyMatrix<T> P(n, n);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      P(i, j) = (i == j) ? T(1) : T(1) / T(2);
+    }
+  }
+  // the coordinates of D: D_ii and D_ij, i < j; D[v] and tr(Fr D) in them
+  auto coeffs = [&](MyVector<Tint> const &v) -> MyVector<T> {
+    MyVector<T> c(dim);
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        T vi = UniversalScalarConversion<T, Tint>(v(i));
+        T vj = UniversalScalarConversion<T, Tint>(v(j));
+        c(k) = (i == j) ? T(vi * vi) : T(2 * vi * vj);
+        k++;
+      }
+    }
+    return c;
+  };
+  MyVector<T> obj(dim + 1);
+  obj(0) = T(0);
+  {
+    int k = 1;
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        obj(k) = (i == j) ? Fr(i, i) : T(2 * Fr(i, j));
+        k++;
+      }
+    }
+  }
+#ifdef DEBUG_IGUSA_FACET
+  size_t n_flip = 0;
+#endif
+  MyMatrix<Tint> SHV;
+  while (true) {
+    Tshortest<T, Tint> rec = T_ShortestVectorHalf<T, Tint>(P, os);
+    SHV = rec.SHV;
+    int nv = SHV.rows();
+    MyMatrix<T> Ineq(nv + 2, dim + 1);
+    MyVector<T> sum = ZeroVector<T>(dim);
+    for (int i = 0; i < nv; i++) {
+      MyVector<T> c = coeffs(GetMatrixRow(SHV, i));
+      Ineq(i, 0) = T(0);
+      for (int k = 0; k < dim; k++) {
+        Ineq(i, k + 1) = c(k);
+      }
+      sum += c;
+    }
+    Ineq(nv, 0) = T(-1);
+    Ineq(nv + 1, 0) = T(1);
+    for (int k = 0; k < dim; k++) {
+      Ineq(nv, k + 1) = sum(k);
+      Ineq(nv + 1, k + 1) = -sum(k);
+    }
+    LpSolution<T> sol = SIMPLEX_LinearProgramming(Ineq, obj, os);
+    if (!sol.DirectSolution || !sol.DualSolution) {
+      std::cerr << "IGUSA_FACET: the Voronoi descent met an unbounded or "
+                   "infeasible linear program, P is not perfect\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> const &x = *sol.DirectSolution;
+    T value(0);
+    for (int k = 0; k < dim; k++) {
+      value += obj(k + 1) * x(k);
+    }
+    if (value >= 0) {
+      break;
+    }
+    MyMatrix<T> D(n, n);
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i; j < n; j++) {
+        D(i, j) = x(k);
+        D(j, i) = x(k);
+        k++;
+      }
+    }
+    P = Flipping_Perfect<T, Tint>(P, D, os).first;
+#ifdef DEBUG_IGUSA_FACET
+    n_flip++;
+#endif
+  }
+#ifdef DEBUG_IGUSA_FACET
+  os << "IGUSA_FACET: igusa_voronoi_descent, flips=" << n_flip
+     << " |SHV|=" << SHV.rows() << "\n";
+#endif
+  // U is unimodular, so U^{-1} v' is integral
+  MyMatrix<T> Uinv = Inverse(UniversalMatrixConversion<T, Tint>(lll.Pmat));
+  std::vector<MyVector<Tint>> l_v;
+  for (int i = 0; i < SHV.rows(); i++) {
+    MyVector<T> vp = UniversalVectorConversion<T, Tint>(GetMatrixRow(SHV, i));
+    MyVector<T> v = Uinv * vp;
+    l_v.push_back(UniversalVectorConversion<Tint, T>(v));
+  }
+  return l_v;
+}
+
+/*
   Before minimizing tr(F X), F positive definite, over the Ryshkov
   polyhedron or over I: the minimizer has its minimal vectors among the
   short vectors of F^{-1}, and seeding the cuts X[v] >= 1 with vectors that
@@ -141,6 +265,9 @@ igusa_face_integral_points(IgusaSpace<T, Tint> &space,
 template <typename T, typename Tint>
 void igusa_insert_seed_cuts(IgusaSpace<T, Tint> &space, MyMatrix<T> const &F,
                             std::ostream &os) {
+  for (auto &v : igusa_voronoi_descent<T, Tint>(F, os)) {
+    (void)igusa_insert_cut(space, v);
+  }
   MyMatrix<T> Finv = Inverse(F);
   int n = Finv.rows();
   T min_diag = Finv(0, 0);
