@@ -80,6 +80,18 @@ faster); every result is exact.
     touching `P`, with a witness lattice and its contact vectors. The value
     is scale invariant. See "Maximal kissing number" below.
 
+  * **POLYNORM_MinimalCoveringPolytope** `[arith] [FileEXT] [OutFormat] [OutFile] [MaxStep]`
+    takes a covering polytope `P` (`P + Z^n = R^n`) and returns a minimal
+    covering polytope `Q` contained in `P`: `Q` is covering and no convex
+    body strictly contained in `Q` is (Codenotti, Freyer, Krivokuca,
+    *Minimal covering bodies and Brunn-Minkowski type inequalities for the
+    covering radius*). `P` is first shrunk to `mu(P) P`, then reduced by
+    vertex removals, facet pushes and vertex cuts, each the deepest one
+    that keeps the covering, computed exactly; minimality is the criterion
+    of Lemma 2.2 of the paper (no vertex can be cut). At most `MaxStep`
+    reductions are done (default 1000). See "Minimal covering polytopes"
+    below.
+
 `OutFormat` is `text` (default) or `GAP`, and `OutFile` is a file name or
 `stderr` / `stdout`.
 
@@ -199,6 +211,31 @@ of Talata for the translative kissing number of the tetrahedron is
 attained by a lattice packing. The 2D cases and the cube take seconds; the
 exactness proofs for the octahedron and the tetrahedron take minutes.
 
+Minimal covering polytopes
+--------------------------
+
+A covering polytope `K` is minimal exactly when, for every vertex `v` and
+every `u` exposing it, the truncations `K cap {<x,u> <= <v,u> - eps}` are
+not covering (Lemma 2.2 of the paper above). Removing vertices is not
+enough: the rectangle `[0,3/2] x [0,1]` contains the unit square, but the
+convex hull of three of its vertices has area 3/4. So the vertices are cut.
+
+The deepest covering cut `t* = min{t : K cap {<x,u> <= t} is covering}` is
+`sup_x h(x)` with `h(x) = min{<x - z, u> : x - z in K}`, computed exactly by
+a branch and bound like the covering radius one: after translating, `x` is
+in `K` with `<x,u> >= s`, and for every other lattice point `z`, either
+`x - z` is in `K` with `<x - z, u> >= s`, or `x - z` is outside `K` through
+some facet `j`, in the cone of `j`. A node is solved when no lattice point
+of `x* - K` violates its bound. Since `h` is not continuous, only the nodes
+whose region has a nonempty interior count (a second linear program).
+
+Each step applies the first reduction that keeps the covering: the
+removal of a vertex, the deepest translate of a facet, the deepest cut of
+a vertex in the direction of the sum of its facet normals. The cuts alone
+can go on forever (on the rectangle, a vertex gets flatter and flatter on
+an edge of the limit square); the first two reductions add no new facet
+direction and avoid that on the examples.
+
 Files
 -----
 
@@ -216,4 +253,6 @@ Files
   * `PolyNorm_Kissing.h`: the maximal kissing number by the contact
     configuration enumeration of `PolyNorm_PackingContacts.h` and the exact
     admissibility branch and bound.
+  * `PolyNorm_MinimalCovering.h`: the deepest covering cut and the
+    reduction to a minimal covering polytope.
   * The CI test is `CI_tests/25B_PolyNorm/TestPolyNorm.g`.
