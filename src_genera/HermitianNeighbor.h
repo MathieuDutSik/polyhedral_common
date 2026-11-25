@@ -129,9 +129,9 @@ MyMatrix<Tint> HermRowsToMatrix(std::vector<std::vector<int64_t>> const &rows,
   x, the residues of the basis e, the Z-basis of P and of P^2 (rows, on e),
   e and f over Q, the index of conj(P) and the type over K_0.
  */
-enum class HermPrimeType { Split, Inert, Ramified };
+enum class HermIdealType { Split, Inert, Ramified };
 
-template <typename Tint> struct HermPrime {
+template <typename Tint> struct HermIdealPrime {
   int64_t ell;
   int e;
   int f;
@@ -142,13 +142,15 @@ template <typename Tint> struct HermPrime {
   MyMatrix<Tint> ideal;
   MyMatrix<Tint> ideal_sq;
   size_t conj_index;
-  HermPrimeType type;
+  HermIdealType type;
   std::string name;
+  // P^1, P^2, ... as Z-bases, computed on demand by HermIdealVal
+  mutable std::vector<MyMatrix<Tint>> powers;
   uint64_t q() const { return F.q; }
 };
 
 template <typename Tint>
-FqElt HermResidue(HermPrime<Tint> const &P, MyVector<Tint> const &a) {
+FqElt HermResidue(HermIdealPrime<Tint> const &P, MyVector<Tint> const &a) {
   FqElt res = FqFromCoeffs(P.F, std::vector<int64_t>{});
   for (int k = 0; k < a.size(); k++) {
     int64_t c = order_residue(a(k), P.ell);
@@ -163,7 +165,7 @@ FqElt HermResidue(HermPrime<Tint> const &P, MyVector<Tint> const &a) {
 
 // The residue of an element of E with denominators prime to ell.
 template <typename T, typename Tint>
-FqElt HermResidueRat(HermPrime<Tint> const &P, MyVector<T> const &a) {
+FqElt HermResidueRat(HermIdealPrime<Tint> const &P, MyVector<T> const &a) {
   FqElt res = FqFromCoeffs(P.F, std::vector<int64_t>{});
   for (int k = 0; k < a.size(); k++) {
     int64_t c = order_residue_rat(a(k), P.ell);
@@ -192,8 +194,8 @@ bool HermInLattice(MyMatrix<Tint> const &B, MyVector<Tint> const &a) {
  */
 template <typename T, typename Tint>
 MyVector<Tint>
-HermFindUniformizer(MyMatrix<Tint> const &B, HermPrime<Tint> const &P,
-                    std::vector<HermPrime<Tint>> const &l_other) {
+HermFindUniformizer(MyMatrix<Tint> const &B, HermIdealPrime<Tint> const &P,
+                    std::vector<HermIdealPrime<Tint>> const &l_other) {
   int k = B.rows();
   int d = B.cols();
   for (int iter = 0; iter < 10000; iter++) {
@@ -225,10 +227,73 @@ HermFindUniformizer(MyMatrix<Tint> const &B, HermPrime<Tint> const &P,
 }
 
 /*
+  The valuation v_P of an element of E (rational coordinates on e): the
+  powers of ell are removed (v_P(ell) = e), then the membership in the
+  successive powers of P, kept in P.powers.
+ */
+template <typename T, typename Tint>
+int HermIdealVal(CMOrder<T, Tint> const &ord, HermIdealPrime<Tint> const &P,
+                 MyVector<T> const &a) {
+  int d = ord.deg;
+  if (IsZeroVector(a)) {
+    return 1 << 28;
+  }
+  Tint ell_T = UniversalScalarConversion<Tint, int64_t>(P.ell);
+  Tint den(1);
+  for (int k = 0; k < d; k++) {
+    den = LCMpair(den, GetDenominator_z(a(k)));
+  }
+  // a = num / den: v_P(a) = v_P(num) - e v_ell(den)
+  MyVector<Tint> num(d);
+  for (int k = 0; k < d; k++) {
+    num(k) = UniversalScalarConversion<Tint, T>(a(k) * UniversalScalarConversion<T, Tint>(den));
+  }
+  int val = 0;
+  while (den % ell_T == 0) {
+    den /= ell_T;
+    val -= P.e;
+  }
+  while (true) {
+    bool all = true;
+    for (int k = 0; k < d && all; k++) {
+      all = (num(k) % ell_T == 0);
+    }
+    if (!all) {
+      break;
+    }
+    num /= ell_T;
+    val += P.e;
+  }
+  if (P.powers.empty()) {
+    P.powers.push_back(P.ideal);
+  }
+  int k = 0;
+  while (true) {
+    if (static_cast<int>(P.powers.size()) <= k) {
+      MyMatrix<Tint> const &A = P.powers.back();
+      MyMatrix<Tint> Gen(A.rows() * P.ideal.rows(), d);
+      for (int i = 0; i < A.rows(); i++) {
+        for (int j = 0; j < P.ideal.rows(); j++) {
+          MyVector<Tint> pr = ord.product(GetMatrixRow(A, i), GetMatrixRow(P.ideal, j));
+          for (int c = 0; c < d; c++) {
+            Gen(i * P.ideal.rows() + j, c) = pr(c);
+          }
+        }
+      }
+      P.powers.push_back(GetZbasis(Gen));
+    }
+    if (!HermInLattice<T, Tint>(P.powers[k], num)) {
+      return val + k;
+    }
+    k++;
+  }
+}
+
+/*
   The primes of O_E above ell.
  */
 template <typename T, typename Tint>
-std::vector<HermPrime<Tint>> HermPrimesAbove(CMOrder<T, Tint> const &ord,
+std::vector<HermIdealPrime<Tint>> HermIdealPrimesAbove(CMOrder<T, Tint> const &ord,
                                              int64_t ell) {
   int d = ord.deg;
   HermResidueAlgebra A;
@@ -292,7 +357,7 @@ std::vector<HermPrime<Tint>> HermPrimesAbove(CMOrder<T, Tint> const &ord,
     if (tot != dim_ss) {
       continue;
     }
-    std::vector<HermPrime<Tint>> l_prime;
+    std::vector<HermIdealPrime<Tint>> l_prime;
     MyVector<Tint> z_lift(d);
     for (int a = 0; a < d; a++) {
       z_lift(a) = UniversalScalarConversion<Tint, int64_t>(z[a]);
@@ -317,7 +382,7 @@ std::vector<HermPrime<Tint>> HermPrimesAbove(CMOrder<T, Tint> const &ord,
                             NullspaceMatMod(HermRowsToMatrix<Tint>(rows, d),
                                             ell_T)
                                 .rows());
-      HermPrime<Tint> P;
+      HermIdealPrime<Tint> P;
       P.ell = ell;
       P.f = g.degree();
       P.e = dim_loc / P.f;
@@ -405,7 +470,7 @@ std::vector<HermPrime<Tint>> HermPrimesAbove(CMOrder<T, Tint> const &ord,
     }
     // the conjugate primes and the types
     for (size_t i = 0; i < l_prime.size(); i++) {
-      HermPrime<Tint> &P = l_prime[i];
+      HermIdealPrime<Tint> &P = l_prime[i];
       std::optional<size_t> opt_j;
       for (size_t j = 0; j < l_prime.size() && !opt_j; j++) {
         bool all = true;
@@ -423,11 +488,11 @@ std::vector<HermPrime<Tint>> HermPrimesAbove(CMOrder<T, Tint> const &ord,
       }
       P.conj_index = *opt_j;
       if (*opt_j != i) {
-        P.type = HermPrimeType::Split;
+        P.type = HermIdealType::Split;
       } else {
         FqElt rz = HermResidue(P, P.z);
         FqElt rcz = HermResidue(P, ord.conjugate(P.z));
-        P.type = (rz == rcz) ? HermPrimeType::Ramified : HermPrimeType::Inert;
+        P.type = (rz == rcz) ? HermIdealType::Ramified : HermIdealType::Inert;
       }
       P.name = "(" + std::to_string(ell) + "," + std::to_string(i) + ")";
     }
@@ -617,7 +682,7 @@ MyMatrix<Tint> HermIdealTimesLattice(HermLatticeData<T, Tint> const &L,
 
 template <typename T, typename Tint>
 HermLineSpace HermGetLineSpace(HermLatticeData<T, Tint> const &L,
-                               HermPrime<Tint> const &C) {
+                               HermIdealPrime<Tint> const &C) {
   int n = L.n();
   int64_t ell = C.ell;
   Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
@@ -690,56 +755,21 @@ HermLineSpace HermGetLineSpace(HermLatticeData<T, Tint> const &L,
 }
 
 /*
-  The data of the neighbors at P: the prime C of the line space, the
-  uniformizer, the Z-basis of C^{-1} (rows on e, rational).
+  The fractional ideal C^{-1} = ell^{-1} { b in O_E : b C in ell O_E }, as
+  the rows of a Z-basis on e.
  */
-template <typename T, typename Tint> struct HermNeighborPrime {
-  HermPrime<Tint> P;
-  HermPrime<Tint> C;
-  MyVector<Tint> pi;
-  MyMatrix<T> C_inv;
-};
-
 template <typename T, typename Tint>
-HermNeighborPrime<T, Tint>
-HermGetNeighborPrime(CMOrder<T, Tint> const &ord,
-                     std::vector<HermPrime<Tint>> const &l_prime, size_t i) {
+MyMatrix<T> HermIdealInverse(CMOrder<T, Tint> const &ord,
+                             HermIdealPrime<Tint> const &C) {
   int d = ord.deg;
-  HermNeighborPrime<T, Tint> np;
-  np.P = l_prime[i];
-  np.C = l_prime[np.P.conj_index];
-  int64_t ell = np.P.ell;
+  int64_t ell = C.ell;
   Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
-  std::vector<HermPrime<Tint>> l_other;
-  for (size_t j = 0; j < l_prime.size(); j++) {
-    if (j != i) {
-      l_other.push_back(l_prime[j]);
-    }
-  }
-  if (np.P.type == HermPrimeType::Inert) {
-    // a uniformizer of p in K_0: P cap K_0, the elements fixed by conj
-    MyMatrix<Tint> Pc = np.P.ideal;
-    MyMatrix<Tint> Diff(Pc.rows(), d);
-    for (int r = 0; r < Pc.rows(); r++) {
-      MyVector<Tint> v = GetMatrixRow(Pc, r);
-      MyVector<Tint> w = ord.conjugate(v) - v;
-      for (int a = 0; a < d; a++) {
-        Diff(r, a) = w(a);
-      }
-    }
-    MyMatrix<Tint> Ker = NullspaceIntMat(Diff);
-    MyMatrix<Tint> Fixed = Ker * Pc;
-    np.pi = HermFindUniformizer<T, Tint>(Fixed, np.P, l_other);
-  } else {
-    np.pi = HermFindUniformizer<T, Tint>(np.P.ideal, np.P, l_other);
-  }
-  // C^{-1} = ell^{-1} { b in O_E : b C in ell O_E }
-  MyMatrix<Tint> Cond(d, d * np.C.ideal.rows());
+  MyMatrix<Tint> Cond(d, d * C.ideal.rows());
   for (int a = 0; a < d; a++) {
     MyVector<Tint> ea = ZeroVector<Tint>(d);
     ea(a) = 1;
-    for (int r = 0; r < np.C.ideal.rows(); r++) {
-      MyVector<Tint> pr = ord.product(ea, GetMatrixRow(np.C.ideal, r));
+    for (int r = 0; r < C.ideal.rows(); r++) {
+      MyVector<Tint> pr = ord.product(ea, GetMatrixRow(C.ideal, r));
       for (int c = 0; c < d; c++) {
         Cond(a, r * d + c) = pr(c);
       }
@@ -758,7 +788,55 @@ HermGetNeighborPrime(CMOrder<T, Tint> const &ord,
     }
   }
   MyMatrix<Tint> D = GetZbasis(Gen);
-  np.C_inv = UniversalMatrixConversion<T, Tint>(D) / UniversalScalarConversion<T, int64_t>(ell);
+  return UniversalMatrixConversion<T, Tint>(D) /
+         UniversalScalarConversion<T, int64_t>(ell);
+}
+
+/*
+  The data of the neighbors at P: the prime C of the line space, the
+  uniformizer, the Z-basis of C^{-1} (rows on e, rational).
+ */
+template <typename T, typename Tint> struct HermNeighborPrime {
+  HermIdealPrime<Tint> P;
+  HermIdealPrime<Tint> C;
+  MyVector<Tint> pi;
+  MyMatrix<T> C_inv;
+};
+
+template <typename T, typename Tint>
+HermNeighborPrime<T, Tint>
+HermGetNeighborPrime(CMOrder<T, Tint> const &ord,
+                     std::vector<HermIdealPrime<Tint>> const &l_prime, size_t i) {
+  int d = ord.deg;
+  HermNeighborPrime<T, Tint> np;
+  np.P = l_prime[i];
+  np.C = l_prime[np.P.conj_index];
+  int64_t ell = np.P.ell;
+  Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
+  std::vector<HermIdealPrime<Tint>> l_other;
+  for (size_t j = 0; j < l_prime.size(); j++) {
+    if (j != i) {
+      l_other.push_back(l_prime[j]);
+    }
+  }
+  if (np.P.type == HermIdealType::Inert) {
+    // a uniformizer of p in K_0: P cap K_0, the elements fixed by conj
+    MyMatrix<Tint> Pc = np.P.ideal;
+    MyMatrix<Tint> Diff(Pc.rows(), d);
+    for (int r = 0; r < Pc.rows(); r++) {
+      MyVector<Tint> v = GetMatrixRow(Pc, r);
+      MyVector<Tint> w = ord.conjugate(v) - v;
+      for (int a = 0; a < d; a++) {
+        Diff(r, a) = w(a);
+      }
+    }
+    MyMatrix<Tint> Ker = NullspaceIntMat(Diff);
+    MyMatrix<Tint> Fixed = Ker * Pc;
+    np.pi = HermFindUniformizer<T, Tint>(Fixed, np.P, l_other);
+  } else {
+    np.pi = HermFindUniformizer<T, Tint>(np.P.ideal, np.P, l_other);
+  }
+  np.C_inv = HermIdealInverse(ord, np.C);
   return np;
 }
 
@@ -776,8 +854,8 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
   int d = ord.deg;
   int64_t ell = np.P.ell;
   Tint ell_T = UniversalScalarConversion<Tint, int64_t>(ell);
-  HermPrime<Tint> const &P = np.P;
-  HermPrime<Tint> const &C = np.C;
+  HermIdealPrime<Tint> const &P = np.P;
+  HermIdealPrime<Tint> const &C = np.C;
   MyVector<Tint> w(n);
   for (int k = 0; k < n; k++) {
     w(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
@@ -785,7 +863,7 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
   MyMatrix<Tint> Mpi = L.mult_of(np.pi);
   // the vectors x of the neighbors
   std::vector<MyVector<Tint>> l_x;
-  if (P.type == HermPrimeType::Split) {
+  if (P.type == HermIdealType::Split) {
     l_x.push_back(Mpi.transpose() * w);
   } else {
     MyVector<T> hww = L.herm(w, w);
@@ -812,7 +890,7 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
     uint64_t q = P.F.q;
     std::optional<FqElt> target;
     int half = P.f / 2;
-    if (P.type == HermPrimeType::Inert) {
+    if (P.type == HermIdealType::Inert) {
       // Tr(s lambda) = -h(w, w) / pi modulo P
       MyMatrix<T> Mpi_e = UniversalMatrixConversion<T, Tint>(ord.mult_matrix(np.pi));
       MyVector<T> hww_pi = Inverse(Mpi_e).transpose() * hww;
