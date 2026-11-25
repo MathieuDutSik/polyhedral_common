@@ -16,16 +16,18 @@
 #endif
 #include "Permutation.h"
 #include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabMethods.h"
 #include "MatrixGroup.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T, typename Tgroup>
 void full_process_A(std::string const &eFile, std::string const &OutFormat,
-                    std::ostream &os) {
+                    LinPolytopeMethod method, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
   //
-  Tgroup GRP = LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
+  Tgroup GRP = LinPolytope_Automorphism_Method<T, Tgroup>(EXT, method,
+                                                         std::cerr);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
@@ -79,16 +81,21 @@ int main(int argc, char *argv[]) {
     std::string FileEXT;
     std::string OutFormat = "GAP";
     std::string FileGRP = "stderr";
+    std::string method_str = "standard";
+    LinPolytopeMethod method = LinPolytopeMethod::standard;
     std::ostream *os_ptr = nullptr;
     ArithmeticDispatch dispatch;
     auto f_arith = [&]<typename T>() -> void {
-      full_process_A<T, Tgroup>(FileEXT, OutFormat, *os_ptr);
+      full_process_A<T, Tgroup>(FileEXT, OutFormat, method, *os_ptr);
     };
     add_rational_arithmetics<Trat>(dispatch, f_arith);
     add_algebraic_field_arithmetics(dispatch, f_arith);
-    if (argc != 3 && argc != 5) {
+    if (argc != 3 && argc != 5 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
+      std::cerr << "GRP_LinPolytope_Automorphism arith [FileEXT] [OutFormat] "
+                   "[FileGRP] [method]\n";
+      std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Automorphism arith [FileEXT] [OutFormat] "
                    "[FileGRP]\n";
       std::cerr << "or\n";
@@ -98,6 +105,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or "
                    "Oscar/CPP)\n";
       std::cerr << "FileGRP   : The file for outputting the group\n";
+      std::cerr << "method    : The method of computation (standard by "
+                   "default)\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";
@@ -116,15 +125,31 @@ int main(int argc, char *argv[]) {
       std::cerr << "stderr : standard error (default)\n";
       std::cerr << "stdout : standard output\n";
       std::cerr << "otherwise output to the named file\n";
+      std::cerr << "\n";
+      std::cerr << "        --- method ---\n";
+      std::cerr << "\n";
+      LinPolytopeMethodPrintDescriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
     FileEXT = argv[2];
-    if (argc == 5) {
+    if (argc >= 5) {
       OutFormat = argv[3];
       FileGRP = argv[4];
     }
+    if (argc == 6) {
+      method_str = argv[5];
+    }
+    std::optional<LinPolytopeMethod> opt_method =
+        LinPolytopeMethodFromString(method_str);
+    if (!opt_method) {
+      std::cerr << "GRP_LinPolytope_Automorphism: unknown method="
+                << method_str << ", the allowed ones are\n";
+      LinPolytopeMethodPrintDescriptions(std::cerr);
+      throw TerminalException{1};
+    }
+    method = *opt_method;
     //
     auto f = [&](std::ostream &os_out) -> void {
       os_ptr = &os_out;

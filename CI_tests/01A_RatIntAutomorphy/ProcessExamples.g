@@ -8,10 +8,13 @@ Read("../access_points.g");
 #
 # The examples are the classification of simplices in dimension 5 to 7
 # and the simple root systems of the reflective forms in dimension 4
-# and 5. As in the former sections, the root systems are used for the
-# integral tests only: the rational section had AppendReflectiveDim45
-# set to false and the double coset tests enumerate the groups element
-# by element, which is out of reach for those examples.
+# and 5. As in the former sections, the root systems are not used for
+# the rational tests (the rational section had AppendReflectiveDim45 set
+# to false) nor for the double coset tests, which enumerate the groups
+# element by element, out of reach for those examples. They are used for
+# the integral tests and for the tests of the methods of the rational
+# codes, where the simplices alone (bases, whose groups are the full
+# symmetric groups) would test little.
 
 ListEXT_simplices:=[];
 for n in [5..7]
@@ -132,6 +135,158 @@ TestCase_Rational_Isomorphy:=function(EXT)
         return false;
     fi;
     return true;
+end;
+
+
+#
+# The methods of the rational codes: the last argument of
+# GRP_LinPolytope_Automorphism, GRP_LinPolytope_Canonic and
+# GRP_LinPolytope_Isomorphism. Every method must give the same group, a
+# canonical form invariant under the scrambling, and isomorphisms that are
+# linear equivalences. The reflective root systems are included: they are
+# not bases, so their groups are not the full symmetric groups of the
+# simplices.
+#
+
+ListMethod:=["standard", "graph", "subset", "plesken_souvignier"];
+
+# The configuration with one more coordinate, a combination of the others:
+# the same linear equivalences of the rows, but not full column rank.
+extend_ext:=function(EXT)
+    local n;
+    n:=Length(EXT[1]);
+    return List(EXT, x->Concatenation(x, [Sum([1..n], i->i * x[i])]));
+end;
+
+# Whether one linear map sends the row i of EXT1 to the row V[i] of EXT2 for
+# every i, EXT1 being of full column rank.
+IsLinearEquivalenceMap:=function(EXT1, EXT2, V)
+    local ListIdx, Basis, i, g;
+    if Set(V) <> [1..Length(EXT2)] then
+        return false;
+    fi;
+    ListIdx:=[];
+    Basis:=[];
+    for i in [1..Length(EXT1)]
+    do
+        if RankMat(Concatenation(Basis, [EXT1[i]])) > Length(Basis) then
+            Add(Basis, EXT1[i]);
+            Add(ListIdx, i);
+        fi;
+    od;
+    g:=Inverse(Basis) * List(ListIdx, i->EXT2[V[i]]);
+    return ForAll([1..Length(EXT1)], i->EXT1[i] * g = EXT2[V[i]]);
+end;
+
+TestCase_Methods_Automorphy:=function(EXT)
+    local EXT_img, ListGRP, method, rec_gap, rec_img;
+    EXT_img:=scramble_ext(EXT);
+    ListGRP:=[];
+    for method in ListMethod
+    do
+        rec_gap:=get_grp_automorphy(EXT, rec(method:=method));
+        if is_error(rec_gap) then
+            return false;
+        fi;
+        rec_img:=get_grp_automorphy(EXT_img, rec(method:=method));
+        if is_error(rec_img) then
+            return false;
+        fi;
+        if Order(rec_gap.GAPperm) <> Order(rec_img.GAPperm) then
+            Print("Methods_Automorphy: method=", method, " different orders for EXT and its image\n");
+            return false;
+        fi;
+        Add(ListGRP, rec_gap.GAPperm);
+    od;
+    if ForAny(ListGRP, x->x <> ListGRP[1]) then
+        Print("Methods_Automorphy: the methods give different groups, orders=", List(ListGRP, Order), "\n");
+        return false;
+    fi;
+    return true;
+end;
+
+TestCase_Methods_Canonic:=function(EXT)
+    local EXT_img, method, EXT_can1, EXT_can2, EXT_can3;
+    EXT_img:=scramble_ext(EXT);
+    for method in ListMethod
+    do
+        EXT_can1:=get_canonic_form(EXT, rec(method:=method));
+        if is_error(EXT_can1) then
+            return false;
+        fi;
+        EXT_can2:=get_canonic_form(EXT_img, rec(method:=method));
+        if is_error(EXT_can2) then
+            return false;
+        fi;
+        if EXT_can1 <> EXT_can2 then
+            Print("Methods_Canonic: method=", method, " different canonical forms\n");
+            return false;
+        fi;
+        # Not of full column rank: the column reduction keeps the first
+        # columns, so the canonical form is the same.
+        EXT_can3:=get_canonic_form(extend_ext(EXT_img), rec(method:=method));
+        if is_error(EXT_can3) then
+            return false;
+        fi;
+        if EXT_can1 <> EXT_can3 then
+            Print("Methods_Canonic: method=", method, " different canonical form for the extended configuration\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
+TestCase_Methods_Isomorphy:=function(EXT)
+    local EXT_img, method, V, Vext;
+    EXT_img:=scramble_ext(EXT);
+    for method in ListMethod
+    do
+        V:=get_isomorphism_result(EXT, EXT_img, rec(method:=method));
+        if is_error(V) then
+            return false;
+        fi;
+        if V=fail or not IsLinearEquivalenceMap(EXT, EXT_img, V) then
+            Print("Methods_Isomorphy: method=", method, " no isomorphism or a wrong one\n");
+            return false;
+        fi;
+        Vext:=get_isomorphism_result(extend_ext(EXT), extend_ext(EXT_img), rec(method:=method));
+        if is_error(Vext) then
+            return false;
+        fi;
+        if Vext=fail or not IsLinearEquivalenceMap(EXT, EXT_img, Vext) then
+            Print("Methods_Isomorphy: method=", method, " no isomorphism or a wrong one for the extended configurations\n");
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
+# Configurations of the same shape whose groups have different orders are
+# not isomorphic, and every method has to say so.
+TestCase_Methods_NonIsomorphy:=function(ListEXT, max_pair)
+    local ListOrder, n_pair, n_err, i, j, method, V;
+    ListOrder:=List(ListEXT, x->Order(get_grp_automorphy(x).GAPperm));
+    n_pair:=0;
+    n_err:=0;
+    for i in [1..Length(ListEXT)]
+    do
+        for j in [i+1..Length(ListEXT)]
+        do
+            if n_pair < max_pair and Length(ListEXT[i]) = Length(ListEXT[j]) and Length(ListEXT[i][1]) = Length(ListEXT[j][1]) and ListOrder[i] <> ListOrder[j] then
+                n_pair:=n_pair + 1;
+                for method in ListMethod
+                do
+                    V:=get_isomorphism_result(ListEXT[i], ListEXT[j], rec(method:=method));
+                    if V <> fail then
+                        Print("Methods_NonIsomorphy: method=", method, " pair ", i, " ", j, " found isomorphic\n");
+                        n_err:=n_err + 1;
+                    fi;
+                od;
+            fi;
+        od;
+    od;
+    Print("Methods_NonIsomorphy: ", n_pair, " pairs, n_err=", n_err, "\n");
+    return n_err;
 end;
 
 
@@ -444,6 +599,14 @@ n_error:=n_error + RunTestSuite("Rational",
      ["Rational_Isomorphy", TestCase_Rational_Isomorphy],
      ["Rational_HashWeightMatrixLimited", TestCase_Rational_HashWeightMatrixLimited]],
     ListEXT_simplices);
+
+n_error:=n_error + RunTestSuite("Methods",
+    [["Methods_Automorphy", TestCase_Methods_Automorphy],
+     ["Methods_Canonic", TestCase_Methods_Canonic],
+     ["Methods_Isomorphy", TestCase_Methods_Isomorphy]],
+    ListEXT_integral);
+
+n_error:=n_error + TestCase_Methods_NonIsomorphy(ListEXT_reflective, 20);
 
 n_error:=n_error + RunTestSuite("Integral",
     [["Integral_Automorphy", TestCase_Integral_Automorphy],

@@ -8,20 +8,27 @@
 #include "NumberTheoryFlint.h"
 #endif
 #include "GRP_GroupFct.h"
+#include "Permutation.h"
+#include "Group.h"
 #include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabMethods.h"
 #include "Arithmetic_dispatch_types.h"
 // clang-format on
 
 template <typename T>
 void process(std::string const &FileExt1, std::string const &FileExt2,
-             std::string const &OutFormat, std::string const &FileO) {
+             std::string const &OutFormat, std::string const &FileO,
+             LinPolytopeMethod method) {
   using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using Tgroup = permutalib::Group<Telt, mpz_class>;
   MyMatrix<T> EXT1 = ReadMatrixFile<T>(FileExt1);
   MyMatrix<T> EXT2 = ReadMatrixFile<T>(FileExt2);
   size_t nbRow = EXT1.rows();
   //
   std::optional<std::vector<Tidx>> equiv =
-      LinPolytope_Isomorphism<T, Tidx>(EXT1, EXT2, std::cerr);
+      LinPolytope_Isomorphism_Method<T, Tgroup>(EXT1, EXT2, method,
+                                                std::cerr);
   //
   auto print_info = [&](std::ostream &os) -> void {
     if (OutFormat == "Oscar") {
@@ -69,9 +76,11 @@ int main(int argc, char *argv[]) {
     std::string FileExt2;
     std::string OutFormat = "GAP";
     std::string FileO = "stderr";
+    std::string method_str = "standard";
+    LinPolytopeMethod method = LinPolytopeMethod::standard;
     ArithmeticDispatch dispatch;
     auto f_arith = [&]<typename T>() -> void {
-      process<T>(FileExt1, FileExt2, OutFormat, FileO);
+      process<T>(FileExt1, FileExt2, OutFormat, FileO, method);
     };
     add_rational_arithmetics(dispatch, f_arith);
     add_algebraic_field_arithmetics(dispatch, f_arith);
@@ -81,9 +90,13 @@ int main(int argc, char *argv[]) {
                    f_arith.template operator()<QuadField<Trat_quad_field, 3>>();
                  });
 #endif
-    if (argc != 6 && argc != 4) {
+    if (argc != 7 && argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
+      std::cerr
+          << "GRP_LinPolytope_Isomorphism [arith] [EXT1] [EXT2] [OutFormat] "
+             "[OutEquiv] [method]\n";
+      std::cerr << "or\n";
       std::cerr
           << "GRP_LinPolytope_Isomorphism [arith] [EXT1] [EXT2] [OutFormat] "
              "[OutEquiv]\n";
@@ -92,20 +105,38 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "OutEquiv : The equivalence information file (otherwise "
                    "printed to screen)\n";
+      std::cerr << "method   : The method of computation (standard by "
+                   "default)\n";
       std::cerr << "\n";
       std::cerr << "     ------- arith -------\n";
       std::cerr << "\n";
       dispatch.print_descriptions(std::cerr);
+      std::cerr << "\n";
+      std::cerr << "     ------- method -------\n";
+      std::cerr << "\n";
+      LinPolytopeMethodPrintDescriptions(std::cerr);
       return -1;
     }
     //
     std::string arith = argv[1];
     FileExt1 = argv[2];
     FileExt2 = argv[3];
-    if (argc == 6) {
+    if (argc >= 6) {
       OutFormat = argv[4];
       FileO = argv[5];
     }
+    if (argc == 7) {
+      method_str = argv[6];
+    }
+    std::optional<LinPolytopeMethod> opt_method =
+        LinPolytopeMethodFromString(method_str);
+    if (!opt_method) {
+      std::cerr << "GRP_LinPolytope_Isomorphism: unknown method="
+                << method_str << ", the allowed ones are\n";
+      LinPolytopeMethodPrintDescriptions(std::cerr);
+      throw TerminalException{1};
+    }
+    method = *opt_method;
     dispatch.run(arith);
     std::cerr << "Normal termination of GRP_LinPolytope_Isomorphism\n";
   } catch (TerminalException const &e) {

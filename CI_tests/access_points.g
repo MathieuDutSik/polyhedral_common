@@ -66,14 +66,18 @@ extract_runtime_from_log:=function(FileE)
 end;
 
 get_grp_automorphy:=function(arg)
-    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, TheGRP_rat, runtime_str, list_arg, status;
+    local EXT, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, TheGRP_rat, runtime_str, list_arg, status;
     EXT:=arg[1];
     arith:="mpq_class";
+    method:=fail;
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -86,6 +90,9 @@ get_grp_automorphy:=function(arg)
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
     list_arg:=[arith, FileI, "RecGAP", FileO];
+    if method <> fail then
+        Add(list_arg, method);
+    fi;
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);
@@ -351,14 +358,18 @@ test_polytope_integral_equivalence:=function(arg)
 end;
 
 get_canonic_form:=function(arg)
-    local EXT, options, arith, print_info, TmpDir, FileI, FileO, FileE, eProg, EXT_can, runtime_str, list_arg, status;
+    local EXT, options, arith, method, print_info, TmpDir, FileI, FileO, FileE, eProg, EXT_can, runtime_str, list_arg, status;
     EXT:=arg[1];
     arith:="mpq_class";
+    method:=fail;
     print_info:=false;
     if Length(arg) >= 2 then
         options:=arg[2];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -371,6 +382,9 @@ get_canonic_form:=function(arg)
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Canonic");
     list_arg:=[arith, FileI, "GAP", FileO];
+    if method <> fail then
+        Add(list_arg, method);
+    fi;
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);
@@ -390,15 +404,19 @@ get_canonic_form:=function(arg)
 end;
 
 get_isomorphism_result:=function(arg)
-    local EXT1, EXT2, options, arith, print_info, TmpDir, File1, File2, FileO, FileE, eProg, result, runtime_str, list_arg, status;
+    local EXT1, EXT2, options, arith, method, print_info, TmpDir, File1, File2, FileO, FileE, eProg, result, runtime_str, list_arg, status;
     EXT1:=arg[1];
     EXT2:=arg[2];
     arith:="mpq_class";
+    method:=fail;
     print_info:=false;
     if Length(arg) >= 3 then
         options:=arg[3];
         if IsBound(options.arith) then
             arith:=options.arith;
+        fi;
+        if IsBound(options.method) then
+            method:=options.method;
         fi;
         if IsBound(options.print_info) and options.print_info then
             print_info:=true;
@@ -413,6 +431,9 @@ get_isomorphism_result:=function(arg)
     WriteMatrixFile(File2, EXT2);
     eProg:=GetBinaryFilename("GRP_LinPolytope_Isomorphism");
     list_arg:=[arith, File1, File2, "GAP", FileO];
+    if method <> fail then
+        Add(list_arg, method);
+    fi;
     status:=run_binary(eProg, list_arg, FileE);
     if status <> 0 then
         return binary_failure(eProg, list_arg, status, FileE);
