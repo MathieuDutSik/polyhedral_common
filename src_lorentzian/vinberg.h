@@ -361,7 +361,8 @@ private:
     for (auto &k : Vtot.root_lengths) {
       MyVector<Tint> V2 = cand_a(candidates.at(k));
       Tint val = -Vtot.v0.dot(Vtot.G * V2);
-      double k_d = sqrt(UniversalScalarConversion<double, Tint>(val));
+      // The distance of the candidate is -(v0,a)/sqrt(k), k the root norm.
+      double k_d = sqrt(UniversalScalarConversion<double, Tint>(k));
       double val_d = UniversalScalarConversion<double, Tint>(val) / k_d;
       if (!we_found) {
         we_found = true;

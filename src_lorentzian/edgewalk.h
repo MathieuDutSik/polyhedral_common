@@ -1781,7 +1781,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
         UniversalScalarConversion<TintGroup, int>(nonew_nbdone);
     std::string choice =
         HeuristicEvaluation(mapV, HeuristicTryTerminateDualDescription);
-    if (choice == "") {
+    if (choice == "trydualdesc") {
       return f_try_terminate();
     }
     return false;

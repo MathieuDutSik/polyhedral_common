@@ -495,6 +495,9 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
 #endif
     if (multiplicity[val_five] == 1) {
       // Looking for H2, H3, H4
+      if (n_higher_edge != 1) {
+        return {};
+      }
       if (n_vert == 2)
         return IrrCoxDyn<T>{"H", 2, T(0)};
       if (n_vert > 5)
@@ -549,6 +552,10 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
   size_t eCent = list_deg3[0];
   // Now just one vertex of degree 3.
   if (multiplicity[val_four] == 1) {
+    // tildeB: the edge 4 is the only higher edge.
+    if (n_higher_edge != 1) {
+      return {};
+    }
     // Possibility tilde{Bn}
     std::vector<size_t> const &LAdj = LLAdj[eCent];
     size_t n_sing = 0;

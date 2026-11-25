@@ -343,7 +343,7 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T> &G) {
   // eigenvector equation is (a - l1) x + b y = 0
   // Thus (x,y) = (-b , a - l1)
   double disc = sqrt((a_d - c_d) * (a_d - c_d) + 4 * b_d * b_d);
-  double l1 = ((a_d + c_d) + sqrt(disc)) / 2;
+  double l1 = ((a_d + c_d) + disc) / 2;
   double x = -b_d;
   double y = a_d - l1;
   size_t mult = 1;
@@ -812,7 +812,9 @@ std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>>
 AnisotropicComplete(const MyMatrix<T> &G, const T &M) {
   MyVector<Tint> r = GetPositiveVector<T, Tint>(G);
   MyVector<Tint> l_A = GetTwoComplement(r);
-  MyVector<Tint> l_B = Canonical(G, M, r, l_A);
+  // Anisotropic (Algorithm 8.7) takes the canonical r^2-supplement of r.
+  T r_norm = eval_quad(G, r);
+  MyVector<Tint> l_B = Canonical(G, r_norm, r, l_A);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "TWODIMLOR: r=" << r << "  l_A=" << l_A << " l_B=" << l_B
             << "\n";
@@ -871,9 +873,14 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(
   WriteMatrix(std::cerr, G);
 #endif
   MyVector<Tint> l_A = GetTwoComplement(r0);
+  // Anisotropic (Algorithm 8.7) takes the canonical r0^2-supplement of r0,
+  // and lists in ascending order the primitive vectors of norm <= SearchNorm
+  // of one period after r0; the next periods are their images. So the first
+  // vector of norm SearchNorm is a vector of the list or a multiple k v of
+  // one with k^2 N(v) = SearchNorm, which comes at the same angle as v.
   MyVector<Tint> l_B = Canonical(G, M, r0, l_A);
   std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>> opt =
-      Anisotropic(G, M, r0, l_B);
+      Anisotropic(G, SearchNorm, r0, l_B);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "TWODIMLOR: We have opt\n";
 #endif
@@ -889,8 +896,15 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(
     std::cerr << "TWODIMLOR: norm=" << norm << " SearchNorm=" << SearchNorm
               << " e_v=" << StringVectorGAP(e_v) << "\n";
 #endif
-    if (norm == SearchNorm)
-      return e_v;
+    T ratio = SearchNorm / norm;
+    if (IsInteger(ratio)) {
+      std::optional<T> opt_k = UniversalSquareRoot(ratio);
+      if (opt_k) {
+        Tint k = UniversalScalarConversion<Tint, T>(*opt_k);
+        MyVector<Tint> e_w = k * e_v;
+        return e_w;
+      }
+    }
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "TWODIMLOR: returning missing\n";
