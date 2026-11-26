@@ -15,4 +15,7 @@ real subfield by Siegel's formula, the L-values of the relative character
 numerically and certified with Arb). The unimodular genera of
 Schiemann's tables over imaginary quadratic fields (A. Schiemann, J. Symbolic
 Comput. 26 (1998)), for 18 entries (field, rank) from Q(sqrt -3) to
-Q(sqrt -163): the class numbers of the genera of an entry sum to his.
+Q(sqrt -163): the class numbers of the genera of an entry sum to his. Over
+the fields where 2 ramifies the enumeration uses the neighbors at the dyadic
+ramified prime first, and the test is run again with the SANITY_CHECK macros,
+which check that every neighbor has the local symbols of its lattice.

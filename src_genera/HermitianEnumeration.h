@@ -20,6 +20,10 @@
 #define DEBUG_HERMITIAN_ENUMERATION
 #endif
 
+#ifdef SANITY_CHECK
+# define SANITY_CHECK_HERMITIAN_ENUMERATION
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_HERMITIAN_ENUMERATION
 #endif
@@ -36,8 +40,8 @@
   order enters the mass sum 1 / |U(L)|.
 
   A class is expanded at a prime P of O_E where it is unimodular (the
-  neighbors of HermitianNeighbor.h: split, inert, and ramified but not
-  dyadic): one neighbor computation per orbit of U(L) on the lines of
+  neighbors of HermitianNeighbor.h: split, inert and ramified, the dyadic
+  ramified ones included): one neighbor computation per orbit of U(L) on the lines of
   L / C L, the automorphisms being O_E-linear so that they preserve C L.
   The neighbor primes are the primes of E above the rational primes, in
   increasing order, where the seed is unimodular; all the classes are
@@ -317,9 +321,6 @@ HermitianEnumeration(CMOrder<T, Tint> const &ord, HermSeed<T, Tint> const &seed,
     }
     std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, ell);
     for (size_t ip = 0; ip < l_prime.size() && !closed(); ip++) {
-      if (l_prime[ip].type == HermIdealType::Ramified && ell == 2) {
-        continue;
-      }
       // one prime of each conjugate pair: the neighbors at conj(P) are the
       // reversed edges of those at P (Hecke.jl uses a single prime too)
       if (l_prime[ip].conj_index < ip) {
@@ -338,6 +339,26 @@ HermitianEnumeration(CMOrder<T, Tint> const &ord, HermSeed<T, Tint> const &seed,
         for (auto const &[idx, size] : HermLineOrbits(ls, l_gen)) {
           (void)size;
           for (auto const &Bn : HermNeighbors(L, np, ls.line_vector(idx))) {
+#ifdef SANITY_CHECK_HERMITIAN_ENUMERATION
+            // the neighbor has the local symbol of L at the primes above ell
+            HermLatticeData<T, Tint> Ln =
+                HermLatticeOfBasis(ord, ring, MyMatrix<T>(Bn * A));
+            for (size_t jp = 0; jp < l_prime.size(); jp++) {
+              if (HermK0Representative(l_prime, jp) != jp) {
+                continue;
+              }
+              bool ram = l_prime[jp].type == HermIdealType::Ramified;
+              bool dy = ram && ell == 2;
+              int dv = dy ? HermDifferentVal(ord, l_prime, jp) : 0;
+              if (!HermLocalSymbolEquivalent(
+                      HermLocalSymbolOfLattice(Ln, l_prime, jp),
+                      HermLocalSymbolOfLattice(L, l_prime, jp), ram, dy, dv)) {
+                std::cerr << "HERMENUM: a neighbor at " << l_prime[ip].name
+                          << " is not in the genus\n";
+                throw TerminalException{1};
+              }
+            }
+#endif
             insert(MyMatrix<T>(Bn * A));
             if (closed()) {
               break;

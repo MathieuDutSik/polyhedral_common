@@ -427,11 +427,6 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
     std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, p);
     size_t first = l_np.size();
     for (size_t k = 0; k < l_prime.size(); k++) {
-      if (l_prime[k].type == HermIdealType::Ramified && p == 2) {
-        std::cerr << "AMFH: no Hecke operator at the dyadic ramified prime "
-                  << l_prime[k].name << "\n";
-        throw TerminalException{1};
-      }
       l_np.push_back(HermGetNeighborPrime(ord, l_prime, k));
       ListPrimeOp.push_back(p);
       ListPrimeName.push_back(l_prime[k].name);

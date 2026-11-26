@@ -61,29 +61,6 @@ template <typename Tint> int64_t HermK0Norm(HermIdealPrime<Tint> const &P) {
   return q;
 }
 
-// The p-valuation of the norm n(L)_p of a lattice at a ramified prime: the
-// h(z_k, z_k) and Tr_{E/K_0} h(z_k, z_l) on a Z-basis.
-template <typename T, typename Tint>
-int HermNormValAt(HermLatticeData<T, Tint> const &L,
-                  HermIdealPrime<Tint> const &P) {
-  CMOrder<T, Tint> const &ord = *L.ord;
-  int n = L.n();
-  MyMatrix<T> C = UniversalMatrixConversion<T, Tint>(ord.conj).transpose();
-  int best = 1 << 28;
-  for (int k = 0; k < n; k++) {
-    MyVector<Tint> ek = ZeroVector<Tint>(n);
-    ek(k) = 1;
-    best = std::min(best, HermIdealVal(ord, P, L.herm(ek, ek)));
-    for (int l = k + 1; l < n; l++) {
-      MyVector<Tint> el = ZeroVector<Tint>(n);
-      el(l) = 1;
-      MyVector<T> h = L.herm(ek, el);
-      best = std::min(best, HermIdealVal(ord, P, MyVector<T>(h + C * h)));
-    }
-  }
-  return best;
-}
-
 template <typename T, typename Tint, typename Tgroup>
 T HermLocalFactor(CMOrder<T, Tint> const &ord,
                   RealifiedRing<T, Tint> const &ring, MyMatrix<T> const &A,

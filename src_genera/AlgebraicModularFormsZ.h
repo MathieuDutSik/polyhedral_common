@@ -461,7 +461,7 @@ checked against the mass formula";
     ListListIntValues_doc["ListPrime"] = "Default: 2\n\
 The primes of the Hecke operators, prime to the level and to the determinant.\n\
 Hermitian: rational primes where the genus is unimodular, an operator for\n\
-every prime of E above each (not the dyadic ramified ones)";
+every prime of E above each (the dyadic ramified ones included)";
     ListIntValues_doc["level"] = "Default: 1\n\
 1 for no level structure, or a prime N prime to the determinant: the states\n\
 are then the orbits of the automorphism groups on the isotropic lines mod N.\n\

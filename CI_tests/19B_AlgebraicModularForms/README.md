@@ -18,4 +18,6 @@ GENUS_AlgebraicModularForms (which the levels of su21_hecke.tex were
 validated with against PARI); there are also two non-Galois CM quartics and
 a sextic CM field over a non-Galois cubic. The masses are computed from
 certified L-values (flint). At a split prime the operator is adjoint to the
-one at the conjugate prime.
+one at the conjugate prime. Hecke operators at the dyadic ramified prime
+too, over Z[i], Q(sqrt -2), Q(sqrt -5), Q(sqrt -6) and Q(sqrt -14), odd and
+even genera.

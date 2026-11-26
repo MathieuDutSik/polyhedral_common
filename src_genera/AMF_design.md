@@ -167,7 +167,7 @@ Runs follow the usual 10G / 30 min caps through `scripts/run_capped.sh`.
   the class numbers, automorphism orders and masses of O_K^m, m = 2, 3, 4,
   for D = -4, -3, -7, -8, -11, equal to those of Hecke.jl.
 - Done since: the orbits of Aut(L) on the Hecke lines, the levels over Z
-  (prime), the ramified primes, the Hermitian mass formula (the list is
+  (prime), the ramified primes, the dyadic ramified ones included (the
+  neighbors keep the norm ideal), the Hermitian mass formula (the list is
   certified by the mass). Not yet: the weights other than the trivial one,
-  the composite levels over Z, the Hecke operators at the dyadic ramified
-  primes.
+  the composite levels over Z.

@@ -56,9 +56,18 @@
     P, for the q_p elements s of O_E / P with h(x, x) in p^2 (an affine
     condition on s: Tr(s h(e_k, w)) = -h(w, w) / pi modulo P);
   - p ramified: w isotropic, x = w + pi s e_k, pi a uniformizer of P, for
-    the q elements s of O_E / P.
-  The odd scales at a ramified prime (special in Hecke.jl) and the dyadic
-  ramified primes are not treated: such a prime is not used.
+    the q elements s of O_E / P (x modulo pi M: they give all the
+    neighbors of the line).
+  - p ramified and dyadic: the genus records the norm ideal n(L), so a
+    neighbor must keep it. P^{-1} x has its norm in n(L) iff h(x, x) is in
+    p n(L), that is v_P(h(x, x)) >= v_P(n(L)) + 2, a condition on x modulo
+    pi M (it moves h(x, x) by Tr(P^2) = p Tr(O_E), in p n(L) as Tr h(L, L)
+    is in n(L)); the other norms of L' are in n(L) then. L' is unimodular
+    with a determinant of the class of det(L), but n(L') can be smaller
+    than n(L): such an L' is in another genus and is not kept. The
+    relation stays symmetric, so the Hecke operators remain self-adjoint.
+  The odd scales at a ramified prime (special in Hecke.jl) are not
+  treated.
  */
 
 // The algebra O_E / ell O_E on the basis e of the order.
@@ -846,6 +855,30 @@ HermGetNeighborPrime(CMOrder<T, Tint> const &ord,
   return np;
 }
 
+// The P-valuation of the norm ideal n(L) at a prime P: the values of the
+// quadratic form x -> h(x, x) on the Z-span of a Z-basis z are spanned by
+// the h(z_k, z_k) and the Tr_{E/K_0} h(z_k, z_l).
+template <typename T, typename Tint>
+int HermNormValAt(HermLatticeData<T, Tint> const &L,
+                  HermIdealPrime<Tint> const &P) {
+  CMOrder<T, Tint> const &ord = *L.ord;
+  int n = L.n();
+  MyMatrix<T> C = UniversalMatrixConversion<T, Tint>(ord.conj).transpose();
+  int best = 1 << 28;
+  for (int k = 0; k < n; k++) {
+    MyVector<Tint> ek = ZeroVector<Tint>(n);
+    ek(k) = 1;
+    best = std::min(best, HermIdealVal(ord, P, L.herm(ek, ek)));
+    for (int l = k + 1; l < n; l++) {
+      MyVector<Tint> el = ZeroVector<Tint>(n);
+      el(l) = 1;
+      MyVector<T> h = L.herm(ek, el);
+      best = std::min(best, HermIdealVal(ord, P, MyVector<T>(h + C * h)));
+    }
+  }
+  return best;
+}
+
 /*
   The neighbors of L at P for the line of the residue vector z of L / C L,
   as Z-bases in the coordinates of L.
@@ -903,6 +936,8 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
       target = FqNeg(P.F, HermResidueRat(P, hww_pi));
     }
     MyMatrix<Tint> Mz = L.mult_of(P.z);
+    bool dyadic = P.type == HermIdealType::Ramified && ell == 2;
+    int norm_val = dyadic ? HermNormValAt(L, P) : 0;
     for (uint64_t code = 0; code < q; code++) {
       FqElt s = FqDecode(P.F, code);
       if (target) {
@@ -923,9 +958,47 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
         }
         v = Mz.transpose() * v;
       }
-      l_x.push_back(MyVector<Tint>(w + Mpi.transpose() * sv));
+      MyVector<Tint> x = w + Mpi.transpose() * sv;
+      if (dyadic && HermIdealVal(ord, P, L.herm(x, x)) < norm_val + 2) {
+        continue;
+      }
+      l_x.push_back(x);
     }
   }
+  // at a dyadic ramified prime, the norm of a neighbor
+  bool dyadic_ram = P.type == HermIdealType::Ramified && ell == 2;
+  auto norm_val_of = [&](MyMatrix<T> const &B) -> int {
+    // the P-valuation of n on the rows of B (coordinates of L): h(D b, D b)
+    // / D^2, D a common denominator
+    Tint D(1);
+    for (int i = 0; i < B.rows(); i++) {
+      for (int k = 0; k < n; k++) {
+        D = LCMpair(D, GetDenominator_z(B(i, k)));
+      }
+    }
+    T D2 = UniversalScalarConversion<T, Tint>(D * D);
+    MyMatrix<T> C = UniversalMatrixConversion<T, Tint>(ord.conj).transpose();
+    std::vector<MyVector<Tint>> l_b;
+    for (int i = 0; i < B.rows(); i++) {
+      MyVector<Tint> b(n);
+      for (int k = 0; k < n; k++) {
+        b(k) = UniversalScalarConversion<Tint, T>(
+            B(i, k) * UniversalScalarConversion<T, Tint>(D));
+      }
+      l_b.push_back(b);
+    }
+    int best = 1 << 28;
+    for (size_t k = 0; k < l_b.size(); k++) {
+      MyVector<T> hkk = L.herm(l_b[k], l_b[k]) / D2;
+      best = std::min(best, HermIdealVal(ord, P, hkk));
+      for (size_t l = k + 1; l < l_b.size(); l++) {
+        MyVector<T> h = L.herm(l_b[k], l_b[l]);
+        best = std::min(best, HermIdealVal(ord, P, MyVector<T>((h + C * h) / D2)));
+      }
+    }
+    return best;
+  };
+  int norm_val_L = dyadic_ram ? HermNormValAt(L, P) : 0;
   std::vector<MyMatrix<T>> l_basis;
   for (auto const &x : l_x) {
     // M: the kernel of y -> h(x, y) = conj(h(y, x)) modulo C
@@ -993,6 +1066,9 @@ HermNeighbors(HermLatticeData<T, Tint> const &L,
       throw TerminalException{1};
     }
 #endif
+    if (dyadic_ram && norm_val_of(Basis) != norm_val_L) {
+      continue;
+    }
     l_basis.push_back(Basis);
   }
   return l_basis;

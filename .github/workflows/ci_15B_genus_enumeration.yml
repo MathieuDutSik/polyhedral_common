@@ -163,6 +163,21 @@ jobs:
           fi
           cd ../..
 
+      # The Hermitian enumeration with its checks: every neighbor (at the
+      # dyadic ramified primes too) has the local symbols of its lattice, the
+      # seeds and the neighbors are verified.
+      - name: Test the Hermitian enumeration with the SANITY_CHECK macros
+        run: |
+          make -C src_genera -B GENUS_HermitianEnumerate CDEFS="-DGMP_POOL -DSANITY_CHECK"
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHermitianEnumeration.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The Hermitian sanity test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       # last, as it rebuilds the programs with the boost types as well
       - name: Test the programs of the pairs with every arithmetic
         run: |
