@@ -12,4 +12,7 @@ and over fields given by a polynomial, with the class numbers, the orders of
 the unitary groups and the masses of Hecke.jl; for three CM fields that are
 not abelian the program computes the mass itself (the zeta values of the
 real subfield by Siegel's formula, the L-values of the relative character
-numerically and certified with Arb).
+numerically and certified with Arb). The unimodular genera of
+Schiemann's tables over imaginary quadratic fields (A. Schiemann, J. Symbolic
+Comput. 26 (1998)), for 18 entries (field, rank) from Q(sqrt -3) to
+Q(sqrt -163): the class numbers of the genera of an entry sum to his.

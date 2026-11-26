@@ -355,6 +355,118 @@ MyMatrix<T> HermHyperplaneSublattice(HermLatticeData<T, Tint> const &L,
 }
 
 /*
+  The hyperplanes of L / P L given by the form, for the descent: with s
+  the least scale of L at P (h(L, L) = P^s locally), the maps
+  x -> res_P(pi^{-s} h(x, v)), v in L, are linear forms on L / P L (they
+  vanish on P L). They span the dual of the scale-s Jordan block, so their
+  kernels are the sublattices that change that block, which are few among
+  all the hyperplanes of L / P L (the others are reached as well by the
+  random lines of the descent). The forms are returned by their values on
+  the F_q-basis of ls (codes, as HermHyperplaneSublattice takes them), one
+  per line of their span, at most max_forms of them.
+ */
+template <typename T, typename Tint>
+std::vector<std::vector<int>>
+HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
+                    std::vector<HermIdealPrime<Tint>> const &l_prime,
+                    size_t i_P, HermLineSpace const &ls, int scale,
+                    size_t max_forms) {
+  CMOrder<T, Tint> const &ord = *L.ord;
+  HermIdealPrime<Tint> const &P = l_prime[i_P];
+  FiniteField const &F = ls.F;
+  int d = ord.deg;
+  int n = L.n();
+  int m = ls.m;
+  int q = static_cast<int>(F.q);
+  // rho = pi^{-s}, pi a uniformizer of P prime to the other primes above
+  // ell
+  std::vector<HermIdealPrime<Tint>> l_other;
+  for (size_t j = 0; j < l_prime.size(); j++) {
+    if (j != i_P) {
+      l_other.push_back(l_prime[j]);
+    }
+  }
+  MyVector<Tint> pi = HermFindUniformizer<T, Tint>(P.ideal, P, l_other);
+  MyMatrix<T> M_pi = UniversalMatrixConversion<T, Tint>(ord.mult_matrix(pi));
+  // y -> y pi (product(pi, y) = mult_matrix(pi)^T y), and its inverse
+  MyMatrix<T> M_pi_t = M_pi.transpose();
+  MyMatrix<T> Mul = (scale <= 0) ? M_pi_t : MyMatrix<T>(Inverse(M_pi_t));
+  MyVector<T> one = ZeroVector<T>(d);
+  one(0) = T(1);
+  int n_mul = (scale <= 0) ? -scale : scale;
+  // the F_q-basis of L / P L as vectors of L
+  std::vector<MyVector<Tint>> l_w;
+  for (int j = 0; j < m; j++) {
+    std::vector<int> e(m, 0);
+    e[j] = 1;
+    std::vector<int64_t> z = ls.line_vector(IndexOfProjectiveLine(e, q));
+    MyVector<Tint> w(n);
+    for (int k = 0; k < n; k++) {
+      w(k) = UniversalScalarConversion<Tint, int64_t>(z[k]);
+    }
+    l_w.push_back(w);
+  }
+  // the columns R(., k) = (res_P(rho h(w_j, w_k)))_j, reduced to a basis
+  uint64_t minus_one = FqEncode(F, FqNeg(F, FqOne(F)));
+  std::vector<std::vector<uint64_t>> basis;
+  std::vector<int> pivots;
+  for (int k = 0; k < m; k++) {
+    std::vector<uint64_t> col(m);
+    for (int j = 0; j < m; j++) {
+      MyVector<T> u = L.herm(l_w[j], l_w[k]);
+      for (int t = 0; t < n_mul; t++) {
+        u = Mul * u;
+      }
+      col[j] = FqEncode(F, HermResidueAtP(ord, l_prime, i_P, u));
+    }
+    for (size_t b = 0; b < basis.size(); b++) {
+      uint64_t c = col[pivots[b]];
+      if (c != 0) {
+        uint64_t f = FqCodeMul(F, c, minus_one);
+        for (int j = 0; j < m; j++) {
+          col[j] = FqCodeAdd(F, col[j], FqCodeMul(F, f, basis[b][j]));
+        }
+      }
+    }
+    int piv = -1;
+    for (int j = 0; j < m && piv < 0; j++) {
+      if (col[j] != 0) {
+        piv = j;
+      }
+    }
+    if (piv < 0) {
+      continue;
+    }
+    uint64_t inv = FqCodeInv(F, col[piv]);
+    for (int j = 0; j < m; j++) {
+      col[j] = FqCodeMul(F, col[j], inv);
+    }
+    basis.push_back(col);
+    pivots.push_back(piv);
+  }
+  std::vector<std::vector<int>> res;
+  int r = static_cast<int>(basis.size());
+  if (r == 0) {
+    return res;
+  }
+  size_t n_line = NumberProjectiveLines(r, q);
+  for (size_t idx = 0; idx < std::min(n_line, max_forms); idx++) {
+    std::vector<int> a = ProjectiveLineOfIndex(r, q, idx);
+    std::vector<int> c(m, 0);
+    for (int j = 0; j < m; j++) {
+      uint64_t val = 0;
+      for (int b = 0; b < r; b++) {
+        val = FqCodeAdd(F, val,
+                        FqCodeMul(F, static_cast<uint64_t>(a[b]), basis[b][j]));
+      }
+      c[j] = static_cast<int>(val);
+    }
+    res.push_back(c);
+  }
+  return res;
+}
+
+/*
   The seed of the genus of the symbol: the realified ring of the space and
   the basis of the lattice in it.
  */
@@ -424,6 +536,13 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
     return res;
   };
   std::optional<MyVector<Tint>> opt_a;
+  if (non_norm.empty()) {
+    // a = 1, a norm everywhere: the space of O_E^m, whose lattice O_E^m
+    // then has the symbol already at most primes
+    MyVector<Tint> one = ZeroVector<Tint>(d);
+    one(0) = 1;
+    opt_a = one;
+  }
   CVPSolver<T, Tint> solver(Q0, os);
   for (int bound = 4 * d; !opt_a && bound < 1000000; bound *= 2) {
     for (auto const &v : solver.at_most_norm_vectors(T(bound))) {
@@ -507,8 +626,49 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
   for (auto const &kv : target) {
     l_ell_all.insert(kv.first.ell);
   }
+  HermLocalSymbol unimod;
+  unimod.blocks.push_back({0, m, 1});
+  // The primes where the lattice of the space (O_E^m, diag(1, ..., 1, a))
+  // has the symbol already: nothing to do there (the steps 2 and 3 change
+  // the lattice only at the primes above ell). This is every prime for
+  // the genus of O_E^m.
+  auto has_target_at = [&](int64_t ell) -> bool {
+    std::vector<HermIdealPrime<Tint>> const &l_prime = cache.at(ell);
+    HermLatticeData<T, Tint> L = lattice_of(seed.basis);
+    for (size_t j = 0; j < l_prime.size(); j++) {
+      if (HermK0Representative(l_prime, j) != j) {
+        continue;
+      }
+      HermK0Ref ref{ell, j};
+      HermLocalSymbol tgt = target.count(ref) ? target[ref] : unimod;
+      bool ramified = l_prime[j].type == HermIdealType::Ramified;
+      bool dyadic = ramified && ell == 2;
+      int diff_val = dyadic ? HermDifferentVal(ord, l_prime, j) : 0;
+      if (dyadic && tgt.norms.empty()) {
+        return false;
+      }
+      HermLocalSymbol sym = HermLocalSymbolOfLattice(L, l_prime, j);
+      if (!HermLocalSymbolEquivalent(sym, tgt, ramified, dyadic, diff_val)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  std::set<int64_t> l_ell_done;
+  for (int64_t ell : l_ell_all) {
+    if (has_target_at(ell)) {
+      l_ell_done.insert(ell);
+    }
+  }
+#ifdef DEBUG_HERMITIAN_GENUS_SEED
+  os << "HERMSEED: " << l_ell_done.size() << " of the " << l_ell_all.size()
+     << " primes have the symbol already\n";
+#endif
   // 2. a maximal lattice, at the primes of E above them
   for (int64_t ell : l_ell_all) {
+    if (l_ell_done.count(ell)) {
+      continue;
+    }
     std::vector<HermIdealPrime<Tint>> const &l_prime = cache.at(ell);
     for (size_t j = 0; j < l_prime.size(); j++) {
       MyMatrix<T> P_inv = HermIdealInverse(ord, l_prime[j]);
@@ -539,9 +699,10 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
     }
   }
   // 3. the descent, prime of K_0 by prime of K_0
-  HermLocalSymbol unimod;
-  unimod.blocks.push_back({0, m, 1});
   for (int64_t ell : l_ell_all) {
+    if (l_ell_done.count(ell)) {
+      continue;
+    }
     std::vector<HermIdealPrime<Tint>> const &l_prime = cache.at(ell);
     for (size_t j = 0; j < l_prime.size(); j++) {
       if (HermK0Representative(l_prime, j) != j) {
@@ -563,6 +724,12 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
         l_side.push_back(l_prime[j].conj_index);
       }
       HermLocalSymbol sym0 = HermLocalSymbolOfLattice(lattice_of(seed.basis), l_prime, j);
+#ifdef DEBUG_HERMITIAN_GENUS_SEED
+      os << "HERMSEED: at " << ell << " the maximal lattice has "
+         << HermLocalSymbolString(sym0) << " (volume "
+         << HermLocalSymbolVolume(sym0) << "), the target "
+         << HermLocalSymbolString(tgt) << " (volume " << vol_tgt << ")\n";
+#endif
       if (HermLocalSymbolEquivalent(sym0, tgt, ramified, dyadic, diff_val)) {
         continue;
       }
@@ -580,12 +747,23 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
           HermLineSpace ls = HermGetLineSpace(L, l_prime[side]);
           size_t n_line = ls.n_line();
           size_t n_try = std::min<size_t>(n_line, 3000);
-          for (size_t t = 0; t < n_try && !found; t++) {
-            size_t idx = (n_try == n_line)
-                             ? t
-                             : static_cast<size_t>(random_u64() % n_line);
-            std::vector<int> c = ProjectiveLineOfIndex(
-                ls.m, static_cast<int>(ls.F.q), idx);
+          // the hyperplanes given by the form first, then the lines (all of
+          // them, or a random sample)
+          HermLocalSymbol sym_L = HermLocalSymbolOfLattice(L, l_prime, j);
+          std::vector<std::vector<int>> l_form = HermFormHyperplanes(
+              L, l_prime, side, ls, sym_L.blocks[0][0], 100000);
+          size_t n_form = l_form.size();
+          for (size_t t = 0; t < n_form + n_try && !found; t++) {
+            std::vector<int> c;
+            if (t < n_form) {
+              c = l_form[t];
+            } else {
+              size_t u = t - n_form;
+              size_t idx = (n_try == n_line)
+                               ? u
+                               : static_cast<size_t>(random_u64() % n_line);
+              c = ProjectiveLineOfIndex(ls.m, static_cast<int>(ls.F.q), idx);
+            }
             MyMatrix<T> A_sub = HermHyperplaneSublattice(L, ls, c) * A;
             HermLocalSymbol sym =
                 HermLocalSymbolOfLattice(lattice_of(A_sub), l_prime, j);
@@ -599,6 +777,12 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
             }
             std::string key = HermLocalSymbolString(sym);
             if (seen.insert(key).second) {
+#ifdef DEBUG_HERMITIAN_GENUS_SEED
+              os << "HERMSEED: at " << ell << " reached " << key << " (volume "
+                 << HermLocalSymbolVolume(sym) << ") at the candidate " << t + 1
+                 << " (" << n_form << " from the form, then " << n_try
+                 << " of the " << n_line << " lines)\n";
+#endif
               queue.push_back(A_sub);
             }
           }
