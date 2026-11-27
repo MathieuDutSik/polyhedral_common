@@ -133,7 +133,11 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (dual_desc_program_from_string_opt(prog)) {
-        return DirectFacetComputationIncidence(EXT, prog, os);
+        // The faces of the recursion are selections of rows of the input, so
+        // they do not have full column rank, which normaliz and
+        // beneath_beyond require. The incidences are those of the rows, so
+        // the column reduction does not change them.
+        return DirectFacetComputationIncidence(ColumnReduction(EXT), prog, os);
       }
       if (prog == "fullrankfacetset") {
         return GetFullRankFacetSet(EXT, os);
