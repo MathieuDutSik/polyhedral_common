@@ -950,7 +950,13 @@ MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T, Tidx> const &data) {
   return eGram;
 }
 
-template <typename T>
+/*
+  The C-type of a Gram matrix: for each non-zero class e of Z^n / 2Z^n, the
+  relevant vector of the class, that is the difference of the two lattice
+  points closest to e/2. There must be exactly two of them, which holds if
+  and only if eG is in the interior of a generic iso-edge domain.
+ */
+template <typename T, typename Tint>
 TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
                                           std::ostream &os) {
   int n = eG.rows();
@@ -969,8 +975,8 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
       esum += M(i_row, i);
     if (esum > 0) {
       for (int i = 0; i < n; i++)
-        Vmid(i, 0) = M(i_row, i) / 2;
-      resultCVP<T, T> result = NearestVectors<T, T>(eG, Vmid, os);
+        Vmid(i) = T(M(i_row, i)) / T(2);
+      resultCVP<T, Tint> result = NearestVectors<T, Tint>(eG, Vmid, os);
       int n_closest = result.ListVect.rows();
       if (n_closest != 2) {
         std::cerr << "n_closest=" << n_closest << "\n";
@@ -978,7 +984,8 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
         throw TerminalException{1};
       }
       for (int i = 0; i < n; i++)
-        Mret(pos, i) = result.ListVect(1, i) - result.ListVect(0, i);
+        Mret(pos, i) = UniversalScalarConversion<T, Tint>(
+            result.ListVect(1, i) - result.ListVect(0, i));
       pos += 1;
     }
   }
@@ -986,7 +993,7 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
     std::cerr << "pos=" << pos << " n_elt=" << n_elt << "\n";
     throw TerminalException{1};
   }
-  return Mret;
+  return {Mret};
 }
 
 template <typename T, typename Tidx>

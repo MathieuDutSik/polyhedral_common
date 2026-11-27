@@ -1,4 +1,4 @@
-PROGRAM		= LATT_FindOneVertex LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay LATT_SerialComputeIminimum LATT_SerialComputeIminimumGiD LATT_LookForFullRankRayDomain LATT_AnalysisIsoDelaunay LATT_SerialPeriodic_IsoDelaunayDomain LATT_SerialPeriodicDelaunay PERIODIC_LookForRecordCovering PERIODIC_RandomCosets
+PROGRAM		= LATT_FindOneVertex LATT_CtypeValidSimplices LATT_LocalDelaunayNeighbors LATT_LocalDelaunayStar LATT_LocalDelaunayExtend LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay LATT_SerialComputeIminimum LATT_SerialComputeIminimumGiD LATT_LookForFullRankRayDomain LATT_AnalysisIsoDelaunay LATT_SerialPeriodic_IsoDelaunayDomain LATT_SerialPeriodicDelaunay PERIODIC_LookForRecordCovering PERIODIC_RandomCosets
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -16,7 +16,7 @@ NOLINKFLAG 	= -c
 CDEPS           = -MMD -MP
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_dualdesc -I../src_isotropy -I../src_short -I../src_enum_schemes -I../src_latt -I../src_polydecomp -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_dualdesc -I../src_isotropy -I../src_short -I../src_enum_schemes -I../src_latt -I../src_polydecomp -I../src_ctype -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -isystem $(EIGEN_PATH) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 

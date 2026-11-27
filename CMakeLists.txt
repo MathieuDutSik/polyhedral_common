@@ -875,6 +875,10 @@ endforeach()
 set(
   DELAUNAY_PROGRAMS
   LATT_FindOneVertex
+  LATT_CtypeValidSimplices
+  LATT_LocalDelaunayNeighbors
+  LATT_LocalDelaunayStar
+  LATT_LocalDelaunayExtend
   LATT_SerialLattice_IsoDelaunayDomain
   LATT_SerialPeriodic_IsoDelaunayDomain
   LATT_SerialPeriodicDelaunay
