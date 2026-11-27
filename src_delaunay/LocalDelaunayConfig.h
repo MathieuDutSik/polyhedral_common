@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "CoveringMaxdet.h"
+#include "SignatureSymmetric.h"
 #include <cmath>
 #include <map>
 #include <functional>
@@ -811,29 +812,21 @@ BarrierPackCov(std::vector<LogDetTerm> const &ListTerm,
 }
 
 /*
-  The semidefinite program for the simplices ListVert, the lattice vectors
-  ListW and the homogeneous linear constraints ListIneq (in the symmetric
-  coordinates).
+  The semidefinite program over a covering data cd: the T-space basis
+  ListA, the homogeneous linear constraints Alin (an iso-Delaunay cone, or
+  emptiness constraints), the simplices whose circumradius is at most 1, and
+  the lattice vectors ListW with Q[w] >= t. x_start has to be strictly
+  feasible for Alin and the circumradii; t starts below the norms.
  */
-template <typename T>
-SdpResult SolvePackCovConfiguration(std::vector<MyMatrix<T>> const &ListVert,
-                                    std::vector<MyVector<T>> const &ListW,
-                                    std::vector<MyVector<T>> const &ListIneq,
-                                    [[maybe_unused]] std::ostream &os) {
+inline SdpResult
+SolvePackCovData(covering_maxdet::CoveringData<double> const &cd,
+                 std::vector<MyVector<double>> const &ListW,
+                 MyVector<double> const &x_start,
+                 [[maybe_unused]] std::ostream &os) {
   using namespace covering_maxdet;
-  int n = ListVert[0].cols();
-  int dim = n * (n + 1) / 2;
+  int n = cd.n;
+  int dim = cd.dim;
   int dimy = dim + 1;
-  CoveringData<double> cd;
-  cd.n = n;
-  cd.dim = dim;
-  cd.ListA = GetSymmetricBasis<double>(n);
-  cd.Alin = MyMatrix<double>(0, dim);
-  cd.point_density = 1;
-  for (auto &Vert : ListVert) {
-    cd.ListSimplex.push_back(
-        UniversalMatrixConversion<double, T>(DifferenceMatrix(Vert)));
-  }
   std::vector<LogDetTerm> ListTerm;
   for (size_t i = 0; i < cd.ListSimplex.size(); i++) {
     std::vector<MyMatrix<double>> ListB = GetLmiBlock(cd, i);
@@ -850,37 +843,27 @@ SdpResult SolvePackCovConfiguration(std::vector<MyMatrix<T>> const &ListVert,
     term.ListM = cd.ListA;
     ListTerm.push_back(term);
   }
-  int n_lin = ListW.size() + ListIneq.size();
+  int n_lin = ListW.size() + cd.Alin.rows();
   MyMatrix<double> Lin = ZeroMatrix<double>(n_lin, dimy);
   int pos = 0;
-  for (auto &w_T : ListW) {
-    MyVector<double> w = UniversalVectorConversion<double, T>(w_T);
-    int idx = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = i; j < n; j++) {
-        Lin(pos, idx) = (i == j) ? w(i) * w(i) : 2 * w(i) * w(j);
-        idx++;
-      }
+  for (auto &w : ListW) {
+    for (int u = 0; u < dim; u++) {
+      Lin(pos, u) = w.dot(cd.ListA[u] * w);
     }
     Lin(pos, dim) = -1;
     pos++;
   }
-  for (auto &a_T : ListIneq) {
+  for (int i = 0; i < cd.Alin.rows(); i++) {
     for (int u = 0; u < dim; u++) {
-      Lin(pos, u) = UniversalScalarConversion<double, T>(a_T(u));
+      Lin(pos, u) = cd.Alin(i, u);
     }
     pos++;
   }
   double nu =
-      double(n) + double(ListVert.size()) * double(n + 1) + double(n_lin);
-  // Start: c I with the circumradii 1/2, t below the norms.
-  MyMatrix<double> Id = IdentityMat<double>(n);
-  double max_sq = MaxSquaredCircumRadius(cd, Id);
+      double(n) + double(cd.ListSimplex.size()) * double(n + 1) + double(n_lin);
   MyVector<double> y = ZeroVector<double>(dimy);
-  MyVector<double> x0 =
-      GramToSymmetricCoordinates(MyMatrix<double>(Id / (2 * max_sq)));
   for (int u = 0; u < dim; u++) {
-    y(u) = x0(u);
+    y(u) = x_start(u);
   }
   double min_norm = 1e100;
   for (int i = 0; i < static_cast<int>(ListW.size()); i++) {
@@ -892,8 +875,7 @@ SdpResult SolvePackCovConfiguration(std::vector<MyMatrix<T>> const &ListVert,
   }
   y(dim) = min_norm / 2;
   if (!BarrierPackCov(ListTerm, Lin, y, 1.0, nullptr, nullptr)) {
-    // The homogeneous constraints are not satisfied by the identity: no
-    // strictly feasible start of this kind.
+    // The start is not strictly feasible.
     return {false, 0, 0, y};
   }
   double s = 1;
@@ -952,6 +934,46 @@ SdpResult SolvePackCovConfiguration(std::vector<MyMatrix<T>> const &ListVert,
     x(u) = y(u);
   }
   return {false, y(dim), nu / s, x};
+}
+
+/*
+  The semidefinite program for the simplices ListVert, the lattice vectors
+  ListW and the homogeneous linear constraints ListIneq (in the symmetric
+  coordinates), started from a multiple of the identity.
+ */
+template <typename T>
+SdpResult SolvePackCovConfiguration(std::vector<MyMatrix<T>> const &ListVert,
+                                    std::vector<MyVector<T>> const &ListW,
+                                    std::vector<MyVector<T>> const &ListIneq,
+                                    std::ostream &os) {
+  using namespace covering_maxdet;
+  int n = ListVert[0].cols();
+  int dim = n * (n + 1) / 2;
+  CoveringData<double> cd;
+  cd.n = n;
+  cd.dim = dim;
+  cd.ListA = GetSymmetricBasis<double>(n);
+  cd.Alin = MyMatrix<double>(ListIneq.size(), dim);
+  for (size_t i = 0; i < ListIneq.size(); i++) {
+    for (int u = 0; u < dim; u++) {
+      cd.Alin(i, u) = UniversalScalarConversion<double, T>(ListIneq[i](u));
+    }
+  }
+  cd.point_density = 1;
+  for (auto &Vert : ListVert) {
+    cd.ListSimplex.push_back(
+        UniversalMatrixConversion<double, T>(DifferenceMatrix(Vert)));
+  }
+  std::vector<MyVector<double>> ListW_d;
+  for (auto &w : ListW) {
+    ListW_d.push_back(UniversalVectorConversion<double, T>(w));
+  }
+  // Start: c I with the circumradii 1/2.
+  MyMatrix<double> Id = IdentityMat<double>(n);
+  double max_sq = MaxSquaredCircumRadius(cd, Id);
+  MyVector<double> x0 =
+      GramToSymmetricCoordinates(MyMatrix<double>(Id / (2 * max_sq)));
+  return SolvePackCovData(cd, ListW_d, x0, os);
 }
 
 /*
@@ -1091,6 +1113,112 @@ PairBound BoundConfigPackCov(std::vector<MyMatrix<T>> const &ListVert,
     return {0, 0, false, n_cut};
   }
   return {res.t, res.t + res.gap, true, n_cut};
+}
+
+/*
+  The packing-covering constant over an iso-Delaunay domain: with R = 1,
+  the maximum of lambda over the closed domain, lambda being the minimum of
+  Q over the edges of the Delaunay subdivision (a shortest vector is an
+  edge, and the edges of a coarser subdivision are edges of the domain's).
+  ListW0 holds the edge vectors of the orbit representatives of the
+  Delaunay polytopes; the other edges are their images, which are added as
+  cuts when shorter than t at the optimum, with all the vectors shorter
+  than t found by an exact enumeration on a rational rounding of the
+  optimum. The result gives the lower bound 2 / sqrt(lambda + gap) of gamma
+  on the domain, and the optimum as a Gram matrix.
+ */
+struct PackCovDomainResult {
+  bool success;
+  std::string message;
+  double lambda;
+  double gap;
+  double gamma_lower;
+  int n_cut;
+  MyMatrix<double> Q;
+};
+
+template <typename T, typename Tint>
+PackCovDomainResult
+SolvePackingCoveringDomain(covering_maxdet::CoveringData<T> const &cd,
+                           std::vector<MyVector<T>> const &ListW0, int max_cut,
+                           std::ostream &os) {
+  using namespace covering_maxdet;
+  int n = cd.n;
+  PackCovDomainResult res{false, "", 0, 0, 0, 0, MyMatrix<double>()};
+  CoveringData<double> cd_f = ConvertCoveringData<double, T>(cd);
+  std::optional<MyVector<double>> opt_start =
+      GetStartingPoint<T, double>(cd, cd_f, os);
+  if (!opt_start) {
+    res.message = "the domain is too thin to be optimized in floating point";
+    return res;
+  }
+  std::vector<MyVector<double>> ListW;
+  std::set<std::vector<long>> SetW;
+  auto f_insert = [&](MyVector<T> const &w_T) -> void {
+    std::vector<long> key(n);
+    for (int i = 0; i < n; i++) {
+      key[i] = UniversalScalarConversion<long, T>(w_T(i));
+    }
+    for (int i = 0; i < n; i++) {
+      if (key[i] != 0) {
+        if (key[i] < 0) {
+          for (auto &x : key) {
+            x = -x;
+          }
+        }
+        break;
+      }
+    }
+    if (SetW.insert(key).second) {
+      ListW.push_back(UniversalVectorConversion<double, T>(w_T));
+    }
+  };
+  for (auto &w : ListW0) {
+    f_insert(w);
+  }
+  SdpResult sres = SolvePackCovData(cd_f, ListW, *opt_start, os);
+  for (int i_cut = 0; i_cut < max_cut; i_cut++) {
+    MyMatrix<double> Qd = ZeroMatrix<double>(n, n);
+    for (int u = 0; u < cd.dim; u++) {
+      Qd += sres.x(u) * cd_f.ListA[u];
+    }
+    MyMatrix<T> Q(n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        long v = std::lround(Qd(i, j) * 1e9);
+        Q(i, j) = T(v) / T(1000000000);
+      }
+    }
+    long tv = std::lround(sres.t * 1e9);
+    T bound = T(tv) / T(1000000000);
+    size_t n_before = ListW.size();
+    if (IsPositiveDefinite(Q, os)) {
+      CVPSolver<T, Tint> solver(Q, os);
+      std::vector<MyVector<Tint>> ListShort =
+          solver.at_most_norm_vectors(bound);
+      for (auto &v : ListShort) {
+        MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
+        if (EvaluationQuadForm(Q, v_T) < bound) {
+          f_insert(v_T);
+        }
+      }
+    }
+    if (ListW.size() == n_before) {
+      break;
+    }
+    sres = SolvePackCovData(cd_f, ListW, *opt_start, os);
+    res.n_cut++;
+  }
+  res.success = sres.success;
+  res.message = sres.success ? "converged" : "no centered point reached";
+  res.lambda = sres.t;
+  res.gap = sres.gap;
+  res.gamma_lower = 2.0 / std::sqrt(sres.t + sres.gap);
+  res.Q = ZeroMatrix<double>(n, n);
+  for (int u = 0; u < cd.dim; u++) {
+    res.Q += sres.x(u) * cd_f.ListA[u];
+  }
+  return res;
 }
 
 // The packing-covering bound of the pair S, S' = F_k + w.
@@ -1577,7 +1705,8 @@ template <typename T, typename Tint>
 ExtendResult ExtendConfiguration(std::vector<MyMatrix<T>> const &ListStart,
                                  std::vector<MyVector<T>> const &P0, bool is_pc,
                                  double threshold, int depth_limit,
-                                 size_t node_limit, std::ostream &os_out,
+                                 size_t node_limit, int Vmax_general,
+                                 double dstar, std::ostream &os_out,
                                  std::ostream &os) {
   int n = ListStart[0].cols();
   using Pt = std::vector<long>;
@@ -1689,6 +1818,50 @@ ExtendResult ExtendConfiguration(std::vector<MyMatrix<T>> const &ListStart,
       ListDir.clear();
       opt = SolveConfiguration(ListVert, ListIneq, ListDir, x_opt, os);
     }
+    // Lazy cuts: the lattice points strictly inside a circumsphere at the
+    // optimum give valid emptiness constraints; a few rounds. A round whose
+    // solve fails keeps the previous bound, which is valid.
+    for (int i_cut = 0; i_cut < 5 && opt; i_cut++) {
+      std::vector<MyMatrix<double>> ListA = GetSymmetricBasis<double>(n);
+      MyMatrix<double> Qd = ZeroMatrix<double>(n, n);
+      for (size_t u = 0; u < ListA.size(); u++) {
+        Qd += x_opt(u) * ListA[u];
+      }
+      MyMatrix<T> Q(n, n);
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          Q(i, j) =
+              T(std::lround((Qd(i, j) + Qd(j, i)) / 2 * 1e9)) / T(1000000000);
+        }
+      }
+      if (!IsPositiveDefinite(Q, os)) {
+        break;
+      }
+      bool found = false;
+      for (auto &Vert : ListVert) {
+        std::optional<MyVector<T>> opt_w =
+            FindInteriorPoint<T, Tint>(Q, Vert, os);
+        if (opt_w) {
+          std::optional<MyMatrix<T>> opt_d = PositiveDirection(Vert, *opt_w);
+          if (opt_d) {
+            ListIneq.push_back(EmptinessInequality(Vert, *opt_w));
+            ListDir.push_back(*opt_d);
+            found = true;
+          }
+        }
+      }
+      if (!found) {
+        break;
+      }
+      MyVector<double> x_new;
+      std::optional<std::pair<double, double>> opt_new =
+          SolveConfiguration(ListVert, ListIneq, ListDir, x_new, os);
+      if (!opt_new) {
+        break;
+      }
+      opt = opt_new;
+      x_opt = x_new;
+    }
     return opt ? opt->second : 1e100;
   };
   // The open facets: (simplex index, removed vertex index).
@@ -1723,9 +1896,177 @@ ExtendResult ExtendConfiguration(std::vector<MyMatrix<T>> const &ListStart,
     return ret;
   };
   // The candidate apexes across the facet of simplex is opposite to vertex k.
+  // The general mode (Vmax_general > 0): the apexes of the neighbours of a
+  // simplex of any volume across a facet, of volume at most Vmax_general,
+  // surviving the pair bound. They are computed once per type of simplex on
+  // a representative and transported by a unimodular affine map. The type
+  // is the volume V and the set I of the vertices on which the barycentric
+  // coordinates of the classes of Z^n modulo the lattice of the vertices are
+  // not all integral; the vertices are ordered with I first, which gives an
+  // integral map when the stabilizer is Sym(I) x Sym(J), as for the
+  // simplices of volume at most 2. When the map is not integral the
+  // neighbours are enumerated directly.
+  auto ordered_vertices = [&](std::vector<Pt> const &simp)
+      -> std::pair<std::pair<int, int>, std::vector<int>> {
+    MyMatrix<T> Vert(n + 1, n);
+    for (int i = 0; i <= n; i++) {
+      for (int j = 0; j < n; j++) {
+        Vert(i, j) = T(simp[i][j]);
+      }
+    }
+    SimplexData<T> sd = GetSimplexData(Vert);
+    std::vector<bool> in_I(n + 1, false);
+    if (sd.V > 1) {
+      for (auto &a : CosetRepresentatives(sd)) {
+        int64_t sum = 0;
+        for (int i = 0; i < n; i++) {
+          if (a[i] != 0) {
+            in_I[i + 1] = true;
+          }
+          sum += a[i];
+        }
+        if (sum % sd.V != 0) {
+          in_I[0] = true;
+        }
+      }
+    }
+    std::vector<int> order;
+    for (int i = 0; i <= n; i++) {
+      if (in_I[i]) {
+        order.push_back(i);
+      }
+    }
+    int sizI = order.size();
+    for (int i = 0; i <= n; i++) {
+      if (!in_I[i]) {
+        order.push_back(i);
+      }
+    }
+    return {{sd.V, sizI}, order};
+  };
+  // The apexes across the facet opposite to vertex k of simp, computed
+  // directly, filtered by the pair bound, one bound per orbit of the
+  // stabilizer of simp.
+  auto direct_apexes =
+      [&](std::vector<Pt> const &simp) -> std::vector<std::vector<Pt>> {
+    MyMatrix<T> Vert(n + 1, n);
+    for (int i = 0; i <= n; i++) {
+      for (int j = 0; j < n; j++) {
+        Vert(i, j) = T(simp[i][j]);
+      }
+    }
+    SimplexData<T> sd = GetSimplexData(Vert);
+    std::vector<std::vector<Pt>> ret(n + 1);
+    std::optional<double> opt_lambda = InertiaLowerBound(n, sd.V, dstar);
+    if (!opt_lambda) {
+      return ret;
+    }
+    double EdgeBound = 4.0 / *opt_lambda;
+    std::vector<int> all_facets;
+    for (int k = 0; k <= n; k++) {
+      all_facets.push_back(k);
+    }
+    std::vector<NeighborCandidate<T>> ListCand =
+        EnumerateNeighborCandidates<T, Tint>(sd, all_facets, EdgeBound,
+                                             Vmax_general, os);
+    std::vector<AffineMap<T>> ListMap = SimplexStabilizer(sd);
+    std::vector<size_t> ListRep = OrbitRepresentatives(ListCand, ListMap);
+    std::vector<std::optional<bool>> ListKeep(ListCand.size());
+    for (size_t i = 0; i < ListCand.size(); i++) {
+      size_t r = ListRep[i];
+      if (!ListKeep[r]) {
+        PairBound pb =
+            is_pc ? BoundPairPackCov<T, Tint>(Vert, ListCand[r], false, 3, os)
+                  : BoundPair<T, Tint>(Vert, ListCand[r], false, 0, os);
+        ListKeep[r] = !pb.success || pb.bound >= threshold;
+      }
+      if (*ListKeep[r]) {
+        ret[ListCand[i].k].push_back(to_pt(ListCand[i].w));
+      }
+    }
+    return ret;
+  };
+  struct TypeData {
+    std::vector<Pt> rep;
+    std::vector<int> order;
+    std::vector<std::vector<Pt>> apexes;
+  };
+  std::map<std::pair<int, int>, TypeData> map_type;
+  std::map<std::vector<Pt>, std::vector<std::vector<Pt>>> cache_direct;
+  auto general_apexes = [&](std::vector<Pt> const &simp,
+                            int k) -> std::vector<Pt> {
+    std::pair<std::pair<int, int>, std::vector<int>> pr =
+        ordered_vertices(simp);
+    auto iter = map_type.find(pr.first);
+    if (iter == map_type.end()) {
+      TypeData td{simp, pr.second, direct_apexes(simp)};
+      iter = map_type.emplace(pr.first, td).first;
+    }
+    TypeData const &td = iter->second;
+    std::vector<int> const &oN = pr.second;
+    std::vector<int> const &oR = td.order;
+    // The map x -> N_oN[0] + (x - R_oR[0]) L with
+    // (N_oN[i] - N_oN[0]) = (R_oR[i] - R_oR[0]) L.
+    MyMatrix<T> MR(n, n), MN(n, n);
+    for (int i = 1; i <= n; i++) {
+      for (int j = 0; j < n; j++) {
+        MR(i - 1, j) = T(td.rep[oR[i]][j] - td.rep[oR[0]][j]);
+        MN(i - 1, j) = T(simp[oN[i]][j] - simp[oN[0]][j]);
+      }
+    }
+    MyMatrix<T> L = Inverse(MR) * MN;
+    if (!IsIntegralMatrix(L)) {
+      auto it2 = cache_direct.find(simp);
+      if (it2 == cache_direct.end()) {
+        it2 = cache_direct.emplace(simp, direct_apexes(simp)).first;
+      }
+      return it2->second[k];
+    }
+    int p = 0;
+    while (oN[p] != k) {
+      p++;
+    }
+    std::vector<Pt> ret;
+    for (auto &x : td.apexes[oR[p]]) {
+      Pt w(n);
+      for (int j = 0; j < n; j++) {
+        T val = T(simp[oN[0]][j]);
+        for (int i = 0; i < n; i++) {
+          val += T(x[i] - td.rep[oR[0]][i]) * L(i, j);
+        }
+        w[j] = UniversalScalarConversion<long, T>(val);
+      }
+      ret.push_back(w);
+    }
+    return ret;
+  };
   auto candidates = [&](std::vector<std::vector<Pt>> const &config, size_t is,
                         int k) -> std::vector<std::vector<Pt>> {
     std::vector<Pt> const &simp = config[is];
+    if (Vmax_general > 0) {
+      std::set<std::vector<Pt>> existing(config.begin(), config.end());
+      std::vector<std::vector<Pt>> ret;
+      std::vector<Pt> list_w = general_apexes(simp, k);
+      for (auto &w : list_w) {
+        std::vector<Pt> nsimp;
+        for (int i = 0; i <= n; i++) {
+          if (i != k) {
+            nsimp.push_back(simp[i]);
+          }
+        }
+        nsimp.push_back(w);
+        std::sort(nsimp.begin(), nsimp.end());
+        if (existing.count(nsimp) > 0) {
+          continue;
+        }
+        std::vector<std::vector<Pt>> config2 = config;
+        config2.push_back(nsimp);
+        if (frame_ok(config2)) {
+          ret.push_back(nsimp);
+        }
+      }
+      return ret;
+    }
     std::vector<Pt> rows;
     for (int i = 0; i <= n; i++) {
       if (i != k) {
@@ -1780,6 +2121,39 @@ ExtendResult ExtendConfiguration(std::vector<MyMatrix<T>> const &ListStart,
     res.max_depth = std::max(res.max_depth, depth);
     if (depth >= depth_limit) {
       res.refuted = false;
+      // The optimum of the configuration reached, for the covering: a
+      // candidate form whose actual covering density can be computed.
+      if (!is_pc) {
+        std::vector<MyMatrix<T>> ListVert;
+        for (auto &simp : config) {
+          MyMatrix<T> Vert(n + 1, n);
+          for (int i = 0; i <= n; i++) {
+            for (int j = 0; j < n; j++) {
+              Vert(i, j) = T(simp[i][j]);
+            }
+          }
+          ListVert.push_back(Vert);
+        }
+        MyVector<double> x_opt;
+        std::optional<std::pair<double, double>> opt =
+            SolveConfiguration(ListVert, {}, {}, x_opt, os);
+        if (opt) {
+          std::vector<MyMatrix<double>> ListA = GetSymmetricBasis<double>(n);
+          MyMatrix<double> Qd = ZeroMatrix<double>(n, n);
+          for (size_t u = 0; u < ListA.size(); u++) {
+            Qd += x_opt(u) * ListA[u];
+          }
+          os_out << "OPTIMUM det=" << opt->first << " of the configuration of "
+                 << config.size() << " simplices, Gram matrix:\n";
+          os_out << n << " " << n << "\n";
+          for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+              os_out << " " << std::lround(Qd(i, j) * 1e9) << "/1000000000";
+            }
+            os_out << "\n";
+          }
+        }
+      }
       return;
     }
     std::vector<std::pair<size_t, int>> list_open = open_facets(config);

@@ -8,7 +8,7 @@
 #endif
 #include "IsoDelaunayDomains.h"
 #include "PeriodicStructures.h"
-#include "CoveringMaxdet.h"
+#include "LocalDelaunayConfig.h"
 #include "QuantizerLtypeExport.h"
 #include "Permutation.h"
 #include "Group.h"
@@ -88,6 +88,8 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
       BlockQUERIES.get_string("FileQuantizerLtypeJSON");
   std::string FileCoveringOptimum =
       BlockQUERIES.get_string("FileCoveringOptimum");
+  std::string FilePackingCoveringOptimum =
+      BlockQUERIES.get_string("FilePackingCoveringOptimum");
   std::string FileLinSpace = BlockDATA.get_string("FileLinSpace");
   std::string FileCosets = BlockDATA.get_string("FileCosets");
   //
@@ -324,6 +326,89 @@ void process(FullNamelist const &eFull, std::ostream &os_out) {
     os_out << "covering_gap_bound=" << res.gap_bound << "\n";
     os_out << std::setprecision(prec);
   }
+  //
+  // QUERIES option: maximization of the minimum over the domain for the
+  // covering radius 1, i.e. minimization of the packing-covering constant
+  // gamma = 2 R / sqrt(lambda), by a semidefinite program
+  // (local_delaunay::SolvePackingCoveringDomain). The bound gamma_lower holds
+  // on the whole domain up to the numerical solve; gamma_point is the exact
+  // constant of the optimum rounded to a rational Gram matrix, a genuine
+  // lattice.
+  if (FilePackingCoveringOptimum != "null") {
+    HumanTime t5;
+    covering_maxdet::CoveringData<T> cd = covering_maxdet::BuildCoveringData(
+        x, LinSpa, FACred, T(1), os);
+    std::vector<MyVector<T>> ListW0;
+    for (auto &eDel : x.DT.l_dels) {
+      int nbVert = eDel.EXT.rows();
+      for (int i = 0; i < nbVert; i++) {
+        for (int j = i + 1; j < nbVert; j++) {
+          MyVector<T> w(n);
+          for (int k = 0; k < n; k++) {
+            w(k) = UniversalScalarConversion<T, Tint>(eDel.EXT(j, k + 1) -
+                                                      eDel.EXT(i, k + 1));
+          }
+          ListW0.push_back(w);
+        }
+      }
+    }
+    local_delaunay::PackCovDomainResult res =
+        local_delaunay::SolvePackingCoveringDomain<T, Tint>(cd, ListW0, 10,
+                                                            os);
+    // The exact constant of the optimum rounded to denominator 10^6.
+    double gamma_point = -1;
+    if (res.success) {
+      MyMatrix<T> Q(n, n);
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          double v = (res.Q(i, j) + res.Q(j, i)) / 2;
+          Q(i, j) = T(std::lround(v * 1e6)) / T(1000000);
+        }
+      }
+      if (IsPositiveDefinite(Q, os)) {
+        T cov_sq = ComputeCoveringRadiusSquared<T, Tint, Tgroup>(Q, os);
+        T min_diag = Q(0, 0);
+        for (int i = 1; i < n; i++) {
+          min_diag = std::min(min_diag, Q(i, i));
+        }
+        CVPSolver<T, Tint> solver(Q, os);
+        std::vector<MyVector<Tint>> ListShort =
+            solver.at_most_norm_vectors(min_diag);
+        T lambda = min_diag;
+        for (auto &v : ListShort) {
+          T norm = EvaluationQuadForm(Q, UniversalVectorConversion<T, Tint>(v));
+          if (norm > 0 && norm < lambda) {
+            lambda = norm;
+          }
+        }
+        double r = UniversalScalarConversion<double, T>(cov_sq / lambda);
+        gamma_point = 2 * std::sqrt(r);
+      }
+    }
+    os << "ANA: packing-covering optimization done success=" << res.success
+       << " |elapsed|=" << t5 << "\n";
+    std::ofstream os_pc(FilePackingCoveringOptimum);
+    os_pc << std::setprecision(17) << std::showpoint;
+    os_pc << "return rec(success:=" << (res.success ? "true" : "false")
+          << ", message:=\"" << res.message << "\", lambda:=" << res.lambda
+          << ", gap:=" << res.gap << ", gamma_lower:=" << res.gamma_lower
+          << ", gamma_point:=" << gamma_point << ", n_cut:=" << res.n_cut
+          << ", GramMat:=[";
+    for (int i = 0; i < n; i++) {
+      os_pc << (i > 0 ? ", " : "") << "[";
+      for (int j = 0; j < n; j++) {
+        os_pc << (j > 0 ? ", " : "") << res.Q(i, j);
+      }
+      os_pc << "]";
+    }
+    os_pc << "]);\n";
+    std::streamsize prec = os_out.precision();
+    os_out << std::setprecision(17);
+    os_out << "packing_covering_success=" << res.success << "\n";
+    os_out << "packing_covering_gamma_lower=" << res.gamma_lower << "\n";
+    os_out << "packing_covering_gamma_point=" << gamma_point << "\n";
+    os_out << std::setprecision(prec);
+  }
 }
 
 FullNamelist NAMELIST_GetStandard_ANALYSIS_ISODELAUNAY() {
@@ -373,6 +458,12 @@ in JSON, for the Julia code of the quantizer. If null then it is not written";
     ListStringValues_doc["FileCoveringOptimum"] = "Default: null\n\
 The file to which the optimum of the covering density over the domain is\n\
 written as a GAP record. If null then it is not computed";
+    ListStringValues_doc["FilePackingCoveringOptimum"] = "Default: null\n\
+The file to which the optimum of the packing-covering constant over the\n\
+domain is written as a GAP record: gamma_lower, the lower bound on the\n\
+domain from the numerical semidefinite program, and gamma_point, the exact\n\
+constant of the optimum rounded to a rational Gram matrix. If null then it\n\
+is not computed";
     ListBlock["QUERIES"].setListStringValues_doc(ListStringValues_doc);
   }
   return FullNamelist(ListBlock);
