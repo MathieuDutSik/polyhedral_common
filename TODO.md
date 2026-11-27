@@ -120,6 +120,40 @@ vertex), e.g. by orbit size, rather than always the smallest incidence. The
 instances are in `POLY_igusa/DualDesc_E6_local_cone/` (local cone, facet A
 and the two ridges).
 
+## Adjacency decomposition: the split decision sees the passed-down group, not the full one
+
+The Splitting heuristic is evaluated in `DUALDESC_AdjacencyDecomposition_and_insert`
+on the group passed down to the face (its stabilizer in the group of the parent),
+while the full linear automorphism group of the face is computed only afterwards,
+by AdditionalSymmetry, and only in the split path. So a large face can be refused
+the split for lack of symmetry it actually has.
+
+Measured on the local cone of E6 (2026-11-26), faces of the 4577 ray ridge A cap
+A' (itself passed down with a group of order 96, full group 192):
+
+  face of 1939 rays, rank 18: stabilizer 16 in the ridge group, full group 96
+  face of  857 rays, rank 17: stabilizer 16, full group 16
+
+The full group is now cheap above 1000 vertices (subset method: 0.4 s for the
+1939 rays, 1.3 s for the 4577 rays), against more than 10 minutes for a direct
+dual description at that size. Computing it before the decision for the faces
+with more than 1000 vertices would cost little and let the rule see the true
+symmetry; below 1000 vertices the order would stay as it is, AdditionalSymmetry
+being useless in the no-split path. For now the instances override the default
+Splitting heuristic with the rule `incidence > 1000 groupsize > 10 split` placed
+before `level > 1 nosplit` (the `heuristics/Split.heu` of
+`POLY_igusa/DualDesc_E6_local_cone/` and `DualDesc_Gauss4_E8_local_cone/`), which
+compensates by a low threshold on the passed-down group; the default is
+unchanged.
+
+Method comparison on the ladder of faces of that ridge (direct, trivial group,
+10 GB / 10 min caps, 2026-11-26): lrs and pd_lrs drop out at 267 and 174 rays
+(degeneracy), bb at 857 rays; cdd and normaliz finish the 857 ray face (68 s and
+42 s, 67 MB) and not the 1939 ray face in 10 min (cdd 248 MB, normaliz 1.2 GB).
+The reverse problem (the 486 facets of the 857 ray face as input) is done by bb
+in 1 s and by none of the others in 10 min (normaliz past 10 GB), so the choice
+of the method depends on the direction.
+
 ## Integer arithmetic of the dual-description kernels (normaliz / lrs / bb / dd)
 
 Background: the kernels currently run their machine-integer fast path over the
