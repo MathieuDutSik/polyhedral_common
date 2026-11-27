@@ -287,12 +287,24 @@ Dynamic_bitset_to_vectorints(Face const &eList) {
   return {std::move(V0), std::move(V1)};
 }
 
+/*
+  The column dropped to express a facet in coordinates: any column where the
+  facet inequality V is non-zero gives a valid projection, and the last one is
+  taken. On the rows of the facet, V is the only linear relation between the
+  columns, so the columns kept are then the first independent ones, those of
+  ColumnReduction: a face gets the coordinates of its own rows in the input,
+  whatever the sequence of facets that led to it. The work of the incremental
+  dual descriptions depends on the coordinates (normaliz inserts the rows in
+  lexicographic order), so with the first non-zero column, which was taken
+  before, the same face of the local cone of E6 (857 rays) took 4 h 29 in the
+  recursion against 75 s from ColumnReduction of its rows.
+ */
 template <typename T> int get_idx_drop(MyVector<T> const &V) {
-  int idx_drop = 0;
+  int idx_drop = V.size() - 1;
   while (true) {
     if (V(idx_drop) != 0)
       break;
-    idx_drop++;
+    idx_drop--;
   }
   return idx_drop;
 }
