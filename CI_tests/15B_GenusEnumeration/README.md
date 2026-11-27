@@ -19,3 +19,11 @@ Q(sqrt -163): the class numbers of the genera of an entry sum to his. Over
 the fields where 2 ramifies the enumeration uses the neighbors at the dyadic
 ramified prime first, and the test is run again with the SANITY_CHECK macros,
 which check that every neighbor has the local symbols of its lattice.
+
+The classes of indefinite genera of rank >= 3 (TestIndefiniteRepresentatives.g,
+indefinite_cases.g): GENUS_IndefiniteRepresentatives gives one lattice per
+improper spinor genus, on genera with 1, 2, 4 and 8 classes in ranks 3, 4,
+5 and 10, again with the SANITY_CHECK macros. The numbers of classes are
+those of SageMath's spinor kernel; the representatives of the genera with
+4 and 8 classes were checked with Hecke.jl (in the genus, pairwise
+non-isometric).

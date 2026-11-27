@@ -332,15 +332,20 @@ struct SpinorGenusData {
 };
 
 /*
-  The spinor kernels of the genus of the symbol s (positive definite, rank
-  >= 3). With the Gram matrix G of a lattice of the genus, the improper
-  kernel too: a vector x with v_p(x G x) = v_p(norm) at every p | 2d gives
-  the improper generator Delta(r), r the product of the other primes q with
-  v_q(norm) + v_q(x G x) odd.
+  The spinor kernels of the genus of the symbol s (rank >= 3). With the Gram
+  matrix G of a lattice of the genus, the improper kernel too: a vector x
+  with v_p(x G x) = v_p(norm) at every p | 2d gives the improper generator
+  Delta(r), r the product of the other primes q with v_q(norm) + v_q(x G x)
+  odd. For an indefinite genus (indefinite = true: of signature (r, s),
+  r s > 1) every real number is a spinor norm at the real place, which adds
+  the diagonal image Delta(-1) of -1 to the kernel (as in SageMath's
+  _proper_spinor_kernel); by Eichler's theorem the spinor genera are then
+  the classes.
  */
 template <typename T, typename Tint>
 SpinorGenusData GenusSpinorData(GenusSymbol const &s,
-                                std::optional<MyMatrix<T>> const &G) {
+                                std::optional<MyMatrix<T>> const &G,
+                                bool indefinite = false) {
   SpinorGenusData data;
   data.A.primes.push_back(2);
   for (auto const &kv : s.sym_odd) {
@@ -354,6 +359,9 @@ SpinorGenusData GenusSpinorData(GenusSymbol const &s,
     for (auto const &r : SpinorAutomorphousNumbers<T, Tint>(s, p)) {
       data.kernel_proper.insert(SpinorDeltaAt(data.A, r, p));
     }
+  }
+  if (indefinite) {
+    data.kernel_proper.insert(SpinorDelta(data.A, Tint(-1)));
   }
   if (!G || data.kernel_proper.rank() == data.A.dim()) {
     if (G) {
@@ -409,7 +417,8 @@ SpinorGenusData GenusSpinorData(GenusSymbol const &s,
     // is a unit and v_f(q) decides.
     Tint r(1);
     std::map<Tint, int> mult;
-    for (auto const &f : FactorsInt(q)) {
+    // q may be negative for an indefinite G: r is made of positive primes
+    for (auto const &f : FactorsInt(T_abs(q))) {
       mult[f]++;
     }
     for (auto const &[f, m] : mult) {

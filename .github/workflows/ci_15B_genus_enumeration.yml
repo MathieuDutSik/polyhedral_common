@@ -178,6 +178,30 @@ jobs:
           fi
           cd ../..
 
+      # The classes of indefinite genera of rank >= 3 (one per improper
+      # spinor genus), with and without the SANITY_CHECK macros (every
+      # neighbor in the genus).
+      - name: Test the representatives of indefinite genera
+        run: |
+          make -C src_genera GENUS_IndefiniteRepresentatives
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestIndefiniteRepresentatives.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The indefinite representatives test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          make -C src_genera -B GENUS_IndefiniteRepresentatives CDEFS="-DGMP_POOL -DSANITY_CHECK"
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestIndefiniteRepresentatives.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The indefinite representatives sanity test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       # last, as it rebuilds the programs with the boost types as well
       - name: Test the programs of the pairs with every arithmetic
         run: |

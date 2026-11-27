@@ -21,6 +21,7 @@
 #include "Namelist.h"
 #include "Basic_random.h"
 #include "ResidueArithmetic.h"
+#include <limits>
 #include <algorithm>
 #include <chrono>
 #include <functional>
@@ -296,7 +297,10 @@ GenusNeighborLineData(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
   }
   int e = (p == 2) ? 1 : 0;
   Tint nrm = v.dot(w);
-  int val = IntegerValuation(nrm, p);
+  // an isotropic v (nrm = 0, which only an indefinite form has) is of
+  // infinite valuation: v / p is then in the neighbor as it is
+  int val = (nrm == 0) ? std::numeric_limits<int>::max()
+                       : IntegerValuation(nrm, p);
   if (val <= e) {
     return {};
   }
@@ -336,7 +340,7 @@ GenusNeighborKernel(MyMatrix<Tint> const &G, std::vector<int> const &v_line,
     w = G * v;
     nrm = v.dot(w);
 #ifdef SANITY_CHECK_GENUS_ENUMERATION
-    if (IntegerValuation(nrm, p) < e + 2) {
+    if (nrm != 0 && IntegerValuation(nrm, p) < e + 2) {
       std::cerr << "GENUS: the correction of the isotropic vector failed, "
                 << "valuation is " << IntegerValuation(nrm, p) << " and should be at "
                 << "least " << (e + 2) << "\n";

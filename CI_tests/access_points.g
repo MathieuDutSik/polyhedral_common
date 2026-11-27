@@ -3555,6 +3555,33 @@ get_hermitian_enumeration:=function(field, symbol, mass)
     return U;
 end;
 
+# The representatives of the classes of the genus of an indefinite lattice
+# over Z of rank >= 3 (GENUS_IndefiniteRepresentatives): the record of the
+# program, with n_class, signature, ListGram (the given lattice first) and
+# ListPrime (the primes of the neighbors used).
+get_indefinite_representatives:=function(GramMat)
+    local TmpDir, FileI, FileO, FileE, eProg, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Indef.gram");
+    FileO:=Filename(TmpDir, "Indef.out");
+    FileE:=Filename(TmpDir, "Indef.err");
+    WriteMatrixFile(FileI, GramMat);
+    eProg:=GetBinaryFilename("GENUS_IndefiniteRepresentatives");
+    list_arg:=[FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_IndefiniteRepresentatives wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 # The algebraic modular forms of a genus of Hermitian lattices over a CM
 # field: the classes by GENUS_HermitianEnumerate (field and symbol as for
 # get_hermitian_enumeration, the mass computed by the program), then the
