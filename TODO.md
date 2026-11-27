@@ -342,6 +342,37 @@ Where to go next:
    indices and not on coordinate values, which the measurements confirm (1.00
    ratio between the two bases).
 
+Outcome (2026-11-27): facet coordinates. Changing the basis so that the
+coordinates are the values on a full rank set of facets of large incidence
+(`FullRankFacetSetBasis`, the facets of `GetFullRankFacetSet` by decreasing
+incidence) makes the lexicographic order insert the rows of a large face first,
+and the intermediate cones stay small. It is the `ApplyReorder` heuristic
+(default no, applied only for cdd, normaliz and beneath_beyond).
+
+* Why: the bad orders fail by the blow up of the intermediate sizes within the
+  first few dozen insertions (cdd on a face of 857 rays of the local cone of
+  E6: 166901 rays after 44 insertions, against at most 58729 over the whole run
+  in a good basis and 1299 in facet coordinates). The good basis that made the
+  face fast had leading coordinates that are valid inequalities with many
+  zeros. Facets of small incidence do not do it (17 facets of 16 rays: as slow
+  as a random basis), independence alone is not enough; the order among the
+  chosen facets matters little.
+* Local cone of E6, direct methods on its faces, as given / in facet
+  coordinates (GetFullRankFacetSet included), normaliz: 857 rays 42 s (good
+  basis) or > 10 min / 0.23 to 0.37 s; 1242 rays 2 min 55 s / 0.7 s; 1939 rays
+  > 10 min / 3.7 s; ridges of 4577 and 5409 rays 1361 s and 4038 s (uncapped
+  run) / 3 min 38 s and 6 min 18 s. normaliz beats cdd by 1.5 to 2.5x there.
+  The whole dual description of the cone: 7276 s before, 3 min 59 s with the
+  split above 2000 vertices, the sampling for the initial facets and the
+  reordering from 200 vertices (`POLY_igusa/DualDesc_E6_local_cone/`).
+* Facets of Perf(E8) (rank 35, incidence 47 to 52, up to 636760 facets):
+  normaliz 2.5 to 3.7x faster in facet coordinates, cdd only 1.1 to 1.6x. The
+  gain is smaller when the output is large and the input small.
+
+Open: the default of the heuristic (a rule on delta and the program), the
+choice of the facets (more than a full rank set, or the facets of a sampling),
+and whether another invariant order does better still.
+
 ## LLL seeding of the shortest-vector enumerator (NOT attempted)
 
 `CVPSolver` (`src_latt/Shvec_exact.h:973`) seeds the Fincke-Pohst enumeration
