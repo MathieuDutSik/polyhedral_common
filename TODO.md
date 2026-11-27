@@ -744,3 +744,61 @@ forms. To clarify:
   `src_isotropy/DeterminantMinimization.h`.
 `TestReductions.g` of 02A only prints a note when the determinant increases;
 the check can become strict once this is settled.
+
+## src_genera: Hermitian lattices, Kirschmer's tables (2026-11-27)
+
+Kirschmer's classification of the definite Hermitian lattices of class
+number 1 and 2 (`res_herm.m` of www.math.rwth-aachen.de/~kirschme/forms/,
+2016): a space diag(1, ..., 1, d) over E / K and the lattice spanned over
+O_E by the rows of a matrix (m rows, or m + 1 for a lattice that is not
+free). Over K = Q, 2512 lattices of ranks 2 to 9: the symbol by
+GENUS_HermitianGenusOfLattice (generators), then GENUS_HermitianEnumerate,
+caps 30 min and 10G. 2504 were run: 2502 have Kirschmer's class number and
+close on the mass, 2 did not finish (below), no inconsistency. Open:
+
+* Performance, the seed: `Result7CN2_1_3` (rank 7 over Q(sqrt -3),
+  3: (0,1,-)(3,6,-)) and `Result8CN1_0_0` (rank 8, 3: (1,8,+)) do not build
+  their seed in 30 min. The target has a block of high scale at a ramified
+  prime: many descent steps from the norm maximal lattice, each computing the
+  local symbols of thousands of sublattices of rank 14-16 over Z, and every
+  intermediate symbol explored. Ideas: reach a block of scale s by
+  multiplying by the ideal P (P L shifts the scales by 2 at a ramified P),
+  and descend only from there; order the descent by the target.
+* Performance, the memory: rank 7 over Q(sqrt -3) takes 7.9 GB
+  (`Result7CN2_1_4`, `Result7CN2_1_6`), to understand before rank 8 and 9.
+* Not run: the last 8 lattices of rank 8 and 9 over Q(sqrt -3) and Q(i), and
+  the ~420 lattices over K of degree 2 to 4 (E / K given by a relative
+  polynomial: an absolute polynomial and the conjugate are needed, by
+  SageMath or Hecke.jl).
+* CI: 15B has 33 of these genera as symbols; the input of a lattice by
+  generators (GENUS_HermitianGenusOfLattice) is not in the CI yet.
+* Fixed on the way: the primes of the enumeration by increasing norm N(P)
+  (an inert prime of norm 49 came before the split prime of norm 17 that
+  changes the special genus, Q(sqrt -15)), and the norm maximal lattice of
+  the seed from the radical of the residue form only (instead of all the
+  lines of L / P L).
+
+## src_genera: quadratic lattices over totally real fields (planned)
+
+Hecke.jl's QuadLat, absent here. Test data: Kirschmer's `res_orth.m` (about
+30000 genera of class number 1 or 2 over 75 totally real fields, ranks 3 to
+16, counts equal to Theorems 7.4.1 and 7.4.2 of his habilitation; in rank 3
+the file has 4202 and 18754 genera against the 4194 and 18538 order types of
+Theorem 7.3.7, to explain), `unimod.m` (the unimodular lattices over K != Q,
+with their masses), the K = Q case against GENUS_Enumerate, Kirschmer-Nebe
+(quaternary lattices and quaternion ideals) and, for the algebraic modular
+forms later, Hein-Tornaria-Voight and the LMFDB Hilbert modular forms.
+
+## src_genera: other gaps with Hecke.jl and SageMath
+
+* Indefinite binary forms over Z (rank 2): classes from the class group of a
+  real quadratic order, not the spinor genera; refused by
+  GENUS_IndefiniteRepresentatives.
+* The list of all Hermitian genera of a rank, determinant and signatures
+  (Hecke.jl's hermitian_genera); we take one symbol.
+* Indefinite Hermitian lattices (special genera), and relative quadratic
+  extensions that are not CM.
+* Torsion quadratic modules and primitive embeddings (Nikulin), as far as
+  IsometryGlue.h does not cover them: to check.
+* SageMath's local tools for quadratic forms (representation numbers, local
+  normal forms): partly.

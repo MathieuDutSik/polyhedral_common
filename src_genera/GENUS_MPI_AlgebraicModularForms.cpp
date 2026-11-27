@@ -374,22 +374,22 @@ void RunAmfHerm(boost::mpi::communicator &comm, FullNamelist const &eFull,
   if (LevelIdeal != "1") {
     std::vector<HermIdealPrime<Tint>> l_fact;
     std::vector<int> l_exp;
-    for (std::string const &tok : STRING_Split(LevelIdeal, " ")) {
-      int64_t ell = 0, k = 0, e = 1;
-      char c1 = 0, c2 = 0, c3 = 0;
-      std::istringstream is(tok);
-      is >> c1 >> ell >> c2 >> k >> c3;
-      if (!is || c1 != '(' || c2 != ',' || c3 != ')') {
-        std::cerr << "AMFH: the factor " << tok << " of LevelIdeal is not of "
-                     "the form (ell,k) or (ell,k)^e\n";
+    std::string error;
+    std::optional<std::vector<HermIdealFactor>> opt_fact =
+        HermParseIdealFactors(LevelIdeal, error);
+    if (!opt_fact) {
+      std::cerr << "AMFH: LevelIdeal: " << error << "\n";
+      throw TerminalException{1};
+    }
+    for (auto const &fac : *opt_fact) {
+      int64_t ell = fac.ell;
+      int64_t k = static_cast<int64_t>(fac.k);
+      int64_t e = fac.v;
+      std::string tok = "(" + std::to_string(ell) + "," + std::to_string(k) +
+                        ")^" + std::to_string(e);
+      if (e < 1) {
+        std::cerr << "AMFH: the exponent of " << tok << " must be positive\n";
         throw TerminalException{1};
-      }
-      char c4 = 0;
-      if (is >> c4) {
-        if (c4 != '^' || !(is >> e) || e < 1) {
-          std::cerr << "AMFH: the exponent of " << tok << " is not valid\n";
-          throw TerminalException{1};
-        }
       }
       check_prime(static_cast<int>(ell), "level prime");
       std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, ell);

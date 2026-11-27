@@ -159,35 +159,15 @@ int main(int argc, char *argv[]) {
     SingleBlock const &BlockDATA = eFull.get_block("DATA");
     SingleBlock const &BlockMETHOD = eFull.get_block("METHOD");
     SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
-    NumberField<T> K;
-    std::optional<AbelianField> opt_F;
-    int conductor = BlockDATA.get_int("AbelianConductor");
-    if (conductor > 0) {
-      std::vector<int64_t> gens;
-      for (int g : BlockDATA.get_list_int("AbelianGenerators")) {
-        gens.push_back(g);
-      }
-      opt_F = MakeAbelianCMField(conductor, gens);
-      K = NumberFieldOfAbelianCM<T>(*opt_F);
-    } else {
-      K.d = 0;
-      for (int c : BlockDATA.get_list_int("FieldPolynomial")) {
-        K.Phi.push_back(c);
-      }
-      K.deg = static_cast<int>(K.Phi.size()) - 1;
-      std::vector<std::string> l_conj =
-          BlockDATA.get_list_string("FieldConjugate");
-      if (K.deg < 1 || static_cast<int>(l_conj.size()) != K.deg) {
-        std::cerr << "GENUS_HermitianEnumerate: the field is given by "
-                     "AbelianConductor or by FieldPolynomial and "
-                     "FieldConjugate (" << K.deg << " coefficients)\n";
-        throw TerminalException{1};
-      }
-      K.conj = ElemE<T>(K.deg, T(0));
-      for (int k = 0; k < K.deg; k++) {
-        K.conj[k] = ParseScalar<T>(l_conj[k]);
-      }
+    std::string error;
+    std::optional<HermFieldInput<T>> opt_field =
+        HermFieldFromBlock<T>(BlockDATA, error);
+    if (!opt_field) {
+      std::cerr << "GENUS_HermitianEnumerate: " << error << "\n";
+      throw TerminalException{1};
     }
+    NumberField<T> K = opt_field->K;
+    std::optional<AbelianField> opt_F = opt_field->opt_F;
     std::string symbol = BlockDATA.get_string("GenusSymbol");
     std::string str_mass = BlockDATA.get_string("TotalMass");
     std::optional<T> mass_input;

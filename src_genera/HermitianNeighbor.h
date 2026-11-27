@@ -11,6 +11,7 @@
 #include "Basic_random.h"
 #include <map>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -515,6 +516,45 @@ std::vector<HermIdealPrime<Tint>> HermIdealPrimesAbove(CMOrder<T, Tint> const &o
   }
   std::cerr << "HERMNB: no generator of O_E / rad modulo " << ell << "\n";
   throw TerminalException{1};
+}
+
+/*
+  An ideal of O_E written as a product of prime powers (ell,k)^v, (ell,k) the
+  k-th prime above ell as HermIdealPrimesAbove lists them (their names),
+  separated by spaces; "1" is the unit ideal and v may be negative. The
+  factors, or nothing with the reason in error (an input to report).
+ */
+struct HermIdealFactor {
+  int64_t ell;
+  size_t k;
+  int v;
+};
+
+inline std::optional<std::vector<HermIdealFactor>>
+HermParseIdealFactors(std::string const &str, std::string &error) {
+  std::vector<HermIdealFactor> res;
+  if (str == "1") {
+    return res;
+  }
+  for (std::string const &tok : STRING_Split(str, " ")) {
+    int64_t ell = 0, k = 0, v = 1;
+    char c1 = 0, c2 = 0, c3 = 0;
+    std::istringstream is(tok);
+    is >> c1 >> ell >> c2 >> k >> c3;
+    if (!is || c1 != '(' || c2 != ',' || c3 != ')' || ell < 2 || k < 0) {
+      error = "the factor " + tok + " is not of the form (ell,k) or (ell,k)^v";
+      return {};
+    }
+    char c4 = 0;
+    if (is >> c4) {
+      if (c4 != '^' || !(is >> v)) {
+        error = "the exponent of " + tok + " is not valid";
+        return {};
+      }
+    }
+    res.push_back({ell, static_cast<size_t>(k), static_cast<int>(v)});
+  }
+  return res;
 }
 
 /*

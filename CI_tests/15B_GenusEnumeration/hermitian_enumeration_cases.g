@@ -18,6 +18,15 @@
 # even genera, the spaces I and I + <d> together), the masses are those of
 # Hecke.jl, computed by the program. Q(sqrt -19) in rank 5 needs the
 # hyperplanes given by the form in the seed (HermitianGenusSeed.h).
+# Then genera of Kirschmer's classification of the definite Hermitian
+# lattices of class number 1 and 2 (res_herm.m of
+# www.math.rwth-aachen.de/~kirschme/forms/, 2016), over K = Q, of ranks 2 to
+# 4, genera of free lattices and of lattices that are not free: the class
+# number is Kirschmer's, the symbols are those of his lattices
+# (GENUS_HermitianGenusOfLattice with generators) and the masses are
+# computed by the program. The three rank 4 genera over Q(sqrt -15) need the
+# primes of the enumeration by increasing norm (the split prime of norm 17
+# before the inert one of norm 49).
 return [
   rec(name:="Q(sqrt-3) 1,3,6", field:=rec(conductor:=3, gens:=[1]), symbol:="m=3; 2: (0,2,+)(1,1,-); 3: (0,1,+)(2,2,-)", mass:=1/72, auts:=[108, 216]),
   rec(name:="Q(sqrt-7) 1,14", field:=rec(conductor:=7, gens:=[2]), symbol:="m=2; 2: (0,1,+)(1,1,+); 7: (0,1,+)(2,1,+)", mass:=3/2, auts:=[2, 4, 4, 4, 4]),
@@ -64,5 +73,38 @@ return [
   rec(name:="Schiemann Q(sqrt -56) rank 3, m=3; 2: (0,3,-,0); 7: (0,3,-)", field:=rec(poly:=[56, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,-,0); 7: (0,3,-)", mass:=33/4, n_class:=62, compute_mass:=true),
   rec(name:="Schiemann Q(sqrt -67) rank 3, m=3; 2: (0,3,+); 67: (0,3,+)", field:=rec(poly:=[67, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 67: (0,3,+)", mass:=251/48, n_class:=17, compute_mass:=true),
   rec(name:="Schiemann Q(sqrt -163) rank 2, m=2; 2: (0,2,+); 163: (0,2,+)", field:=rec(poly:=[163, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,+); 163: (0,2,+)", mass:=27/8, n_class:=8, compute_mass:=true),
-  rec(name:="Schiemann Q(sqrt -19) rank 5, m=5; 2: (0,5,+); 19: (0,5,+)", field:=rec(poly:=[19, 0, 1], conj:=[0, -1]), symbol:="m=5; 2: (0,5,+); 19: (0,5,+)", mass:=2959/2304, n_class:=32, compute_mass:=true)
+  rec(name:="Schiemann Q(sqrt -19) rank 5, m=5; 2: (0,5,+); 19: (0,5,+)", field:=rec(poly:=[19, 0, 1], conj:=[0, -1]), symbol:="m=5; 2: (0,5,+); 19: (0,5,+)", mass:=2959/2304, n_class:=32, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN2_4_3 (rank 4, h = 2, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,3,+)(1,1,+); 3: (1,4,+); 5: (1,4,+)", mass:=1/24, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN2_4_4 (rank 4, h = 2)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,1,+)(2,3,+); 3: (1,4,+); 5: (1,4,+)", mass:=1/3, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN2_4_5 (rank 4, h = 2)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,3,+)(2,1,+); 3: (1,4,+); 5: (1,4,+)", mass:=1/3, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_14_2 (rank 2, h = 1)", field:=rec(poly:=[67, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,+); 5: (0,1,+)(1,1,-); 67: (1,2,-)", mass:=1/6, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_5_4 (rank 2, h = 1)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,+); 3: (0,1,+)(2,1,+); 5: (1,2,+)", mass:=1/6, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_3_3 (rank 2, h = 1)", field:=rec(poly:=[2, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,-,1); 5: (0,1,+)(1,1,-)", mass:=1/4, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_31_1 (rank 2, h = 1, not free)", field:=rec(poly:=[78, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (1,2,+,1); 3: (0,2,+); 13: (1,2,+)", mass:=1/4, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_16_5 (rank 2, h = 1, not free)", field:=rec(poly:=[22, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (1,2,+,1); 3: (0,1,+)(1,1,-); 11: (1,2,-)", mass:=1/4, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN1_30_3 (rank 2, h = 1, not free)", field:=rec(poly:=[70, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,-,1); 5: (0,1,+)(2,1,+); 7: (1,2,-)", mass:=1/2, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_27_6 (rank 2, h = 2)", field:=rec(poly:=[37, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,-,0); 7: (0,1,+)(1,1,-); 37: (1,2,+)", mass:=3/4, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_0_4 (rank 2, h = 2)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,1,+)(4,1,+); 3: (0,2,+)", mass:=1/9, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_13_2 (rank 2, h = 2)", field:=rec(poly:=[51, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,1,+)(1,1,-); 3: (1,2,-); 17: (1,2,+)", mass:=1/12, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_88_7 (rank 2, h = 2, not free)", field:=rec(poly:=[282, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (1,2,-,1); 3: (0,1,-)(2,1,-); 47: (1,2,-)", mass:=1, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_78_11 (rank 2, h = 2, not free)", field:=rec(poly:=[795, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (0,2,+); 3: (0,2,+); 5: (0,1,+)(2,1,+); 53: (1,2,+)", mass:=1, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result2CN2_8_8 (rank 2, h = 2, not free)", field:=rec(poly:=[6, 0, 1], conj:=[0, -1]), symbol:="m=2; 2: (1,2,+,2); 3: (0,1,+)(2,1,+); 5: (0,1,+)(1,1,+)", mass:=1, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_0_3 (rank 3, h = 1)", field:=rec(poly:=[2, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (1,2,-,2)(4,1,-,2)", mass:=1/32, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_2_13 (rank 3, h = 1)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (0,1,-)(3,2,-)", mass:=1/144, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_1_4 (rank 3, h = 1)", field:=rec(poly:=[1, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,1,-,0)(2,2,-,1)", mass:=1/128, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_3_7 (rank 3, h = 1, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (1,2,-)(2,1,+); 5: (1,2,+)(2,1,-)", mass:=1/6, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_3_3 (rank 3, h = 1, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (0,1,-)(1,2,-); 5: (1,2,+)(2,1,+)", mass:=1/6, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN1_3_1 (rank 3, h = 1, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (0,1,+)(1,2,-); 5: (0,1,-)(1,2,+)", mass:=1/6, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_2_20 (rank 3, h = 2)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,1,+)(1,2,+); 3: (0,1,+)(2,2,+)", mass:=1/144, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_2_9 (rank 3, h = 2)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (0,1,+)(2,1,-)(4,1,-)", mass:=1/72, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_1_13 (rank 3, h = 2)", field:=rec(poly:=[1, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,1,-,0)(7,2,-,4)", mass:=1/8, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_4_7 (rank 3, h = 2, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,+); 3: (1,2,-)(2,1,+); 5: (0,3,-)", mass:=1/6, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_3_9 (rank 3, h = 2, not free)", field:=rec(poly:=[5, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,3,-,0); 5: (1,2,+)(2,1,-)", mass:=5/16, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result3CN2_3_11 (rank 3, h = 2, not free)", field:=rec(poly:=[5, 0, 1], conj:=[0, -1]), symbol:="m=3; 2: (0,1,+,0)(2,2,-,2); 5: (1,2,+)(2,1,-)", mass:=5/16, n_class:=2, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN1_1_12 (rank 4, h = 1)", field:=rec(poly:=[1, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (1,2,-,1)(3,2,-,2)", mass:=1/1024, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN1_2_15 (rank 4, h = 1)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,3,+)(2,1,+); 3: (1,4,+)", mass:=1/3888, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN1_2_7 (rank 4, h = 1)", field:=rec(poly:=[3, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,4,+); 3: (0,3,-)(2,1,-)", mass:=1/2592, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN1_3_0 (rank 4, h = 1, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,4,+); 3: (0,2,-)(1,2,-); 5: (1,4,+)", mass:=1/18, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN1_3_1 (rank 4, h = 1, not free)", field:=rec(poly:=[15, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,4,+); 3: (1,2,-)(2,2,-); 5: (1,4,+)", mass:=1/18, n_class:=1, compute_mass:=true),
+  rec(name:="Kirschmer Result4CN2_5_1 (rank 4, h = 2)", field:=rec(poly:=[7, 0, 1], conj:=[0, -1]), symbol:="m=4; 2: (0,4,+); 3: (0,2,+)(1,2,+); 7: (1,4,+)", mass:=1/72, n_class:=2, compute_mass:=true)
 ];

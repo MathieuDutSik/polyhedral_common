@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "HermitianGenusSymbol.h"
+#include <limits>
+#include <optional>
 #include <deque>
 #include <map>
 #include <set>
@@ -355,31 +357,22 @@ MyMatrix<T> HermHyperplaneSublattice(HermLatticeData<T, Tint> const &L,
 }
 
 /*
-  The hyperplanes of L / P L given by the form, for the descent: with s
-  the least scale of L at P (h(L, L) = P^s locally), the maps
-  x -> res_P(pi^{-s} h(x, v)), v in L, are linear forms on L / P L (they
-  vanish on P L). They span the dual of the scale-s Jordan block, so their
-  kernels are the sublattices that change that block, which are few among
-  all the hyperplanes of L / P L (the others are reached as well by the
-  random lines of the descent). The forms are returned by their values on
-  the F_q-basis of ls (codes, as HermHyperplaneSublattice takes them), one
-  per line of their span, at most max_forms of them.
+  The residue matrix of the form at P on the F_q-basis w of ls (the lines of
+  L / P L): R[j][k] = res_P(pi^{-s} h(w_j, w_k)) (codes), pi a uniformizer
+  of P prime to the other primes above ell, s = scale such that pi^{-s} h
+  is integral at P (s the least valuation of h(L, L) at P, or below it).
  */
 template <typename T, typename Tint>
-std::vector<std::vector<int>>
-HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
-                    std::vector<HermIdealPrime<Tint>> const &l_prime,
-                    size_t i_P, HermLineSpace const &ls, int scale,
-                    size_t max_forms) {
+std::vector<std::vector<uint64_t>>
+HermResidueFormMatrix(HermLatticeData<T, Tint> const &L,
+                      std::vector<HermIdealPrime<Tint>> const &l_prime,
+                      size_t i_P, HermLineSpace const &ls, int scale) {
   CMOrder<T, Tint> const &ord = *L.ord;
   HermIdealPrime<Tint> const &P = l_prime[i_P];
   FiniteField const &F = ls.F;
-  int d = ord.deg;
   int n = L.n();
   int m = ls.m;
   int q = static_cast<int>(F.q);
-  // rho = pi^{-s}, pi a uniformizer of P prime to the other primes above
-  // ell
   std::vector<HermIdealPrime<Tint>> l_other;
   for (size_t j = 0; j < l_prime.size(); j++) {
     if (j != i_P) {
@@ -391,10 +384,7 @@ HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
   // y -> y pi (product(pi, y) = mult_matrix(pi)^T y), and its inverse
   MyMatrix<T> M_pi_t = M_pi.transpose();
   MyMatrix<T> Mul = (scale <= 0) ? M_pi_t : MyMatrix<T>(Inverse(M_pi_t));
-  MyVector<T> one = ZeroVector<T>(d);
-  one(0) = T(1);
   int n_mul = (scale <= 0) ? -scale : scale;
-  // the F_q-basis of L / P L as vectors of L
   std::vector<MyVector<Tint>> l_w;
   for (int j = 0; j < m; j++) {
     std::vector<int> e(m, 0);
@@ -406,19 +396,27 @@ HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
     }
     l_w.push_back(w);
   }
-  // the columns R(., k) = (res_P(rho h(w_j, w_k)))_j, reduced to a basis
-  uint64_t minus_one = FqEncode(F, FqNeg(F, FqOne(F)));
-  std::vector<std::vector<uint64_t>> basis;
-  std::vector<int> pivots;
-  for (int k = 0; k < m; k++) {
-    std::vector<uint64_t> col(m);
-    for (int j = 0; j < m; j++) {
+  std::vector<std::vector<uint64_t>> R(m, std::vector<uint64_t>(m));
+  for (int j = 0; j < m; j++) {
+    for (int k = 0; k < m; k++) {
       MyVector<T> u = L.herm(l_w[j], l_w[k]);
       for (int t = 0; t < n_mul; t++) {
         u = Mul * u;
       }
-      col[j] = FqEncode(F, HermResidueAtP(ord, l_prime, i_P, u));
+      R[j][k] = FqEncode(F, HermResidueAtP(ord, l_prime, i_P, u));
     }
+  }
+  return R;
+}
+
+// A reduced echelon basis (rows, codes) of the F_q-span of the vectors l_v.
+inline std::vector<std::vector<uint64_t>>
+HermFqSpanBasis(FiniteField const &F, std::vector<std::vector<uint64_t>> l_v) {
+  uint64_t minus_one = FqEncode(F, FqNeg(F, FqOne(F)));
+  std::vector<std::vector<uint64_t>> basis;
+  std::vector<int> pivots;
+  for (auto &col : l_v) {
+    int m = static_cast<int>(col.size());
     for (size_t b = 0; b < basis.size(); b++) {
       uint64_t c = col[pivots[b]];
       if (c != 0) {
@@ -441,16 +439,36 @@ HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
     for (int j = 0; j < m; j++) {
       col[j] = FqCodeMul(F, col[j], inv);
     }
+    // keep the basis reduced at the new pivot
+    for (size_t b = 0; b < basis.size(); b++) {
+      uint64_t c = basis[b][piv];
+      if (c != 0) {
+        uint64_t f = FqCodeMul(F, c, minus_one);
+        for (int j = 0; j < m; j++) {
+          basis[b][j] = FqCodeAdd(F, basis[b][j], FqCodeMul(F, f, col[j]));
+        }
+      }
+    }
     basis.push_back(col);
     pivots.push_back(piv);
   }
+  return basis;
+}
+
+// The lines of the span of the rows of basis (codes): their vectors.
+inline std::vector<std::vector<int>>
+HermFqSpanLines(FiniteField const &F,
+                std::vector<std::vector<uint64_t>> const &basis,
+                size_t max_lines) {
   std::vector<std::vector<int>> res;
   int r = static_cast<int>(basis.size());
   if (r == 0) {
     return res;
   }
+  int m = static_cast<int>(basis[0].size());
+  int q = static_cast<int>(F.q);
   size_t n_line = NumberProjectiveLines(r, q);
-  for (size_t idx = 0; idx < std::min(n_line, max_forms); idx++) {
+  for (size_t idx = 0; idx < std::min(n_line, max_lines); idx++) {
     std::vector<int> a = ProjectiveLineOfIndex(r, q, idx);
     std::vector<int> c(m, 0);
     for (int j = 0; j < m; j++) {
@@ -464,6 +482,89 @@ HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
     res.push_back(c);
   }
   return res;
+}
+
+/*
+  The left kernel of R over F_q: the a with sum_j a_j R[j][k] = 0 for every
+  k, as an echelon basis (rows, codes).
+ */
+inline std::vector<std::vector<uint64_t>>
+HermFqLeftKernel(FiniteField const &F,
+                 std::vector<std::vector<uint64_t>> const &R) {
+  int m = static_cast<int>(R.size());
+  uint64_t minus_one = FqEncode(F, FqNeg(F, FqOne(F)));
+  // row reduction of [R | I]: the rows of I next to the zero rows of R
+  std::vector<std::vector<uint64_t>> A(m, std::vector<uint64_t>(2 * m, 0));
+  int nc = m == 0 ? 0 : static_cast<int>(R[0].size());
+  for (int j = 0; j < m; j++) {
+    for (int k = 0; k < nc; k++) {
+      A[j][k] = R[j][k];
+    }
+    A[j][nc + j] = 1;
+  }
+  int row = 0;
+  for (int col = 0; col < nc && row < m; col++) {
+    int piv = -1;
+    for (int j = row; j < m && piv < 0; j++) {
+      if (A[j][col] != 0) {
+        piv = j;
+      }
+    }
+    if (piv < 0) {
+      continue;
+    }
+    std::swap(A[row], A[piv]);
+    uint64_t inv = FqCodeInv(F, A[row][col]);
+    for (auto &x : A[row]) {
+      x = FqCodeMul(F, x, inv);
+    }
+    for (int j = 0; j < m; j++) {
+      if (j != row && A[j][col] != 0) {
+        uint64_t f = FqCodeMul(F, A[j][col], minus_one);
+        for (int c = 0; c < nc + m; c++) {
+          A[j][c] = FqCodeAdd(F, A[j][c], FqCodeMul(F, f, A[row][c]));
+        }
+      }
+    }
+    row++;
+  }
+  std::vector<std::vector<uint64_t>> ker;
+  for (int j = row; j < m; j++) {
+    ker.push_back(std::vector<uint64_t>(A[j].begin() + nc, A[j].end()));
+  }
+  return HermFqSpanBasis(F, ker);
+}
+
+/*
+  The hyperplanes of L / P L given by the form, for the descent: with s
+  the least scale of L at P (h(L, L) = P^s locally), the maps
+  x -> res_P(pi^{-s} h(x, v)), v in L, are linear forms on L / P L (they
+  vanish on P L). They span the dual of the scale-s Jordan block, so their
+  kernels are the sublattices that change that block, which are few among
+  all the hyperplanes of L / P L (the others are reached as well by the
+  random lines of the descent). The forms are returned by their values on
+  the F_q-basis of ls (codes, as HermHyperplaneSublattice takes them), one
+  per line of their span, at most max_forms of them.
+ */
+template <typename T, typename Tint>
+std::vector<std::vector<int>>
+HermFormHyperplanes(HermLatticeData<T, Tint> const &L,
+                    std::vector<HermIdealPrime<Tint>> const &l_prime,
+                    size_t i_P, HermLineSpace const &ls, int scale,
+                    size_t max_forms) {
+  std::vector<std::vector<uint64_t>> R =
+      HermResidueFormMatrix(L, l_prime, i_P, ls, scale);
+  int m = ls.m;
+  // the columns R(., k) = (res_P(rho h(w_j, w_k)))_j
+  std::vector<std::vector<uint64_t>> l_col;
+  for (int k = 0; k < m; k++) {
+    std::vector<uint64_t> col(m);
+    for (int j = 0; j < m; j++) {
+      col[j] = R[j][k];
+    }
+    l_col.push_back(col);
+  }
+  return HermFqSpanLines(ls.F, HermFqSpanBasis(ls.F, l_col), max_forms);
 }
 
 /*
@@ -672,12 +773,63 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
     std::vector<HermIdealPrime<Tint>> const &l_prime = cache.at(ell);
     for (size_t j = 0; j < l_prime.size(); j++) {
       MyMatrix<T> P_inv = HermIdealInverse(ord, l_prime[j]);
+      HermIdealPrime<Tint> const &P = l_prime[j];
+      // L + P^{-1} x is norm integral only if its trace terms Tr h(y,
+      // P^{-1} x), y in L, are integral, that is h(x, L) in P D^{-1}, D the
+      // different of E / K_0: v_P(h(x, L)) >= t = 1 - v_P(D), for P =
+      // conj(P). With s the scale of L at P (s >= t - 1 as L is norm
+      // integral), when s = t - 1 that is the linear condition that x mod P
+      // is in the radical of the residue form res_P(pi^{-s} h(x, w)): only
+      // the lines of the radical are tried, instead of all the lines of
+      // L / P L. Otherwise (s >= t, or a split P) every line is tried.
+      int t_min = 1;
+      if (P.type == HermIdealType::Ramified) {
+        t_min = 1 - ((ell == 2) ? HermDifferentVal(ord, l_prime, j) : 1);
+      }
       bool progress = true;
       while (progress) {
         progress = false;
         HermLatticeData<T, Tint> L = lattice_of(seed.basis);
         HermLineSpace ls = HermGetLineSpace(L, l_prime[j]);
-        for (size_t idx = 0; idx < ls.n_line() && !progress; idx++) {
+        std::optional<std::vector<std::vector<int>>> l_radical;
+        if (P.type != HermIdealType::Split) {
+          int sc = 1 << 28;
+          for (int k = 0; k < n; k++) {
+            MyVector<Tint> ek = ZeroVector<Tint>(n);
+            ek(k) = 1;
+            for (int l = k; l < n; l++) {
+              MyVector<Tint> el = ZeroVector<Tint>(n);
+              el(l) = 1;
+              sc = std::min(sc, HermIdealVal(ord, P, L.herm(ek, el)));
+            }
+          }
+          if (sc == t_min - 1) {
+            std::vector<std::vector<uint64_t>> R =
+                HermResidueFormMatrix(L, l_prime, j, ls, sc);
+            l_radical = HermFqSpanLines(ls.F, HermFqLeftKernel(ls.F, R),
+                                        std::numeric_limits<size_t>::max());
+          }
+        }
+        size_t n_cand = l_radical ? l_radical->size() : ls.n_line();
+#ifdef DEBUG_HERMITIAN_GENUS_SEED
+        os << "HERMSEED: the maximal lattice at " << P.name << ", " << n_cand
+           << " candidate lines of " << ls.n_line() << "\n";
+#endif
+        for (size_t u = 0; u < n_cand && !progress; u++) {
+          size_t idx = u;
+          if (l_radical) {
+            // the vector normalized (first nonzero coordinate 1)
+            std::vector<int> a = (*l_radical)[u];
+            size_t i0 = 0;
+            while (a[i0] == 0) {
+              i0++;
+            }
+            uint64_t inv = FqCodeInv(ls.F, static_cast<uint64_t>(a[i0]));
+            for (auto &x : a) {
+              x = static_cast<int>(FqCodeMul(ls.F, static_cast<uint64_t>(x), inv));
+            }
+            idx = IndexOfProjectiveLine(a, static_cast<int>(ls.F.q));
+          }
           std::vector<int64_t> z = ls.line_vector(idx);
           MyVector<Tint> x(n);
           for (int k = 0; k < n; k++) {

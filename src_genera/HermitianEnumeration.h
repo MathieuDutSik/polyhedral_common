@@ -9,7 +9,10 @@
 #include "ScalarAbelianField.h"
 #include "LatticeStabEquiCan.h"
 #include "ClassicLLL.h"
+#include "Namelist.h"
 #include <map>
+#include <queue>
+#include <tuple>
 #include <optional>
 #include <string>
 #include <utility>
@@ -43,8 +46,8 @@
   neighbors of HermitianNeighbor.h: split, inert and ramified, the dyadic
   ramified ones included): one neighbor computation per orbit of U(L) on the lines of
   L / C L, the automorphisms being O_E-linear so that they preserve C L.
-  The neighbor primes are the primes of E above the rational primes, in
-  increasing order, where the seed is unimodular; all the classes are
+  The neighbor primes are the primes of E above the rational primes where
+  the seed is unimodular, by increasing norm N(P); all the classes are
   expanded at the first one, and while the mass is not reached the next
   one is brought in and all the classes are expanded at it. The neighbor
   graphs of several primes connect the genus when their classes generate
@@ -188,6 +191,50 @@ std::vector<MyMatrix<T>> HermPairOfBasis(RealifiedRing<T, Tint> const &ring,
   return {G, MyMatrix<T>(G * Om.transpose())};
 }
 
+/*
+  The field of a namelist block (GENUS_HermitianEnumerate,
+  GENUS_HermitianGenera): AbelianConductor and AbelianGenerators, or
+  FieldPolynomial and FieldConjugate. The error message, for the program to
+  report, when the input is not valid.
+ */
+template <typename T> struct HermFieldInput {
+  NumberField<T> K;
+  std::optional<AbelianField> opt_F;
+};
+
+template <typename T>
+std::optional<HermFieldInput<T>> HermFieldFromBlock(SingleBlock const &B,
+                                                    std::string &error) {
+  HermFieldInput<T> res;
+  int conductor = B.get_int("AbelianConductor");
+  if (conductor > 0) {
+    std::vector<int64_t> gens;
+    for (int g : B.get_list_int("AbelianGenerators")) {
+      gens.push_back(g);
+    }
+    res.opt_F = MakeAbelianCMField(conductor, gens);
+    res.K = NumberFieldOfAbelianCM<T>(*res.opt_F);
+    return res;
+  }
+  res.K.d = 0;
+  for (int c : B.get_list_int("FieldPolynomial")) {
+    res.K.Phi.push_back(c);
+  }
+  res.K.deg = static_cast<int>(res.K.Phi.size()) - 1;
+  std::vector<std::string> l_conj = B.get_list_string("FieldConjugate");
+  if (res.K.deg < 1 || static_cast<int>(l_conj.size()) != res.K.deg) {
+    error = "the field is given by AbelianConductor or by FieldPolynomial "
+            "and FieldConjugate (" + std::to_string(res.K.deg) +
+            " coefficients)";
+    return {};
+  }
+  res.K.conj = ElemE<T>(res.K.deg, T(0));
+  for (int k = 0; k < res.K.deg; k++) {
+    res.K.conj[k] = ParseScalar<T>(l_conj[k]);
+  }
+  return res;
+}
+
 template <typename T, typename Tint> struct HermEnumClass {
   // the canonical basis, rows in the coordinates of the ambient space
   MyMatrix<T> basis;
@@ -309,27 +356,72 @@ HermitianEnumeration(CMOrder<T, Tint> const &ord, HermSeed<T, Tint> const &seed,
   };
   insert(seed.basis);
   HermLatticeData<T, Tint> L0 = HermLatticeOfBasis(ord, ring, seed.basis);
-  for (int64_t ell = 2; ell <= max_prime && !closed(); ell++) {
-    bool is_prime = true;
-    for (int64_t q = 2; q * q <= ell; q++) {
-      if (ell % q == 0) {
-        is_prime = false;
+  // The primes P of E above ell <= max_prime, ell where the genus is
+  // unimodular, by increasing norm N(P): the cost of the neighbors at P
+  // grows with N(P) (the lines of L / P L), and an inert prime of norm ell^2
+  // never changes the special genus, so a split prime of small norm comes
+  // before it. As N(P) >= ell, the primes above every ell <= N(P) are known
+  // before P is taken.
+  std::map<int64_t, std::vector<HermIdealPrime<Tint>>> primes_above;
+  // (N(P), ell, index of P above ell), smallest first
+  std::priority_queue<std::tuple<uint64_t, int64_t, size_t>,
+                      std::vector<std::tuple<uint64_t, int64_t, size_t>>,
+                      std::greater<std::tuple<uint64_t, int64_t, size_t>>>
+      pending;
+  int64_t next_ell = 2;
+  auto decompose_up_to = [&](uint64_t bound) -> void {
+    while (next_ell <= max_prime && static_cast<uint64_t>(next_ell) <= bound) {
+      int64_t ell = next_ell++;
+      bool is_prime = true;
+      for (int64_t q = 2; q * q <= ell; q++) {
+        if (ell % q == 0) {
+          is_prime = false;
+        }
       }
-    }
-    if (!is_prime || !HermIsUnimodularAt(L0, ell)) {
-      continue;
-    }
-    std::vector<HermIdealPrime<Tint>> l_prime = HermIdealPrimesAbove(ord, ell);
-    for (size_t ip = 0; ip < l_prime.size() && !closed(); ip++) {
-      // one prime of each conjugate pair: the neighbors at conj(P) are the
-      // reversed edges of those at P (Hecke.jl uses a single prime too)
-      if (l_prime[ip].conj_index < ip) {
+      if (!is_prime || !HermIsUnimodularAt(L0, ell)) {
         continue;
       }
+      std::vector<HermIdealPrime<Tint>> l_p = HermIdealPrimesAbove(ord, ell);
+#ifdef DEBUG_HERMITIAN_ENUMERATION
+      for (auto const &P : l_p) {
+        os << "HERMENUM: above " << ell << " the prime " << P.name
+           << " of norm " << P.q() << "\n";
+      }
+#endif
+      for (size_t ip = 0; ip < l_p.size(); ip++) {
+        // one prime of each conjugate pair: the neighbors at conj(P) are
+        // the reversed edges of those at P (Hecke.jl uses a single prime
+        // too)
+        if (l_p[ip].conj_index >= ip) {
+          pending.push({l_p[ip].q(), ell, ip});
+        }
+      }
+      primes_above[ell] = l_p;
+    }
+  };
+  while (!closed()) {
+    if (pending.empty()) {
+      if (next_ell > max_prime) {
+        break;
+      }
+      decompose_up_to(static_cast<uint64_t>(next_ell));
+      continue;
+    }
+    // every ell <= N(P) must be decomposed before the smallest P is taken
+    uint64_t top_norm = std::get<0>(pending.top());
+    if (next_ell <= max_prime && static_cast<uint64_t>(next_ell) <= top_norm) {
+      decompose_up_to(top_norm);
+      continue;
+    }
+    auto [norm, ell, ip] = pending.top();
+    pending.pop();
+    std::vector<HermIdealPrime<Tint>> const &l_prime = primes_above[ell];
+    {
       HermNeighborPrime<T, Tint> np = HermGetNeighborPrime(ord, l_prime, ip);
       res.primes_used.push_back(ell);
 #ifdef DEBUG_HERMITIAN_ENUMERATION
-      os << "HERMENUM: the neighbors at a prime above " << ell << "\n";
+      os << "HERMENUM: the neighbors at a prime above " << ell << ", of norm "
+         << norm << "\n";
 #endif
       for (size_t i = 0; i < res.l_class.size() && !closed(); i++) {
         MyMatrix<T> A = res.l_class[i].basis;
