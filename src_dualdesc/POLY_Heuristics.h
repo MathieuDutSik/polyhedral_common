@@ -580,6 +580,33 @@ template <typename T> TheHeuristic<T> MethodChoiceCanonicalization() {
   return HeuristicFromListString<T>(ListString);
 }
 
+// Description: whether a direct dual description is done after the change of
+// basis that makes a full rank set of facets of the polytope its coordinates
+// (FullRankFacetSetBasis, the facets of GetFullRankFacetSet). The incremental
+// methods (cdd, normaliz, beneath_beyond) insert the rows in lexicographic
+// order, which depends on the coordinates; in such coordinates the rows of a
+// large face come first and the intermediate cones stay small. The facets cost
+// a few linear programs, which is too much for the many small cases, so the
+// default is to never do it, and an instance turns it on where it pays. It is
+// applied only when the program chosen depends on the basis
+// (dual_desc_program_depends_on_basis): never for lrs, pd_lrs or
+// small_polytopes, whatever the answer.
+//
+// Variable available for making the decision:
+// * "incidence": the number of vertices.
+// * "groupsize": the size of the group available for the computation.
+// * "level": the depth of the call in the recursive adjacency decomposition.
+// * "rank": the dimension of the polytope.
+// * "delta": the difference between the incidence and the rank.
+//
+// Possible output:
+// * "yes": change the basis before the direct dual description.
+// * "no": keep the coordinates as they are.
+template <typename T> TheHeuristic<T> MethodApplyReorder() {
+  std::vector<std::string> ListString = {"0", "no"};
+  return HeuristicFromListString<T>(ListString);
+}
+
 // Description: When computing with dual description, we need to split
 // from the list of orbits for one big group to the list of orbits for
 // a smaller group. There are many possible methods to consider.
@@ -771,6 +798,7 @@ template <typename TintGroup> struct PolyHeuristicSerial {
   OrbitSplitHeuristic<TintGroup> OrbitSplitTechnique;
   DualDescHeuristic<TintGroup> CommThread;
   DualDescHeuristic<TintGroup> ChoiceCanonicalization;
+  DualDescHeuristic<TintGroup> ApplyReorder;
   bool DD_Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -816,6 +844,7 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
               MethodOrbitSplitTechnique<TintGroup>()),
           convert_dual_desc_heuristic(StandardHeuristicCommThread<TintGroup>()),
           convert_dual_desc_heuristic(MethodChoiceCanonicalization<TintGroup>()),
+          convert_dual_desc_heuristic(MethodApplyReorder<TintGroup>()),
           DD_Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,
@@ -856,6 +885,7 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
   os << "RDD: CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
   os << "RDD: ChoiceCanonicalizationFile\n"
      << AllArr.ChoiceCanonicalization << "\n";
+  os << "RDD: ApplyReorderHeuristicFile\n" << AllArr.ApplyReorder << "\n";
   os << "RDD: max_runtime=" << AllArr.max_runtime << "\n";
   os << "RDD: DD_Saving=" << AllArr.DD_Saving << "\n";
   os << "RDD: DD_Prefix=" << AllArr.DD_Prefix << "\n";

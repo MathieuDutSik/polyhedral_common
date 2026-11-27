@@ -118,6 +118,7 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
   SetHeuristic(eFull, "ChoiceCanonicalizationFile",
                AllArr.ChoiceCanonicalization, os);
+  SetHeuristic(eFull, "ApplyReorderHeuristicFile", AllArr.ApplyReorder, os);
   //
   bool DD_Saving = BlockMETHOD.get_bool("Saving");
   AllArr.DD_Saving = DD_Saving;

@@ -219,6 +219,14 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
     start_comm_thread();
     std::string ansProg = AllArr.DualDescriptionProgram.get_eval(info.named_map());
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
+    // The change of basis of FullRankFacetSetBasis when the ApplyReorder
+    // heuristic asks for it and the program depends on the basis (the
+    // incidences are the same).
+    if (apply_reorder_decision_from_string(dual_desc_heuristic_evaluation(
+            AllArr.ApplyReorder, info)) == ApplyReorderDecision::yes &&
+        dual_desc_program_depends_on_basis(prog)) {
+      EXT = EXT * FullRankFacetSetBasis(EXT, os).transpose();
+    }
     vectface TheOutput = DirectFacetOrbitComputation(EXT, Stab, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI

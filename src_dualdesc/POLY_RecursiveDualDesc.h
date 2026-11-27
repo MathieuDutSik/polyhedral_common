@@ -101,6 +101,20 @@ inline SplittingDecision splitting_decision_from_string(std::string const &ans) 
 // The decision produced by the AdditionalSymmetry heuristic: whether to look
 // for additional symmetries (the full stabilizer of the weight matrix, "yes")
 // or to reuse the input group as-is ("no").
+// Whether a direct dual description is done after the change of basis of
+// FullRankFacetSetBasis (the ApplyReorder heuristic).
+enum class ApplyReorderDecision { yes, no };
+
+inline ApplyReorderDecision
+apply_reorder_decision_from_string(std::string const &ans) {
+  if (ans == "yes")
+    return ApplyReorderDecision::yes;
+  if (ans == "no")
+    return ApplyReorderDecision::no;
+  std::cerr << "RDD: unknown apply reorder decision ans=" << ans << "\n";
+  throw TerminalException{1};
+}
+
 enum class AdditionalSymmetryDecision { yes, no };
 
 inline std::string
@@ -1047,6 +1061,17 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|RDD: ansProg|=" << time_step << "\n";
 #endif
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
+    // The change of basis of FullRankFacetSetBasis, when the ApplyReorder
+    // heuristic asks for it and the program depends on the basis: the
+    // incidences are the same, an inequality w in the new coordinates is
+    // N^T w in those of the face.
+    ApplyReorderDecision reorder_decision = apply_reorder_decision_from_string(
+        dual_desc_heuristic_evaluation(AllArr.ApplyReorder, info));
+    std::optional<MyMatrix<T>> opt_NT;
+    if (reorder_decision == ApplyReorderDecision::yes &&
+        dual_desc_program_depends_on_basis(prog)) {
+      opt_NT = FullRankFacetSetBasis(df.FF.EXT_face, os).transpose();
+    }
     if (df.Stab.size() == 1) {
       auto f_process =
           [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
@@ -1066,7 +1091,17 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
         os << "|RDD: insert1|=" << time_loc << "\n";
 #endif
       };
-      DirectFacetComputationFaceIneq(df.FF.EXT_face, prog, f_process, os);
+      if (opt_NT) {
+        MyMatrix<T> const &NT = *opt_NT;
+        auto f_process_reorder =
+            [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
+          f_process({pair_face.first, NT * pair_face.second});
+        };
+        DirectFacetComputationFaceIneq(MyMatrix<T>(df.FF.EXT_face * NT), prog,
+                                       f_process_reorder, os);
+      } else {
+        DirectFacetComputationFaceIneq(df.FF.EXT_face, prog, f_process, os);
+      }
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: DirectFacetComputationFaceIneq|=" << time_step << "\n";
 #endif
@@ -1076,7 +1111,11 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
     } else {
       vectface TheOutput =
-          DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, prog, os);
+          opt_NT ? DirectFacetOrbitComputation(
+                       MyMatrix<T>(df.FF.EXT_face * (*opt_NT)), df.Stab, prog,
+                       os)
+                 : DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, prog,
+                                               os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|RDD: TheOutput|=" << time_step << "\n";
 #endif
@@ -1451,7 +1490,15 @@ vectface DUALDESC_AdjacencyDecomposition(
     std::string ansProg =
         AllArr.DualDescriptionProgram.get_eval(info.named_map());
     DualDescProgram prog = dual_desc_program_from_string(ansProg);
-    vectface TheOutput = DirectFacetOrbitComputation(EXT, GRP, prog, os);
+    ApplyReorderDecision reorder_decision = apply_reorder_decision_from_string(
+        dual_desc_heuristic_evaluation(AllArr.ApplyReorder, info));
+    vectface TheOutput =
+        (reorder_decision == ApplyReorderDecision::yes &&
+         dual_desc_program_depends_on_basis(prog))
+            ? DirectFacetOrbitComputation(
+                  MyMatrix<T>(EXT * FullRankFacetSetBasis(EXT, os).transpose()),
+                  GRP, prog, os)
+            : DirectFacetOrbitComputation(EXT, GRP, prog, os);
     AllArr.DualDescriptionProgram.pop(os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|RDD: entry_direct nbRow=" << nbRow << "|=" << time_direct << "\n";
@@ -1768,6 +1815,10 @@ If set to unset.heu then disabled";
     ListStringValues_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
 The heuristic for choosing the canonicalization method used.\n\
 If set to unset.heu then disabled";
+    ListStringValues_doc["ApplyReorderHeuristicFile"] = "Default: unset.heu\n\
+The heuristic for choosing whether a direct dual description is done after the\n\
+change of basis to a full rank set of facets (FullRankFacetSetBasis).\n\
+If set to unset.heu then never done";
     ListBlock["HEURISTIC"].setListStringValues_doc(ListStringValues_doc);
   }
   // METHOD

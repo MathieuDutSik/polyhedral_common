@@ -82,6 +82,26 @@ struct std::formatter<DualDescProgram> : std::formatter<std::string_view> {
   }
 };
 
+// Whether the work of the program depends on the coordinates of the input,
+// through its insertion order: the incremental methods insert the rows in
+// lexicographic order. The reverse search orders on variable indices and not
+// on coordinate values, so a change of basis does not change its work, and
+// small_polytopes is a closed formula. The change of basis of
+// FullRankFacetSetBasis is only worth its linear programs for the former.
+inline bool dual_desc_program_depends_on_basis(DualDescProgram prog) {
+  switch (prog) {
+  case DualDescProgram::cdd:
+  case DualDescProgram::beneath_beyond:
+  case DualDescProgram::normaliz:
+    return true;
+  case DualDescProgram::small_polytopes:
+  case DualDescProgram::lrs:
+  case DualDescProgram::pd_lrs:
+    return false;
+  }
+  return false;
+}
+
 // Parses the string form of the program. Returns nullopt if the string is not
 // a known dual description program (e.g. "fullrankfacetset" handled elsewhere).
 inline std::optional<DualDescProgram>
@@ -264,6 +284,52 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     Fprocess f_process, std::ostream &os) {
   return DirectFacetComputationFaceIneq(
       EXT, dual_desc_program_from_string(ansProg), f_process, os);
+}
+
+/*
+  The change of basis that makes a full rank set of facets of the cone EXT
+  (rows the rays, of full column rank) its coordinates: the facets of
+  GetFullRankFacetSet, by decreasing incidence. It returns N, d x d, whose rows
+  are the facet inequalities; the cone with rows EXT N^T has the same
+  incidences, and an inequality w of it is the inequality N^T w of EXT.
+
+  The work of the incremental methods (cdd, normaliz, beneath_beyond) depends
+  on the coordinates, through their lexicographic insertion order: in
+  coordinates that are facet inequalities, the rays of a large face come first
+  and the intermediate cones stay small. The facets of GetFullRankFacetSet are
+  the neighbors of one facet through a full rank set of its ridges, of large
+  incidence. Facets of small incidence do not do it, independence alone is not
+  enough. On a face of 857 rays of the local cone of E6, normaliz takes 4 h 29
+  in the coordinates of the recursion and 0.4 s after this change of basis
+  (GetFullRankFacetSet included), cdd 0.5 s, with at most 1300 intermediate
+  rays against 175000 after 44 insertions.
+ */
+template <typename T>
+MyMatrix<T> FullRankFacetSetBasis(MyMatrix<T> const &EXT, std::ostream &os) {
+  int dim = EXT.cols();
+  vectface vf = GetFullRankFacetSet(EXT, os);
+  SubsetRankOneSolver<T> solver(EXT);
+  std::vector<std::pair<size_t, MyVector<T>>> l_fac;
+  for (auto &face : vf) {
+    l_fac.push_back({face.count(), solver.GetPositiveKernelVector(face)});
+  }
+  std::stable_sort(l_fac.begin(), l_fac.end(),
+                   [](auto const &a, auto const &b) -> bool {
+                     return a.first > b.first;
+                   });
+  MyMatrix<T> N(dim, dim);
+  for (int i = 0; i < dim; i++) {
+    N.row(i) = l_fac[i].second;
+  }
+#ifdef SANITY_CHECK_DUAL_DESC
+  if (static_cast<int>(vf.size()) != dim || RankMat(N) != dim) {
+    std::cerr << "DDD: FullRankFacetSetBasis, |vf|=" << vf.size()
+              << " is not a full rank set of facets in dimension " << dim
+              << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return N;
 }
 
 template <typename T, typename Tgroup>
