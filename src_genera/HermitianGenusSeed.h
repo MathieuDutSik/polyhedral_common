@@ -975,6 +975,29 @@ HermSeed<T, Tint> HermSeedFromSymbol(CMOrder<T, Tint> const &ord,
   return seed;
 }
 
+// Whether L and L2 have the same local symbols at the primes l_prime above
+// ell (one per prime of K_0), as a neighbor at a prime above ell must.
+template <typename T, typename Tint>
+bool HermSameLocalSymbolsAbove(HermLatticeData<T, Tint> const &L,
+                               HermLatticeData<T, Tint> const &L2,
+                               std::vector<HermIdealPrime<Tint>> const &l_prime) {
+  CMOrder<T, Tint> const &ord = *L.ord;
+  for (size_t jp = 0; jp < l_prime.size(); jp++) {
+    if (HermK0Representative(l_prime, jp) != jp) {
+      continue;
+    }
+    bool ram = l_prime[jp].type == HermIdealType::Ramified;
+    bool dy = ram && l_prime[jp].ell == 2;
+    int dv = dy ? HermDifferentVal(ord, l_prime, jp) : 0;
+    if (!HermLocalSymbolEquivalent(HermLocalSymbolOfLattice(L2, l_prime, jp),
+                                   HermLocalSymbolOfLattice(L, l_prime, jp),
+                                   ram, dy, dv)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // clang-format off
 #endif  // SRC_GENERA_HERMITIANGENUSSEED_H_
 // clang-format on

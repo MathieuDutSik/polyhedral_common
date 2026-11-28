@@ -432,23 +432,13 @@ HermitianEnumeration(CMOrder<T, Tint> const &ord, HermSeed<T, Tint> const &seed,
           (void)size;
           for (auto const &Bn : HermNeighbors(L, np, ls.line_vector(idx))) {
 #ifdef SANITY_CHECK_HERMITIAN_ENUMERATION
-            // the neighbor has the local symbol of L at the primes above ell
+            // the neighbor has the local symbols of L at the primes above ell
             HermLatticeData<T, Tint> Ln =
                 HermLatticeOfBasis(ord, ring, MyMatrix<T>(Bn * A));
-            for (size_t jp = 0; jp < l_prime.size(); jp++) {
-              if (HermK0Representative(l_prime, jp) != jp) {
-                continue;
-              }
-              bool ram = l_prime[jp].type == HermIdealType::Ramified;
-              bool dy = ram && ell == 2;
-              int dv = dy ? HermDifferentVal(ord, l_prime, jp) : 0;
-              if (!HermLocalSymbolEquivalent(
-                      HermLocalSymbolOfLattice(Ln, l_prime, jp),
-                      HermLocalSymbolOfLattice(L, l_prime, jp), ram, dy, dv)) {
-                std::cerr << "HERMENUM: a neighbor at " << l_prime[ip].name
-                          << " is not in the genus\n";
-                throw TerminalException{1};
-              }
+            if (!HermSameLocalSymbolsAbove(L, Ln, l_prime)) {
+              std::cerr << "HERMENUM: a neighbor at " << l_prime[ip].name
+                        << " is not in the genus\n";
+              throw TerminalException{1};
             }
 #endif
             insert(MyMatrix<T>(Bn * A));

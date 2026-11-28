@@ -3576,6 +3576,79 @@ get_hermitian_enumeration:=function(field, symbol, mass)
     return U;
 end;
 
+# The genera of Hermitian lattices of a rank and determinant over a CM field
+# (GENUS_HermitianGenera), matched with the expected list eCase.genera up to
+# the equivalence of the local symbols, a lattice being built in each genus
+# (CheckSeed): the list of the genera found, or the failure (exit status 2
+# when the two lists differ). eCase has poly, conj (as in the namelist), m
+# and det.
+get_hermitian_genera:=function(eCase)
+    local TmpDir, FileN, FileC, FileO, FileE, eProg, strOut, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "HermGenera.nml");
+    FileC:=Filename(TmpDir, "HermGenera.cmp");
+    FileO:=Filename(TmpDir, "HermGenera.out");
+    FileE:=Filename(TmpDir, "HermGenera.err");
+    WriteStringFile(FileC, Concatenation(List(eCase.genera, x->Concatenation(x, "\n"))));
+    strOut:=Concatenation("&DATA\n FieldPolynomial = ", eCase.poly, "\n",
+                          " FieldConjugate = ", eCase.conj, "\n",
+                          " Rank = ", String(eCase.m), "\n",
+                          " Determinant = \"", eCase.det, "\"\n/\n\n",
+                          "&METHOD\n CheckSeed = T\n CompareFile = \"", FileC, "\"\n/\n\n",
+                          "&SYSTEM\n OutFormat = \"GAP\"\n OutFile = \"", FileO, "\"\n/\n");
+    WriteStringFile(FileN, strOut);
+    eProg:=GetBinaryFilename("GENUS_HermitianGenera");
+    list_arg:=[FileN];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_HermitianGenera wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileC);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+# The representatives of the classes of the genus of an indefinite
+# Hermitian lattice O_E^m over E = Q(sqrt d), d < 0, of form h0 + sqrt(d)
+# h1 (h0 symmetric, h1 antisymmetric, integral), by GENUS_HermitianIndefinite:
+# the record of the program, with n_class, signature, ListGram (the trace
+# forms, the given lattice first), ListSymbol and ListPrime.
+get_hermitian_indefinite:=function(d, h0, h1)
+    local TmpDir, FileI, FileO, FileE, eProg, strMat, strOut, list_arg, status, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "HermIndef.desc");
+    FileO:=Filename(TmpDir, "HermIndef.out");
+    FileE:=Filename(TmpDir, "HermIndef.err");
+    strMat:=function(M)
+        return Concatenation(String(Length(M)), " ", String(Length(M[1])), " ",
+                             JoinStringsWithSeparator(List(Concatenation(M), String), " "));
+    end;
+    strOut:=Concatenation("ring NumberField 2 ", String(-d), " 0 1 conj 0 -1\n",
+                          "dimension ", String(Length(h0)), "\n",
+                          "form ", strMat(h0), " ", strMat(h1), "\n");
+    WriteStringFile(FileI, strOut);
+    eProg:=GetBinaryFilename("GENUS_HermitianIndefinite");
+    list_arg:=[FileI, "GAP", FileO];
+    status:=run_binary(eProg, list_arg, FileE);
+    if status <> 0 then
+        return binary_failure(eProg, list_arg, status, FileE);
+    fi;
+    if IsExistingFile(FileO)=false then
+        return "program failure: GENUS_HermitianIndefinite wrote no output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
 # The representatives of the classes of the genus of an indefinite lattice
 # over Z of rank >= 3 (GENUS_IndefiniteRepresentatives): the record of the
 # program, with n_class, signature, ListGram (the given lattice first) and

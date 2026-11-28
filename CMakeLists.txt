@@ -861,6 +861,8 @@ set(
   GENUS_HermitianEnumerate
   GENUS_HermitianGenusOfLattice
   GENUS_IndefiniteRepresentatives
+  GENUS_HermitianGenera
+  GENUS_HermitianIndefinite
 )
 foreach(target IN LISTS GENERA_PROGRAMS)
   add_polyhedral_binary(

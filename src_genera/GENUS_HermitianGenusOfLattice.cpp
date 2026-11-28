@@ -38,66 +38,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     CMOrder<T, Tint> const &ord = *opt_ord;
-    int d = ord.deg;
-    int m = ring.m;
-    int n = ring.n();
-    MyMatrix<T> A = IdentityMat<T>(n);
-    if (!tr.at_end()) {
-      tr.expect("generators");
-      int r = tr.next_int();
-      // the matrices g_k, read with rational entries
-      std::vector<MyMatrix<T>> l_g;
-      for (int k = 0; k < d; k++) {
-        int n_row = tr.next_int();
-        int n_col = tr.next_int();
-        if (n_row != r || n_col != m) {
-          std::cerr << "GENUS_HermitianGenusOfLattice: the generator matrices "
-                       "must be " << r << " x " << m << "\n";
-          throw TerminalException{1};
-        }
-        MyMatrix<T> g(r, m);
-        for (int i = 0; i < r; i++) {
-          for (int j = 0; j < m; j++) {
-            g(i, j) = ParseScalar<T>(tr.next());
-          }
-        }
-        l_g.push_back(g);
-      }
-      // a generator in the realified coordinates (e_a times the i-th unit
-      // vector at a m + i), then its multiples by the basis e of O_E
-      MyMatrix<T> Binv = Inverse(ord.basis_theta);
-      std::vector<MyMatrix<T>> l_mult;
-      for (auto const &M : ring.l_ring_basis) {
-        l_mult.push_back(UniversalMatrixConversion<T, Tint>(M));
-      }
-      MyMatrix<T> Gens(r * d, n);
-      for (int i = 0; i < r; i++) {
-        MyVector<T> v = ZeroVector<T>(n);
-        for (int j = 0; j < m; j++) {
-          MyVector<T> c(d);
-          for (int k = 0; k < d; k++) {
-            c(k) = l_g[k](i, j);
-          }
-          MyVector<T> x = Binv.transpose() * c;
-          for (int a = 0; a < d; a++) {
-            v(a * m + j) = x(a);
-          }
-        }
-        for (int b = 0; b < d; b++) {
-          MyVector<T> w = l_mult[b].transpose() * v;
-          for (int k = 0; k < n; k++) {
-            Gens(i * d + b, k) = w(k);
-          }
-        }
-      }
-      A = GetZbasis(Gens);
-      if (A.rows() != n) {
-        std::cerr << "GENUS_HermitianGenusOfLattice: the generators span a "
-                     "lattice of rank " << A.rows() / d << ", not " << m
-                  << "\n";
-        throw TerminalException{1};
-      }
-    }
+    MyMatrix<T> A = read_herm_lattice_basis<T, Tint>(tr, ord, ring);
     HermLatticeData<T, Tint> L = HermLatticeOfBasis(ord, ring, A);
     std::string sym = HermGlobalSymbolString(HermGenusSymbolOfLattice(L));
     std::string out = (argc == 3) ? argv[2] : "stdout";

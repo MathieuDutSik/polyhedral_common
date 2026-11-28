@@ -178,6 +178,44 @@ jobs:
           fi
           cd ../..
 
+      # The genera of Hermitian lattices of a rank and determinant, against
+      # the lists of Hecke.jl, a lattice built in each.
+      - name: Test the listing of the Hermitian genera
+        run: |
+          make -C src_genera GENUS_HermitianGenera
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHermitianGenera.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The Hermitian genera test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
+      # The classes of indefinite Hermitian genera over imaginary quadratic
+      # fields (one per special genus), against Hecke.jl, with and without
+      # the SANITY_CHECK macros (every neighbor in the genus).
+      - name: Test the representatives of indefinite Hermitian genera
+        run: |
+          make -C src_genera GENUS_HermitianIndefinite
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHermitianIndefinite.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The indefinite Hermitian test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+          make -C src_genera -B GENUS_HermitianIndefinite CDEFS="-DGMP_POOL -DSANITY_CHECK"
+          cd CI_tests/15B_GenusEnumeration
+          rm -f CI_CONCLUSION
+          ../../gap.sh < TestHermitianIndefinite.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The indefinite Hermitian sanity test has not created the expected file" >&2
+            exit 1
+          fi
+          cd ../..
+
       # The classes of indefinite genera of rank >= 3 (one per improper
       # spinor genus), with and without the SANITY_CHECK macros (every
       # neighbor in the genus).

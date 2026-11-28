@@ -794,11 +794,59 @@ forms later, Hein-Tornaria-Voight and the LMFDB Hilbert modular forms.
 * Indefinite binary forms over Z (rank 2): classes from the class group of a
   real quadratic order, not the spinor genera; refused by
   GENUS_IndefiniteRepresentatives.
-* The list of all Hermitian genera of a rank, determinant and signatures
-  (Hecke.jl's hermitian_genera); we take one symbol.
-* Indefinite Hermitian lattices (special genera), and relative quadratic
-  extensions that are not CM.
-* Torsion quadratic modules and primitive embeddings (Nikulin), as far as
-  IsometryGlue.h does not cover them: to check.
+* The list of all Hermitian genera of a rank, determinant and signatures:
+  done (GENUS_HermitianGenera, 2026-11-28), see below.
+* Indefinite Hermitian lattices over the imaginary quadratic fields: done
+  (GENUS_HermitianIndefinite), except the case W != 0 below. Over K_0 != Q
+  (class and unit groups of K_0) and for relative quadratic extensions that
+  are not CM: not done.
+* Primitive extensions: GENUS_GlueIsometry agrees with OSCAR, see below. The
+  primitive embeddings into a genus (OSCAR's primitive_embeddings) and
+  torsion quadratic modules as objects of their own: not done.
 * SageMath's local tools for quadratic forms (representation numbers, local
   normal forms): partly.
+
+## src_genera: the night of 2026-11-27 to 28, Hermitian genera and glue
+
+Checked, nothing inconsistent found:
+* GENUS_HermitianGenera against Hecke.jl 0.40.1 hermitian_genera: 1008
+  cases (20 imaginary quadratic fields, ranks 1 to 4, determinants n O_E
+  for n up to 25; Q(zeta_5), Q(zeta_8), Q(sqrt -2, sqrt -7), ranks 1 to 3),
+  4091 genera, the same lists up to the equivalence of the local symbols;
+  with one negative entry at a real place (odd signature), 752 cases, the
+  same. CI 15B: 39 of these cases (TestHermitianGenera.g), a lattice built
+  in each genus.
+* GENUS_HermitianEnumerate on the genera of that list: 2068 genera closed
+  on the mass (all of ranks 1 and 2, 749 of rank 3), 87362 classes, up to
+  3603 in a genus. 34 of rank 3 beyond the time cap (15 min, later 3 min),
+  the large masses (e.g. 208677/8 over Q(sqrt -2, sqrt -7)). Not run for
+  lack of time: 477 genera of rank 3 and the 1536 of rank 4.
+* GENUS_HermitianIndefinite against Hecke.jl genus_representatives
+  (spinor_genera_in_genus): 558 indefinite lattices O_E^m, 32 imaginary
+  quadratic fields, ranks 2 to 4, the same number of classes (1 to 10)
+  in all of them, the representatives in the genus.
+* GENUS_GlueIsometry glue against OSCAR 1.8.2
+  equivariant_primitive_extensions: 2823 pairs of even definite lattices
+  with an isometry (root lattices up to E8, D8, A8 and their sums, rescaled
+  and binary ones; isometries of order 1, 2, 3, 4, 6), total rank <= 16, up
+  to 14 classes, the same number of classes and the same glue orders.
+  OSCAR refuses the pairs of a lattice with itself, even with a new
+  integer_lattice of the same Gram matrix (165 cases, not compared).
+* CI 15B: TestHermitianIndefinite.g, 54 of the 558 indefinite cases, with
+  and without the SANITY_CHECK macros (every neighbor has the local symbols
+  of its lattice, HermSameLocalSymbolsAbove, now shared with the
+  enumeration).
+
+Open:
+* GENUS_HermitianIndefinite, even rank with W != 0 (ramified primes where
+  every Jordan block has an even rank and an odd scale): Hecke.jl's cocycle
+  on C / C_0 x W, needing a generator of I / conj(I) of norm 1. Reported as
+  not done; it did not occur among the 558 cases, so that path is untested.
+* The genus symbols at a dyadic ramified prime are not canonical strings:
+  two equivalent symbols (signs of the blocks exchanged) print differently.
+  A canonical form would make the outputs comparable as strings.
+* The seed of GENUS_HermitianGenera with CheckSeed for Q(sqrt -2, sqrt -7),
+  rank 3, determinant 4: more than 25 minutes (left out of the CI), the
+  same slow descent as in the Kirschmer section above.
+* TestHermitianGenera.g takes about 35 minutes, mostly the seeds of rank 4.
+
