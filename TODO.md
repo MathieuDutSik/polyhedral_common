@@ -36,10 +36,6 @@ hyperplanes with the polar dual of our kernel). Ranked by expected payoff:
    recursive dual description. Independent subproblems, parallelizes well.
    Largest restructuring, so last; but it is THE algorithmic win for degenerate
    cones (what lets normaliz survive the pos x neg explosion).
-5. **Cheap experiment: insertion order.** We insert in lexicographic-minimum
-   order; normaliz sorts generators by degree / zero counts
-   (`sort_gens_by_degree`). Intermediate ray counts depend strongly on the
-   order; benchmark a few orders on the corpus below.
 
 Re-run the benchmark trio after each step. Evidence (2026-08-04, single-thread,
 normaliz 3.11.1 no-OpenMP; s; ContactE8 240x9/19440, Example3 48x21/11432,
